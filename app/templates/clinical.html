@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block title %}Velmorax | Clinica{% endblock %}
+
+{% block content %}
+{% include "partials/clinical_section.html" %}
+
+<script>
+    const tabButtons = document.querySelectorAll("[data-tab-target]");
+    const tabPanels = document.querySelectorAll("[data-tab-panel]");
+    tabButtons.forEach((button) => {
+        button.addEventListener("click", () => {
+            const target = button.dataset.tabTarget;
+            tabButtons.forEach((item) => item.classList.remove("is-active"));
+            tabPanels.forEach((panel) => panel.classList.remove("is-active"));
+            button.classList.add("is-active");
+            document.querySelector(`[data-tab-panel="${target}"]`).classList.add("is-active");
+        });
+    });
+
+    function setSectionVisibility(element, visible) {
+        if (!element) return;
+        element.classList.toggle("is-hidden", !visible);
+        element.querySelectorAll("input, select, textarea").forEach((field) => {
+            field.disabled = !visible;
+        });
+    }
+
+    const patientForm = document.querySelector("[data-patient-form]");
+    if (patientForm) {
+        const patientType = patientForm.querySelector("[data-patient-type]");
+        const animalSections = patientForm.querySelectorAll("[data-animal-only]");
+        const syncPatientForm = () => {
+            const isAnimal = patientType.value === "Animal";
+            animalSections.forEach((section) => setSectionVisibility(section, isAnimal));
+        };
+        patientType.addEventListener("change", syncPatientForm);
+        syncPatientForm();
+    }
+
+    const recordForm = document.querySelector("[data-record-form]");
+    if (recordForm) {
+        const recordSpecialty = recordForm.querySelector("[data-record-specialty]");
+        const dentalSections = recordForm.querySelectorAll("[data-dental-only]");
+        const vetSections = recordForm.querySelectorAll("[data-vet-only]");
+        const generalSections = recordForm.querySelectorAll("[data-general-only]");
+        const syncRecordForm = () => {
+            const value = recordSpecialty.value;
+            const isDental = value === "Odontologia";
+            const isVet = value === "Veterinaria";
+            const isGeneral = value === "Consulta general";
+            dentalSections.forEach((section) => setSectionVisibility(section, isDental));
+            vetSections.forEach((section) => setSectionVisibility(section, isVet));
+            generalSections.forEach((section) => setSectionVisibility(section, isGeneral));
+        };
+        recordSpecialty.addEventListener("change", syncRecordForm);
+        syncRecordForm();
+    }
+</script>
+{% endblock %}

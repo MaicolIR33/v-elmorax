@@ -1,0 +1,328 @@
+<section class="module-section" id="especialidades">
+    <div class="section-heading">
+        <p class="eyebrow">Clinica</p>
+        <h2 class="page-title">Pacientes, especialidades y notas</h2>
+    </div>
+    {% if patient_saved %}
+    <div class="flash-message">Paciente registrado correctamente.</div>
+    {% endif %}
+    {% if record_saved %}
+    <div class="flash-message">Atencion clinica registrada correctamente.</div>
+    {% endif %}
+    {% if permission_error %}
+    <div class="flash-message flash-message-error">{{ permission_error }}</div>
+    {% endif %}
+    <div class="inventory-metrics">
+        <div class="metric-chip">Pacientes: {{ clinical_summary.patients_total }}</div>
+        <div class="metric-chip">Notas recientes: {{ clinical_summary.records_total }}</div>
+        <div class="metric-chip metric-chip-yellow">Seguimientos: {{ clinical_summary.follow_up }}</div>
+        <div class="metric-chip metric-chip-red">Casos abiertos: {{ clinical_summary.open_cases }}</div>
+        <div class="metric-chip">Contexto: {{ scope.scope_label }}</div>
+    </div>
+    <article class="panel-card daily-summary-card">
+        <div class="split-heading">
+            <div>
+                <p class="eyebrow">Cierre diario</p>
+                <h3>Pacientes y recaudo del dia</h3>
+            </div>
+            <div class="queue-meta">
+                <span>{{ daily_financial_summary.date }}</span>
+                <strong>${{ "%.0f"|format(daily_financial_summary.total_collected) }}</strong>
+            </div>
+        </div>
+        <div class="daily-summary-actions">
+            <a
+                class="btn btn-secondary"
+                href="/clinica/cierre-diario/export?day={{ daily_financial_summary.date }}{% if scope.organization_id %}&organization_id={{ scope.organization_id }}{% endif %}{% if scope.location_id %}&location_id={{ scope.location_id }}{% endif %}"
+            >
+                Exportar Excel-compatible
+            </a>
+            <a
+                class="btn btn-secondary"
+                href="/clinica/reportes/atenciones/export{% if scope.organization_id or scope.location_id %}?{% endif %}{% if scope.organization_id %}organization_id={{ scope.organization_id }}{% endif %}{% if scope.organization_id and scope.location_id %}&{% endif %}{% if scope.location_id %}location_id={{ scope.location_id }}{% endif %}"
+            >
+                Exportar atenciones
+            </a>
+            <a
+                class="btn btn-primary"
+                href="/clinica/cierre-diario/imprimir?day={{ daily_financial_summary.date }}{% if scope.organization_id %}&organization_id={{ scope.organization_id }}{% endif %}{% if scope.location_id %}&location_id={{ scope.location_id }}{% endif %}"
+                target="_blank"
+                rel="noopener noreferrer"
+            >
+                Imprimir / Guardar PDF
+            </a>
+        </div>
+        <div class="daily-summary-grid">
+            {% for item in daily_financial_summary.specialties %}
+            <div class="compact-card daily-summary-item">
+                <p class="panel-label">{{ item.label }}</p>
+                <strong>{{ item.patients_total }} pacientes</strong>
+                <p>Pagaron: {{ item.paying_patients }}</p>
+                <p>Total recogido: ${{ "%.0f"|format(item.total_collected) }}</p>
+            </div>
+            {% endfor %}
+        </div>
+        <div class="daily-summary-grid">
+            <div class="compact-card daily-summary-item">
+                <p class="panel-label">Medios de pago</p>
+                {% for item in daily_financial_summary.by_payment_method %}
+                <p>{{ item.label }}: {{ item.count }} | ${{ "%.0f"|format(item.total_collected) }}</p>
+                {% else %}
+                <p>Sin pagos registrados hoy.</p>
+                {% endfor %}
+            </div>
+            <div class="compact-card daily-summary-item">
+                <p class="panel-label">Por profesional</p>
+                {% for item in daily_financial_summary.by_professional %}
+                <p>{{ item.label }}: {{ item.count }} | ${{ "%.0f"|format(item.total_collected) }}</p>
+                {% else %}
+                <p>Sin atenciones registradas hoy.</p>
+                {% endfor %}
+            </div>
+        </div>
+    </article>
+    <div class="tab-row">
+        {% for specialty in specialty_tabs %}
+        <button class="tab-button{% if loop.first %} is-active{% endif %}" type="button" data-tab-target="{{ specialty.id }}">{{ specialty.name }}</button>
+        {% endfor %}
+    </div>
+    <div class="tab-panels">
+        {% for specialty in specialty_tabs %}
+        <article class="tab-panel{% if loop.first %} is-active{% endif %}" data-tab-panel="{{ specialty.id }}">
+            <div class="tab-main">
+                <p class="lead compact">{{ specialty.summary }}</p>
+                <div class="specialty-columns">
+                    <div>
+                        <p class="panel-label">Flujo sugerido</p>
+                        <ol class="roadmap-list single-column">
+                            {% for flow in specialty.flows %}
+                            <li>{{ flow }}</li>
+                            {% endfor %}
+                        </ol>
+                    </div>
+                    <div>
+                        <p class="panel-label">Panel fijo del profesional</p>
+                        <ul class="feature-list">
+                            {% for point in specialty.focus %}
+                            <li>{{ point }}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+                {% if specialty.id == "vet" %}
+                <div class="specialty-highlight-grid">
+                    <div class="compact-card">
+                        <p class="panel-label">Ficha veterinaria activa</p>
+                        {% if veterinary_snapshot.latest_record %}
+                        <strong>{{ veterinary_snapshot.latest_record.display_name }}</strong>
+                        <p>{{ veterinary_snapshot.latest_record.species }} | {{ veterinary_snapshot.latest_record.breed }}{% if veterinary_snapshot.latest_record.owner_name %} | {{ veterinary_snapshot.latest_record.owner_name }}{% endif %}</p>
+                        <p>Peso actual: {{ veterinary_snapshot.latest_record.current_weight_kg }} kg</p>
+                        <p>Vacunas: {{ veterinary_snapshot.latest_record.vaccine_status or 'Pendiente de definir' }}</p>
+                        <p>Seguimiento: {{ veterinary_snapshot.latest_record.follow_up_date or 'Sin fecha' }}</p>
+                        {% else %}
+                        <p>No hay ficha veterinaria reciente.</p>
+                        {% endif %}
+                    </div>
+                    <div class="compact-card">
+                        <p class="panel-label">Pacientes veterinarios</p>
+                        <div class="movement-list">
+                            {% for patient in veterinary_snapshot.patients %}
+                            <div class="movement-item">
+                                <div>
+                                    <strong>{{ patient.display_name }}</strong>
+                                    <p>{{ patient.species }} | {{ patient.breed }}</p>
+                                </div>
+                                <div class="queue-meta">
+                                    <span>{{ patient.weight_kg }} kg</span>
+                                    <span>{{ patient.vaccine_status or 'Sin esquema' }}</span>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                {% if specialty.id == "dental" %}
+                <div class="specialty-highlight-grid">
+                    <div class="compact-card">
+                        <p class="panel-label">Odontograma rapido</p>
+                        <div class="odontogram-grid">
+                            {% for cell in dental_snapshot.cells %}
+                            <div class="tooth-card tooth-{{ cell.tone }}">
+                                <strong>{{ cell.tooth }}</strong>
+                                <span>{{ cell.state }}</span>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    <div class="compact-card">
+                        <p class="panel-label">Ultima nota odontologica</p>
+                        {% if dental_snapshot.latest_record %}
+                        <strong>{{ dental_snapshot.latest_record.display_name }}</strong>
+                        <p>{{ dental_snapshot.latest_record.reason }}</p>
+                        <p>{{ dental_snapshot.latest_record.note }}</p>
+                        <p>Resumen dental: {{ dental_snapshot.latest_record.dental_chart or 'Sin detalle adicional' }}</p>
+                        <p>Control sugerido: {{ dental_snapshot.latest_record.follow_up_date or 'Sin fecha' }}</p>
+                        {% else %}
+                        <p>No hay registros odontologicos recientes.</p>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </article>
+        {% endfor %}
+    </div>
+    <div class="clinical-grid">
+        {% if permissions.manage_clinical %}
+        <article class="panel-card">
+            <div class="section-heading"><p class="eyebrow">Paciente</p><h3>Registrar paciente</h3></div>
+            <form action="/patients" method="post" class="inventory-form" data-patient-form>
+                <input type="hidden" name="organization_id" value="{{ scope.selected_organization.id if scope.selected_organization else scope.organizations[0].id }}">
+                <input type="hidden" name="location_id" value="{{ scope.selected_location.id if scope.selected_location else scope.locations[0].id if scope.locations else '' }}">
+                <label><span>Nombre visible</span><input type="text" name="display_name" placeholder="Paciente o mascota" required></label>
+                <div class="form-grid">
+                    <label><span>Tipo</span><select name="patient_type" data-patient-type><option selected>{{ patient_form_defaults.patient_type }}</option><option>Animal</option></select></label>
+                    <label><span>Especialidad</span><select name="specialty" data-patient-specialty><option selected>{{ patient_form_defaults.specialty }}</option><option>Veterinaria</option><option>Consulta general</option></select></label>
+                </div>
+                <div class="form-grid">
+                    <label><span>Documento</span><input type="text" name="document_number" placeholder="CC, TI o identificador interno"></label>
+                    <label><span>Fecha nacimiento</span><input type="date" name="birth_date"></label>
+                </div>
+                <div class="form-grid">
+                    <label><span>Sexo</span><select name="sex"><option value="">Sin definir</option><option>Femenino</option><option>Masculino</option><option>Otro</option></select></label>
+                    <label><span>Asegurador / plan</span><input type="text" name="insurance_name" placeholder="EPS, prepagada o convenio"></label>
+                </div>
+                <label data-animal-only><span>Responsable</span><input type="text" name="owner_name" placeholder="Solo si aplica"></label>
+                <div class="form-grid" data-animal-only>
+                    <label><span>Especie</span><input type="text" name="species" placeholder="Canino, felino, humano..."></label>
+                    <label><span>Raza</span><input type="text" name="breed" placeholder="Raza o subtipo"></label>
+                </div>
+                <div class="form-grid" data-animal-only>
+                    <label><span>Peso kg</span><input type="number" min="0" step="0.1" name="weight_kg" value="0"></label>
+                    <label><span>Vacunas</span><select name="vaccine_status"><option selected>{{ patient_form_defaults.vaccine_status }}</option><option>Al dia</option><option>Pendiente</option><option>En seguimiento</option></select></label>
+                </div>
+                <label><span>Telefono</span><input type="text" name="phone" placeholder="Contacto del paciente o responsable"></label>
+                <button class="btn btn-primary btn-block" type="submit">Guardar paciente</button>
+            </form>
+        </article>
+        <article class="panel-card">
+            <div class="section-heading"><p class="eyebrow">Atencion</p><h3>Registrar nota clinica</h3></div>
+            <form action="/clinical-records" method="post" class="inventory-form" data-record-form>
+                <input type="hidden" name="organization_id" value="{{ scope.selected_organization.id if scope.selected_organization else scope.organizations[0].id }}">
+                <input type="hidden" name="location_id" value="{{ scope.selected_location.id if scope.selected_location else scope.locations[0].id if scope.locations else '' }}">
+                <label><span>Paciente</span><select name="patient_id">{% for option in patient_options %}<option value="{{ option.id }}">{{ option.label }}</option>{% endfor %}</select></label>
+                <div class="form-grid">
+                    <label><span>Fecha</span><input type="date" name="encounter_date" value="{{ clinical_form_defaults.encounter_date }}" required></label>
+                    <label><span>Especialidad</span><select name="specialty" data-record-specialty><option selected>{{ clinical_form_defaults.specialty }}</option><option>Veterinaria</option><option>Consulta general</option></select></label>
+                </div>
+                <label><span>Motivo</span><input type="text" name="reason" placeholder="Motivo de consulta" required></label>
+                <label><span>Nota clinica</span><input type="text" name="note" placeholder="Resumen clinico corto" required></label>
+                <div class="form-grid">
+                    <label><span>Servicio realizado</span><input type="text" name="service_performed" placeholder="Consulta, profilaxis, vacunacion..."></label>
+                    <label><span>Diagnostico</span><input type="text" name="diagnosis" placeholder="Diagnostico principal"></label>
+                </div>
+                <label><span>Plan / conducta</span><input type="text" name="treatment_plan" placeholder="Plan de manejo o tratamiento"></label>
+                <div class="form-grid">
+                    <label><span>Alergias</span><input type="text" name="allergies" placeholder="Medicamentos o antecedentes"></label>
+                    <label><span>Signos vitales</span><input type="text" name="vital_signs" placeholder="TA, FC, peso, temperatura..."></label>
+                </div>
+                <label data-dental-only><span>Resumen odontologico</span><input type="text" name="dental_chart" placeholder="Ej. 16 caries, 17 resina, 26 ausente"></label>
+                <div class="form-grid">
+                    <label><span>Estado</span><select name="status"><option selected>{{ clinical_form_defaults.status }}</option><option>Seguimiento</option><option>Abierta</option></select></label>
+                    <label><span>Profesional</span><input type="text" name="professional" placeholder="Nombre del profesional" required></label>
+                </div>
+                <div class="form-grid" data-vet-only>
+                    <label><span>Peso actual kg</span><input type="number" min="0" step="0.1" name="current_weight_kg" value="0"></label>
+                    <label><span>Proximo control</span><input type="date" name="follow_up_date" value="{{ clinical_form_defaults.follow_up_date }}"></label>
+                </div>
+                <label data-vet-only><span>Proxima vacuna</span><input type="date" name="next_vaccine_due"></label>
+                <label data-general-only><span>Proximo control</span><input type="date" name="follow_up_date" value="{{ clinical_form_defaults.follow_up_date }}"></label>
+                <label><span>Formula / indicaciones</span><input type="text" name="prescription" placeholder="Medicamentos o indicaciones"></label>
+                <label><span>Recomendaciones de salida</span><input type="text" name="discharge_notes" placeholder="Controles, signos de alarma, cuidados"></label>
+                <div class="form-grid">
+                    <label><span>Valor pagado</span><input type="number" min="0" step="1000" name="payment_amount" value="0"></label>
+                    <label><span>Medio de pago</span><select name="payment_method"><option>Efectivo</option><option>Transferencia</option><option>Tarjeta</option><option>Mixto</option><option>Sin definir</option></select></label>
+                </div>
+                <button class="btn btn-primary btn-block" type="submit">Guardar atencion</button>
+            </form>
+        </article>
+        {% endif %}
+        <article class="panel-card">
+            <div class="section-heading"><p class="eyebrow">Pacientes</p><h3>Listado actual</h3></div>
+            <div class="movement-list">
+                {% for patient in patients %}
+                <div class="movement-item">
+                    <div>
+                        <strong>{{ patient.display_name }}</strong>
+                        <p>{{ patient.patient_type }} | {{ patient.specialty }} | {{ patient.site_name }}{% if patient.document_number %} | {{ patient.document_number }}{% endif %}{% if patient.owner_name %} | {{ patient.owner_name }}{% endif %}{% if patient.species %} | {{ patient.species }}{% endif %}{% if patient.breed %} | {{ patient.breed }}{% endif %}</p>
+                        {% if patient.insurance_name or patient.sex or patient.birth_date %}
+                        <p>{{ patient.insurance_name or 'Sin plan' }}{% if patient.sex %} | {{ patient.sex }}{% endif %}{% if patient.birth_date %} | {{ patient.birth_date }}{% endif %}</p>
+                        {% endif %}
+                    </div>
+                    <div class="queue-meta">
+                        <span>{{ patient.phone or 'Sin telefono' }}</span>
+                        <span>{% if patient.weight_kg %}{{ patient.weight_kg }} kg{% else %}Sin peso{% endif %}</span>
+                        <span>{{ patient.last_visit }}</span>
+                        {% if permissions.manage_clinical %}
+                        <form action="/patients/{{ patient.id }}/delete" method="post" class="inline-form">
+                            <input type="hidden" name="organization_id" value="{{ scope.organization_id }}">
+                            <input type="hidden" name="location_id" value="{{ scope.location_id }}">
+                            <button class="action-button action-danger" type="submit">Eliminar</button>
+                        </form>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </article>
+        <article class="panel-card">
+            <div class="section-heading"><p class="eyebrow">Notas</p><h3>Atenciones recientes</h3></div>
+            <div class="movement-list">
+                {% for record in clinical_records %}
+                <div class="movement-item">
+                    <div>
+                        <strong>{{ record.display_name }}</strong>
+                        <p>{{ record.reason }} | {{ record.specialty }} | {{ record.site_name }}</p>
+                        {% if record.service_performed or record.diagnosis %}
+                        <p>{{ record.service_performed or 'Sin servicio detallado' }}{% if record.diagnosis %} | Dx: {{ record.diagnosis }}{% endif %}</p>
+                        {% endif %}
+                        <p>{{ record.note }}</p>
+                        {% if record.treatment_plan %}<p>Plan: {{ record.treatment_plan }}</p>{% endif %}
+                        {% if record.vital_signs %}<p>Signos: {{ record.vital_signs }}</p>{% endif %}
+                        {% if record.allergies %}<p>Alergias: {{ record.allergies }}</p>{% endif %}
+                        {% if record.prescription %}<p>Formula: {{ record.prescription }}</p>{% endif %}
+                        {% if record.discharge_notes %}<p>Salida: {{ record.discharge_notes }}</p>{% endif %}
+                        {% if record.dental_chart %}<p>Dental: {{ record.dental_chart }}</p>{% endif %}
+                        {% if record.current_weight_kg %}<p>Peso: {{ record.current_weight_kg }} kg</p>{% endif %}
+                        {% if record.next_vaccine_due %}<p>Proxima vacuna: {{ record.next_vaccine_due }}</p>{% endif %}
+                        <p>Pago: ${{ "%.0f"|format(record.payment_amount or 0) }}{% if record.payment_method %} | {{ record.payment_method }}{% endif %}</p>
+                    </div>
+                    <div class="queue-meta">
+                        <span class="table-badge table-badge-{% if record.status == 'Cerrada' %}green{% elif record.status == 'Seguimiento' %}yellow{% else %}red{% endif %}">{{ record.status }}</span>
+                        <span>{{ record.follow_up_date or 'Sin control' }}</span>
+                        <span>{{ record.encounter_date }}</span>
+                        {% if permissions.manage_clinical %}
+                        <form action="/clinical-records/{{ record.id }}/status" method="post" class="inline-form">
+                            <input type="hidden" name="organization_id" value="{{ scope.organization_id }}">
+                            <input type="hidden" name="location_id" value="{{ scope.location_id }}">
+                            <select name="status">
+                                <option{% if record.status == "Cerrada" %} selected{% endif %}>Cerrada</option>
+                                <option{% if record.status == "Seguimiento" %} selected{% endif %}>Seguimiento</option>
+                                <option{% if record.status == "Abierta" %} selected{% endif %}>Abierta</option>
+                            </select>
+                            <button class="action-button" type="submit">Actualizar</button>
+                        </form>
+                        <form action="/clinical-records/{{ record.id }}/delete" method="post" class="inline-form">
+                            <input type="hidden" name="organization_id" value="{{ scope.organization_id }}">
+                            <input type="hidden" name="location_id" value="{{ scope.location_id }}">
+                            <button class="action-button action-danger" type="submit">Eliminar</button>
+                        </form>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </article>
+    </div>
+</section>

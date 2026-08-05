@@ -1,0 +1,29 @@
+<header class="site-header">
+    <div class="header-brand">
+        <span class="brand-mark brand-mark-logo brand-mark-header">
+            <img src="{{ url_for('static', path='/img/velmorax-logo-photo-clean.png') }}" alt="Velmorax">
+        </span>
+        <div>
+            <p class="eyebrow">Panel operativo</p>
+            <h2 class="header-title">Centro de control clinico</h2>
+            <p class="user-caption">Contexto activo: {{ scope.scope_label }}</p>
+        </div>
+    </div>
+    <nav class="top-nav">
+        <a href="/{% if scope_query %}?{{ scope_query }}{% endif %}" {% if active_path == '/' %}class="is-active"{% endif %}>Tablero</a>
+        {% if permissions.view_agenda %}<a href="/agenda{% if scope_query %}?{{ scope_query }}{% endif %}" {% if active_path == '/agenda' %}class="is-active"{% endif %}>Agenda</a>{% endif %}
+        {% if permissions.view_inventory %}<a href="/inventario{% if scope_query %}?{{ scope_query }}{% endif %}" {% if active_path == '/inventario' %}class="is-active"{% endif %}>Inventario</a>{% endif %}
+        {% if permissions.view_clinical %}<a href="/clinica{% if scope_query %}?{{ scope_query }}{% endif %}" {% if active_path == '/clinica' %}class="is-active"{% endif %}>Clinica</a>{% endif %}
+        {% if permissions.manage_admin %}<a href="/admin{% if scope_query %}?{{ scope_query }}{% endif %}" {% if active_path == '/admin' %}class="is-active"{% endif %}>Admin</a>{% endif %}
+    </nav>
+    <div class="header-status">
+        {% if current_user %}
+        <div class="user-pill-wrap">
+            <span class="status-pill">{{ current_user.role_label }}</span>
+            <span class="user-caption">{{ current_user.full_name }}</span>
+        </div>
+        {% else %}
+        <span class="status-pill">Web activa</span>
+        {% endif %}
+    </div>
+</header>

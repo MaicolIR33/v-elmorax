@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Velmorax | Cierre diario</title>
+    <style>
+        :root {
+            color-scheme: light;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: "Segoe UI", sans-serif;
+            color: #10292d;
+            background: #f4fbfb;
+        }
+
+        .print-shell {
+            max-width: 980px;
+            margin: 0 auto;
+            padding: 32px 28px 48px;
+        }
+
+        .print-header,
+        .print-card {
+            background: white;
+            border: 1px solid #d5eaea;
+            border-radius: 20px;
+            padding: 24px;
+            margin-bottom: 18px;
+        }
+
+        .eyebrow {
+            margin: 0 0 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            font-size: 0.78rem;
+            color: #15757f;
+        }
+
+        h1, h2, h3, p {
+            margin-top: 0;
+        }
+
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 14px;
+        }
+
+        .summary-item {
+            border: 1px solid #d5eaea;
+            border-radius: 16px;
+            padding: 16px;
+            background: #f7fcfc;
+        }
+
+        .summary-item strong {
+            display: block;
+            font-size: 1.4rem;
+            margin-bottom: 8px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.94rem;
+        }
+
+        th, td {
+            padding: 12px 10px;
+            border-bottom: 1px solid #e2f0f0;
+            text-align: left;
+        }
+
+        th {
+            color: #15757f;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .print-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-bottom: 18px;
+        }
+
+        .print-actions button {
+            padding: 12px 16px;
+            border-radius: 999px;
+            border: 1px solid #15757f;
+            background: #15757f;
+            color: white;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .print-actions a {
+            padding: 12px 16px;
+            border-radius: 999px;
+            border: 1px solid #d5eaea;
+            color: #10292d;
+            text-decoration: none;
+            font-weight: 700;
+        }
+
+        @media print {
+            body {
+                background: white;
+            }
+
+            .print-shell {
+                max-width: none;
+                padding: 0;
+            }
+
+            .print-actions {
+                display: none;
+            }
+
+            .print-header,
+            .print-card {
+                border: none;
+                border-radius: 0;
+                padding-left: 0;
+                padding-right: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="print-shell">
+        <div class="print-actions">
+            <a href="/clinica?day={{ daily_financial_summary.date }}{% if scope.organization_id %}&organization_id={{ scope.organization_id }}{% endif %}{% if scope.location_id %}&location_id={{ scope.location_id }}{% endif %}">Volver a clinica</a>
+            <button type="button" onclick="window.print()">Imprimir / Guardar PDF</button>
+        </div>
+
+        <section class="print-header">
+            <p class="eyebrow">Velmorax</p>
+            <h1>Cierre diario clinico</h1>
+            <p>Fecha: {{ daily_financial_summary.date }}</p>
+            <p>Contexto: {{ scope.scope_label }}</p>
+            <p>Total recogido: ${{ "%.0f"|format(daily_financial_summary.total_collected) }}</p>
+        </section>
+
+        <section class="print-card">
+            <p class="eyebrow">Resumen</p>
+            <div class="summary-grid">
+                {% for item in daily_financial_summary.specialties %}
+                <div class="summary-item">
+                    <h3>{{ item.label }}</h3>
+                    <strong>${{ "%.0f"|format(item.total_collected) }}</strong>
+                    <p>Pacientes: {{ item.patients_total }}</p>
+                    <p>Pagaron: {{ item.paying_patients }}</p>
+                </div>
+                {% endfor %}
+            </div>
+        </section>
+
+        <section class="print-card">
+            <p class="eyebrow">Caja</p>
+            <div class="summary-grid">
+                <div class="summary-item">
+                    <h3>Medios de pago</h3>
+                    {% for item in daily_financial_summary.by_payment_method %}
+                    <p>{{ item.label }}: {{ item.count }} | ${{ "%.0f"|format(item.total_collected) }}</p>
+                    {% else %}
+                    <p>Sin pagos registrados.</p>
+                    {% endfor %}
+                </div>
+                <div class="summary-item">
+                    <h3>Profesionales</h3>
+                    {% for item in daily_financial_summary.by_professional %}
+                    <p>{{ item.label }}: {{ item.count }} | ${{ "%.0f"|format(item.total_collected) }}</p>
+                    {% else %}
+                    <p>Sin atenciones registradas.</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </section>
+
+        <section class="print-card">
+            <p class="eyebrow">Detalle</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Paciente</th>
+                        <th>Especialidad</th>
+                        <th>Motivo</th>
+                        <th>Profesional</th>
+                        <th>Pago</th>
+                        <th>Medio</th>
+                        <th>Sede</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for record in daily_records_for_print %}
+                    <tr>
+                        <td>{{ record.display_name }}</td>
+                        <td>{{ record.specialty }}</td>
+                        <td>{{ record.reason }}</td>
+                        <td>{{ record.professional }}</td>
+                        <td>${{ "%.0f"|format(record.payment_amount or 0) }}</td>
+                        <td>{{ record.payment_method or "Sin definir" }}</td>
+                        <td>{{ record.site_name }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </section>
+    </div>
+</body>
+</html>

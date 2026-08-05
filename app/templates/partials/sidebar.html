@@ -1,0 +1,85 @@
+<aside class="sidebar">
+    <div class="sidebar-top">
+        <div class="brand-group brand-group-sidebar">
+            <span class="brand-mark brand-mark-logo">
+                <img src="{{ url_for('static', path='/img/velmorax-logo-photo-clean.png') }}" alt="Velmorax">
+            </span>
+            <div>
+                <p class="eyebrow">Red clinica modular</p>
+                <h1>Velmorax</h1>
+            </div>
+        </div>
+        <div class="sidebar-user">
+            <span class="status-pill">{{ current_user.role_label }}</span>
+            <strong>{{ current_user.full_name }}</strong>
+            <span class="user-caption">{{ current_user.email }}</span>
+        </div>
+    </div>
+
+    <nav class="sidebar-nav">
+        <a href="/{% if scope_query %}?{{ scope_query }}{% endif %}" class="sidebar-link{% if active_path == '/' %} is-active{% endif %}">Resumen</a>
+        {% if permissions.view_agenda %}
+        <a href="/agenda{% if scope_query %}?{{ scope_query }}{% endif %}" class="sidebar-link{% if active_path == '/agenda' %} is-active{% endif %}">Agenda</a>
+        {% endif %}
+        {% if permissions.view_inventory %}
+        <a href="/inventario{% if scope_query %}?{{ scope_query }}{% endif %}" class="sidebar-link{% if active_path == '/inventario' %} is-active{% endif %}">Inventario</a>
+        {% endif %}
+        {% if permissions.view_clinical %}
+        <a href="/clinica{% if scope_query %}?{{ scope_query }}{% endif %}" class="sidebar-link{% if active_path == '/clinica' %} is-active{% endif %}">Clinica</a>
+        {% endif %}
+        {% if permissions.manage_admin %}
+        <a href="/admin{% if scope_query %}?{{ scope_query }}{% endif %}" class="sidebar-link{% if active_path == '/admin' %} is-active{% endif %}">Admin</a>
+        {% endif %}
+        <a href="/{% if scope_query %}?{{ scope_query }}{% endif %}#sources" class="sidebar-link">Referencias</a>
+    </nav>
+
+    <div class="sidebar-block">
+        <p class="panel-label">Red activa</p>
+        <form action="{{ active_path }}" method="get" class="scope-form">
+            <label>
+                <span>Organizacion</span>
+                <select name="organization_id" onchange="this.form.submit()">
+                    <option value="">Toda la red</option>
+                    {% for option in scope.organizations %}
+                    <option value="{{ option.id }}"{% if scope.organization_id == option.id|string %} selected{% endif %}>{{ option.name }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <label>
+                <span>Sede</span>
+                <select name="location_id" onchange="this.form.submit()">
+                    <option value="">Todas</option>
+                    {% for option in scope.locations %}
+                    <option value="{{ option.id }}"{% if scope.location_id == option.id|string %} selected{% endif %}>{{ option.name }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+        </form>
+    </div>
+
+    <div class="sidebar-block">
+        <p class="panel-label">Permisos</p>
+        <div class="permission-grid">
+            <span class="permission-chip{% if permissions.view_inventory %} permission-on{% endif %}">Inventario</span>
+            <span class="permission-chip{% if permissions.view_agenda %} permission-on{% endif %}">Agenda</span>
+            <span class="permission-chip{% if permissions.view_clinical %} permission-on{% endif %}">Clinica</span>
+            <span class="permission-chip{% if permissions.manage_admin %} permission-on{% endif %}">Admin</span>
+        </div>
+    </div>
+
+    <div class="sidebar-block">
+        <p class="panel-label">Accesos rapidos</p>
+        <div class="quick-actions compact-actions">
+            {% for action in quick_actions[:3] %}
+            <a class="quick-card" href="{% if action.title == 'Registrar ingreso' %}/inventario{% elif action.title == 'Abrir triaje' %}/agenda{% else %}/clinica{% endif %}">
+                <strong>{{ action.title }}</strong>
+                <span>{{ action.detail }}</span>
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+
+    <form action="/logout" method="post" class="sidebar-logout">
+        <button class="logout-button" type="submit">Salir</button>
+    </form>
+</aside>

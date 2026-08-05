@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Velmorax | Ingreso</title>
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/styles.css') }}?v=20260621-login-clean-3">
+</head>
+<body>
+    <div class="login-shell login-shell-rich" data-login-shell data-selected-intent="{{ selected_intent }}">
+        <section class="login-experience" data-login-root data-selected-intent="{{ selected_intent }}">
+            <div class="login-visual">
+                <div class="login-orbit login-orbit-a"></div>
+                <div class="login-orbit login-orbit-b"></div>
+
+                <div class="login-brand-row">
+                    <div class="brand-mark brand-mark-logo login-brand-mark">
+                        <img src="{{ url_for('static', path='/img/velmorax-logo-photo-clean.png') }}" alt="Velmorax">
+                    </div>
+                    <div>
+                        <p class="eyebrow">Ingreso</p>
+                        <h1>Velmorax</h1>
+                    </div>
+                </div>
+
+                <div class="login-copy">
+                    <p class="login-kicker">Flujos</p>
+                    <h2 data-login-title>Elige el flujo y entra.</h2>
+                    <p class="lead login-lead" data-login-description>
+                        Acceso directo al flujo correcto.
+                    </p>
+                </div>
+
+                <div class="entry-grid entry-grid-rich">
+                    {% for flow in entry_flows %}
+                    <button
+                        type="button"
+                        class="entry-card entry-card-rich{% if selected_intent == flow.id %} is-selected{% endif %}"
+                        data-flow-card
+                        data-flow-id="{{ flow.id }}"
+                        data-flow-title="{{ flow.title }}"
+                        data-flow-description="{% if flow.id == 'odontologia' %}Odontograma y procedimientos.{% elif flow.id == 'veterinaria' %}Mascotas y seguimiento.{% else %}Triage y consulta.{% endif %}"
+                        data-flow-index="0{{ loop.index }}"
+                        data-flow-tag="{% if loop.index == 1 %}Dental{% elif loop.index == 2 %}Animal{% else %}General{% endif %}"
+                    >
+                        <div class="entry-card-glow"></div>
+                        <div class="entry-card-top">
+                            <span class="entry-index entry-index-rich">
+                                <span class="entry-index-number">0{{ loop.index }}</span>
+                                <span class="entry-index-symbol">{% if loop.index == 1 %}OD{% elif loop.index == 2 %}VT{% else %}CG{% endif %}</span>
+                            </span>
+                            <span class="entry-tag">{% if loop.index == 1 %}Dental{% elif loop.index == 2 %}Animal{% else %}General{% endif %}</span>
+                        </div>
+                        <strong class="entry-card-title">{{ flow.title }}</strong>
+                        <span class="entry-card-description">{% if flow.id == 'odontologia' %}Odontograma y procedimientos.{% elif flow.id == 'veterinaria' %}Mascotas y seguimiento.{% else %}Triage y consulta.{% endif %}</span>
+                        <div class="entry-card-foot">
+                            <span>{% if selected_intent == flow.id %}Seleccionado{% else %}Disponible{% endif %}</span>
+                            <span class="entry-card-state">{% if selected_intent == flow.id %}Activo{% else %}Elegir{% endif %}</span>
+                        </div>
+                    </button>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <aside class="login-panel">
+                <div class="login-panel-top">
+                    <p class="eyebrow">Ingreso</p>
+                    <h3 data-panel-title>Accede</h3>
+                    <p class="login-panel-text" data-panel-text>
+                        Correo y clave.
+                    </p>
+                </div>
+
+                {% if error %}
+                <div class="flash-message flash-message-error" role="alert" aria-live="assertive">{{ error }}</div>
+                {% endif %}
+                {% if success %}
+                <div class="flash-message" role="status" aria-live="polite">{{ success }}</div>
+                {% endif %}
+
+                <div class="login-state-note{% if selected_intent %} is-ready{% endif %}" data-state-note>
+                    <span class="login-state-dot"></span>
+                    <span data-state-text>
+                        {% if selected_intent %}
+                        {{ selected_intent|replace('-', ' ')|title }}
+                        {% else %}
+                        Elige un flujo.
+                        {% endif %}
+                    </span>
+                </div>
+
+                <form action="/login" method="post" class="inventory-form login-form" data-login-form novalidate>
+                    <input type="hidden" name="intent" value="{{ selected_intent }}" data-intent-input>
+                    <label>
+                        <span>Correo</span>
+                        <input id="login-email" type="email" name="email" placeholder="admin@velmorax.local" autocomplete="username email" inputmode="email" spellcheck="false" required autofocus>
+                    </label>
+                    <label>
+                        <span>Clave</span>
+                        <div class="password-field">
+                            <input id="login-password" type="password" name="password" placeholder="Tu clave" autocomplete="current-password" required data-password-input>
+                            <button class="password-toggle" type="button" aria-controls="login-password" aria-pressed="false" data-password-toggle>
+                                Mostrar
+                            </button>
+                        </div>
+                    </label>
+                    <div class="login-meta-row">
+                        <label class="remember-inline">
+                            <input class="remember-checkbox" type="checkbox" name="remember_me" value="1">
+                            <span class="remember-box" aria-hidden="true"></span>
+                            <span class="remember-inline-text">Recordar sesion</span>
+                        </label>
+                        <a class="muted-line login-inline-link login-inline-link-quiet" href="/password-reset">Recuperar clave</a>
+                    </div>
+                    <button class="btn btn-primary btn-block login-submit{% if not selected_intent %} is-disabled{% endif %}" data-submit-button data-submit-default="{% if selected_intent %}Entrar a {{ selected_intent|replace('-', ' ')|title }}{% else %}Selecciona un flujo para continuar{% endif %}" type="submit"{% if not selected_intent %} disabled aria-disabled="true"{% endif %}>
+                        {% if selected_intent %}Entrar a {{ selected_intent|replace('-', ' ')|title }}{% else %}Selecciona un flujo para continuar{% endif %}
+                    </button>
+                </form>
+
+                {% if show_demo_access %}
+                <details class="demo-inline-panel">
+                    <summary>Demo</summary>
+                    <div class="demo-user-list">
+                        {% for user in demo_users %}
+                        <div class="demo-user-item">
+                            <strong>{{ user.role }}</strong>
+                            <span>{{ user.email }}</span>
+                            <span>Clave demo: velmorax123</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </details>
+                {% endif %}
+            </aside>
+        </section>
+    </div>
+
+    <script>
+        const root = document.querySelector("[data-login-root]");
+        if (root) {
+            const cards = [...document.querySelectorAll("[data-flow-card]")];
+            const submitButton = document.querySelector("[data-submit-button]");
+            const spotlightCard = document.querySelector("[data-spotlight-card]");
+            const spotlightIndex = document.querySelector("[data-spotlight-index]");
+            const spotlightTitle = document.querySelector("[data-spotlight-title]");
+            const spotlightDescription = document.querySelector("[data-spotlight-description]");
+            const stateNote = document.querySelector("[data-state-note]");
+            const stateText = document.querySelector("[data-state-text]");
+            const panelTitle = document.querySelector("[data-panel-title]");
+            const panelText = document.querySelector("[data-panel-text]");
+            const loginTitle = document.querySelector("[data-login-title]");
+            const loginDescription = document.querySelector("[data-login-description]");
+            const loginForm = document.querySelector("[data-login-form]");
+            const illustration = document.querySelector("[data-flow-illustration]");
+            const illustrationIcon = document.querySelector("[data-illustration-icon]");
+            const illustrationTitle = document.querySelector("[data-illustration-title]");
+            const illustrationCopy = document.querySelector("[data-illustration-copy]");
+            const loginShell = document.querySelector("[data-login-shell]");
+            const passwordToggles = [...document.querySelectorAll("[data-password-toggle]")];
+            const intentInput = document.querySelector("[data-intent-input]");
+
+            const flowThemes = {
+                "odontologia": {
+                    title: "Entra al flujo odontologico.",
+                    description: "Odontograma y procedimientos.",
+                    panelTitle: "Ingreso odontologico",
+                    panelText: "Correo y clave.",
+                    illustrationTitle: "Mapa dental",
+                    illustrationCopy: "Odontograma, hallazgos y procedimiento en una sola secuencia visual.",
+                    symbol: "OD",
+                },
+                "veterinaria": {
+                    title: "Entra al flujo veterinario.",
+                    description: "Mascotas y seguimiento.",
+                    panelTitle: "Ingreso veterinario",
+                    panelText: "Correo y clave.",
+                    illustrationTitle: "Ficha animal",
+                    illustrationCopy: "Mascota, responsable y seguimiento clinico con peso y vacunas visibles.",
+                    symbol: "VT",
+                },
+                "consulta-general": {
+                    title: "Entra al flujo general.",
+                    description: "Triage y consulta.",
+                    panelTitle: "Ingreso consulta general",
+                    panelText: "Correo y clave.",
+                    illustrationTitle: "Consulta viva",
+                    illustrationCopy: "Triage, nota y control con menos pasos y mejor lectura operacional.",
+                    symbol: "CG",
+                },
+                "default": {
+                    title: "Elige el flujo y entra.",
+                    description: "Acceso directo al flujo correcto.",
+                    panelTitle: "Accede",
+                    panelText: "Correo y clave.",
+                    illustrationTitle: "Flujo adaptable",
+                    illustrationCopy: "La experiencia cambia de tono para adaptarse al trabajo principal del equipo.",
+                    symbol: "VR",
+                }
+            };
+
+            function updateLoginState(flowId) {
+                root.dataset.selectedIntent = flowId || "";
+                if (loginShell) loginShell.dataset.selectedIntent = flowId || "";
+                if (illustration) illustration.dataset.flowIntent = flowId || "default";
+                if (intentInput) intentInput.value = flowId || "";
+
+                cards.forEach((card) => {
+                    const isActive = card.dataset.flowId === flowId;
+                    card.classList.toggle("is-selected", isActive);
+                    card.setAttribute("aria-pressed", isActive ? "true" : "false");
+                    const state = card.querySelector(".entry-card-state");
+                    if (state) state.textContent = isActive ? "Activo" : "Elegir";
+                });
+
+                if (!flowId) {
+                    if (spotlightCard) spotlightCard.classList.add("spotlight-card-muted");
+                    if (spotlightIndex) spotlightIndex.textContent = "--";
+                    if (spotlightTitle) spotlightTitle.textContent = "Seleccion pendiente";
+                    if (spotlightDescription) spotlightDescription.textContent = "Escoge un flujo para activar el acceso y preparar la experiencia de ingreso.";
+                    if (stateNote) stateNote.classList.remove("is-ready");
+                    if (stateText) stateText.textContent = "Elige un flujo.";
+                    submitButton.disabled = true;
+                    submitButton.setAttribute("aria-disabled", "true");
+                    submitButton.classList.add("is-disabled");
+                    submitButton.textContent = "Selecciona un flujo para continuar";
+                    if (panelTitle) panelTitle.textContent = flowThemes.default.panelTitle;
+                    if (panelText) panelText.textContent = flowThemes.default.panelText;
+                    if (loginTitle) loginTitle.textContent = flowThemes.default.title;
+                    if (loginDescription) loginDescription.textContent = flowThemes.default.description;
+                    if (illustrationIcon) illustrationIcon.textContent = flowThemes.default.symbol;
+                    if (illustrationTitle) illustrationTitle.textContent = flowThemes.default.illustrationTitle;
+                    if (illustrationCopy) illustrationCopy.textContent = flowThemes.default.illustrationCopy;
+                    return;
+                }
+
+                const activeCard = cards.find((card) => card.dataset.flowId === flowId);
+                const theme = flowThemes[flowId] || flowThemes.default;
+                if (spotlightCard) spotlightCard.classList.remove("spotlight-card-muted");
+                if (spotlightIndex) spotlightIndex.textContent = activeCard.dataset.flowIndex;
+                if (spotlightTitle) spotlightTitle.textContent = activeCard.dataset.flowTitle;
+                if (spotlightDescription) spotlightDescription.textContent = activeCard.dataset.flowDescription;
+                if (stateNote) stateNote.classList.add("is-ready");
+                if (stateText) stateText.textContent = activeCard.dataset.flowTitle;
+                submitButton.disabled = false;
+                submitButton.removeAttribute("aria-disabled");
+                submitButton.classList.remove("is-disabled");
+                submitButton.textContent = `Entrar a ${activeCard.dataset.flowTitle}`;
+                if (panelTitle) panelTitle.textContent = theme.panelTitle;
+                if (panelText) panelText.textContent = theme.panelText;
+                if (loginTitle) loginTitle.textContent = theme.title;
+                if (loginDescription) loginDescription.textContent = theme.description;
+                if (illustrationIcon) illustrationIcon.textContent = theme.symbol;
+                if (illustrationTitle) illustrationTitle.textContent = theme.illustrationTitle;
+                if (illustrationCopy) illustrationCopy.textContent = theme.illustrationCopy;
+            }
+
+            cards.forEach((card) => {
+                card.addEventListener("click", () => updateLoginState(card.dataset.flowId));
+            });
+
+            passwordToggles.forEach((toggle) => {
+                toggle.addEventListener("click", () => {
+                    const inputId = toggle.getAttribute("aria-controls");
+                    const passwordInput = document.getElementById(inputId);
+                    if (!passwordInput) return;
+                    const nextType = passwordInput.type === "password" ? "text" : "password";
+                    passwordInput.type = nextType;
+                    const showing = nextType === "text";
+                    toggle.textContent = showing ? "Ocultar" : "Mostrar";
+                    toggle.setAttribute("aria-pressed", showing ? "true" : "false");
+                });
+            });
+
+            if (loginForm && submitButton) {
+                loginForm.addEventListener("submit", (event) => {
+                    if (!intentInput || !intentInput.value) {
+                        event.preventDefault();
+                        return;
+                    }
+                    if (!loginForm.reportValidity()) {
+                        event.preventDefault();
+                        return;
+                    }
+                    submitButton.disabled = true;
+                    submitButton.setAttribute("aria-disabled", "true");
+                    submitButton.classList.add("is-loading");
+                    submitButton.textContent = "Ingresando...";
+                });
+            }
+
+            updateLoginState(root.dataset.selectedIntent || "");
+        }
+    </script>
+</body>
+</html>

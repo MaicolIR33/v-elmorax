@@ -1,0 +1,125 @@
+<section class="module-section" id="agenda">
+    <div class="section-heading">
+        <p class="eyebrow">Agenda</p>
+        <h2 class="page-title">Gestion diaria de citas</h2>
+    </div>
+    {% if permission_error %}
+    <div class="flash-message flash-message-error">{{ permission_error }}</div>
+    {% endif %}
+    {% if appointment_saved %}
+    <div class="flash-message">Cita registrada correctamente en la agenda.</div>
+    {% endif %}
+    <div class="inventory-metrics">
+        <div class="metric-chip">Fecha: {{ agenda_day }}</div>
+        <div class="metric-chip">Total: {{ agenda_summary.total }}</div>
+        <div class="metric-chip metric-chip-green">Confirmadas: {{ agenda_summary.confirmed }}</div>
+        <div class="metric-chip metric-chip-yellow">Pendientes: {{ agenda_summary.pending }}</div>
+        <div class="metric-chip">Virtuales: {{ agenda_summary.virtual }}</div>
+    </div>
+    <div class="module-grid">
+        <article class="panel-card">
+            <form action="/agenda" method="get" class="filter-bar">
+                <input type="hidden" name="organization_id" value="{{ scope.organization_id }}">
+                <input type="hidden" name="location_id" value="{{ scope.location_id }}">
+                <label>
+                    Fecha
+                    <input type="date" name="day" value="{{ agenda_day }}">
+                </label>
+                <div class="filter-actions">
+                    <button class="btn btn-secondary" type="submit">Ver agenda</button>
+                </div>
+            </form>
+            <div class="timeline">
+                {% for appointment in appointments %}
+                <div class="timeline-row">
+                    <div class="timeline-time">{{ appointment.time }}</div>
+                    <div class="timeline-body">
+                        <strong>{{ appointment.patient }}</strong>
+                        <p>{{ appointment.service }} | {{ appointment.specialty }} | {{ appointment.channel }}</p>
+                        <p>{{ appointment.site_name }}{% if appointment.site_city %} | {{ appointment.site_city }}{% endif %}</p>
+                    </div>
+                    <div class="row-actions">
+                        <span class="mini-badge">{{ appointment.status }}</span>
+                        {% if permissions.manage_agenda %}
+                        <form action="/appointments/{{ appointment.id }}/status" method="post" class="inline-form">
+                            <input type="hidden" name="day" value="{{ agenda_day }}">
+                            <input type="hidden" name="organization_id" value="{{ scope.organization_id }}">
+                            <input type="hidden" name="location_id" value="{{ scope.location_id }}">
+                            <select name="status">
+                                <option{% if appointment.status == "Confirmada" %} selected{% endif %}>Confirmada</option>
+                                <option{% if appointment.status == "En espera" %} selected{% endif %}>En espera</option>
+                                <option{% if appointment.status == "Llamar" %} selected{% endif %}>Llamar</option>
+                            </select>
+                            <button class="action-button" type="submit">Actualizar</button>
+                        </form>
+                        <form action="/appointments/{{ appointment.id }}/delete" method="post" class="inline-form">
+                            <input type="hidden" name="day" value="{{ agenda_day }}">
+                            <input type="hidden" name="organization_id" value="{{ scope.organization_id }}">
+                            <input type="hidden" name="location_id" value="{{ scope.location_id }}">
+                            <button class="action-button action-danger" type="submit">Eliminar</button>
+                        </form>
+                        {% endif %}
+                    </div>
+                </div>
+                {% else %}
+                <div class="timeline-row">
+                    <div class="timeline-time">--</div>
+                    <div class="timeline-body">
+                        <strong>No hay citas para esta fecha</strong>
+                        <p>Registra una nueva cita desde el formulario lateral.</p>
+                    </div>
+                    <span class="mini-badge">Libre</span>
+                </div>
+                {% endfor %}
+            </div>
+        </article>
+        <aside class="side-stack">
+            <article class="panel-card">
+                <div class="section-heading">
+                    <p class="eyebrow">Fila activa</p>
+                    <h3>Atencion en curso</h3>
+                </div>
+                <div class="queue-list">
+                    {% for item in patient_queue %}
+                    <div class="queue-card">
+                        <div>
+                            <strong>{{ item.name }}</strong>
+                            <p>{{ item.reason }}</p>
+                        </div>
+                        <div class="queue-meta">
+                            <span>{{ item.site_name }}</span>
+                            <span>{{ item.channel }}</span>
+                            <span class="priority priority-{{ item.priority|lower }}">{{ item.priority }}</span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </article>
+            {% if permissions.manage_agenda %}
+            <article class="panel-card">
+                <div class="section-heading">
+                    <p class="eyebrow">Nueva cita</p>
+                    <h3>Registrar agenda</h3>
+                </div>
+                <form action="/appointments" method="post" class="inventory-form">
+                    <input type="hidden" name="organization_id" value="{{ scope.selected_organization.id if scope.selected_organization else scope.organizations[0].id }}">
+                    <input type="hidden" name="location_id" value="{{ scope.selected_location.id if scope.selected_location else scope.locations[0].id if scope.locations else '' }}">
+                    <div class="form-grid">
+                        <label><span>Fecha</span><input type="date" name="appointment_date" value="{{ agenda_day }}" required></label>
+                        <label><span>Hora</span><input type="time" name="appointment_time" required></label>
+                    </div>
+                    <label><span>Paciente o responsable</span><input type="text" name="patient_name" placeholder="Nombre del paciente o mascota / propietario" required></label>
+                    <label><span>Servicio</span><input type="text" name="service" placeholder="Ej. Control, vacuna, valoracion" required></label>
+                    <div class="form-grid">
+                        <label><span>Canal</span><select name="channel"><option selected>{{ appointment_form_defaults.channel }}</option><option>Virtual</option><option>Telefonica</option></select></label>
+                        <label><span>Estado</span><select name="status"><option selected>{{ appointment_form_defaults.status }}</option><option>En espera</option><option>Llamar</option></select></label>
+                    </div>
+                    <label><span>Especialidad</span><select name="specialty"><option selected>{{ appointment_form_defaults.specialty }}</option><option>Veterinaria</option><option>Consulta general</option></select></label>
+                    <label><span>Nota</span><input type="text" name="note" placeholder="Motivo o comentario corto" required></label>
+                    <button class="btn btn-primary btn-block" type="submit">Guardar cita</button>
+                </form>
+            </article>
+            {% endif %}
+        </aside>
+    </div>
+</section>

@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Velmorax | Verificacion en dos pasos</title>
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/styles.css') }}?v=20260804-push-approval-3">
+</head>
+<body>
+    <main class="login-shell login-shell-rich reset-shell">
+        <section class="login-experience login-experience-single reset-experience">
+            <aside class="login-panel login-panel-standalone reset-panel push-approval-panel">
+                <div class="reset-panel-heading push-approval-heading">
+                    <h3>Aprueba el ingreso</h3>
+                    <p class="login-panel-text push-approval-copy">
+                        Confirma este acceso desde tu telefono confiable para continuar.
+                    </p>
+                </div>
+
+                <div class="reset-panel-layout">
+                    <div class="reset-panel-main">
+                        {% if error %}
+                        <div class="flash-message flash-message-error" role="alert" aria-live="assertive">{{ error }}</div>
+                        {% endif %}
+
+                        <div class="reset-form-card push-approval-card">
+                            <div class="push-approval-status">
+                                <span class="push-approval-status-dot"></span>
+                                <span>Esperando aprobacion</span>
+                            </div>
+
+                            <div class="push-approval-device">
+                                <div class="push-approval-device-mark">2FA</div>
+                                <div class="push-approval-device-copy">
+                                    <strong>{{ trusted_device_label }}</strong>
+                                    <small>{{ user.role_label }} | {{ intent|replace('-', ' ')|title }}</small>
+                                </div>
+                            </div>
+
+                            <form action="/login/push-approval" method="post" class="inventory-form login-form reset-form" novalidate>
+                                <div class="reset-actions">
+                                    <button class="btn btn-primary btn-block login-submit" type="submit" name="approve" value="1">
+                                        Si, soy yo
+                                    </button>
+                                    <button class="btn btn-secondary btn-block push-decline-button" type="submit" name="approve" value="0">
+                                        Detener ingreso
+                                    </button>
+                                    <a class="muted-line reset-back-link" href="/login">Volver al ingreso</a>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </aside>
+        </section>
+    </main>
+</body>
+</html>

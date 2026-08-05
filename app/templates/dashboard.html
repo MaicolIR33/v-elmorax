@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+
+{% block title %}Velmorax | Resumen{% endblock %}
+
+{% block content %}
+{% include "partials/overview_section.html" %}
+<section class="sources-section" id="sources">
+    <p class="eyebrow">Referencias usadas para mejorar el flujo</p>
+    <div class="source-list">
+        {% for source in sources %}
+        <a href="{{ source.url }}" target="_blank" rel="noreferrer">{{ source.label }}</a>
+        {% endfor %}
+    </div>
+</section>
+{% endblock %}

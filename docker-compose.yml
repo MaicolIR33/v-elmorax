@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: velmorax-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: velmorax
+      POSTGRES_USER: velmorax
+      POSTGRES_PASSWORD: velmorax_dev
+    ports:
+      - "5432:5432"
+    volumes:
+      - velmorax_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U velmorax -d velmorax"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  velmorax_postgres_data:

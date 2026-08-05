@@ -1,0 +1,174 @@
+<section class="module-section" id="inventario">
+    <div class="section-heading split-heading">
+        <div>
+            <p class="eyebrow">Inventario</p>
+            <h2 class="page-title">Control de insumos y movimientos</h2>
+        </div>
+        <div class="legend-row">
+            <span><i class="dot dot-red"></i> Critico</span>
+            <span><i class="dot dot-yellow"></i> Alerta</span>
+            <span><i class="dot dot-green"></i> Seguro</span>
+        </div>
+    </div>
+    {% if saved %}
+    <div class="flash-message">Producto registrado correctamente y agregado al tablero.</div>
+    {% endif %}
+    {% if moved %}
+    <div class="flash-message">Movimiento de inventario registrado correctamente.</div>
+    {% endif %}
+    {% if movement_error %}
+    <div class="flash-message flash-message-error">{{ movement_error }}</div>
+    {% endif %}
+    {% if permission_error %}
+    <div class="flash-message flash-message-error">{{ permission_error }}</div>
+    {% endif %}
+    <div class="inventory-metrics">
+        <div class="metric-chip">Total: {{ inventory_summary.total_items }}</div>
+        <div class="metric-chip metric-chip-red">Criticos: {{ inventory_summary.critical }}</div>
+        <div class="metric-chip metric-chip-yellow">Stock bajo: {{ inventory_summary.low_stock }}</div>
+        <div class="metric-chip metric-chip-green">Seguros: {{ inventory_summary.safe }}</div>
+        <div class="metric-chip">Unidades: {{ inventory_summary.total_units }}</div>
+        <div class="metric-chip">Valor stock: ${{ "%.0f"|format(inventory_summary.stock_value) }}</div>
+        <div class="metric-chip">Cadena frio: {{ inventory_summary.cold_chain_items }}</div>
+    </div>
+    <div class="module-grid">
+        <article class="panel-card">
+            <form action="/inventario" method="get" class="filter-bar">
+                <input type="hidden" name="organization_id" value="{{ scope.organization_id }}">
+                <input type="hidden" name="location_id" value="{{ scope.location_id }}">
+                <label><span>Buscar</span><input type="text" name="search" value="{{ inventory_filters.search }}" placeholder="Nombre, marca, lote, codigo o registro"></label>
+                <label>
+                    <span>Categoria</span>
+                    <select name="category">
+                        <option value="">Todas</option>
+                        {% for option in inventory_categories %}
+                        <option value="{{ option }}"{% if option == inventory_filters.category %} selected{% endif %}>{{ option }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+                <label>
+                    <span>Estado</span>
+                    <select name="status">
+                        <option value="">Todos</option>
+                        <option value="red"{% if inventory_filters.status == "red" %} selected{% endif %}>Critico</option>
+                        <option value="yellow"{% if inventory_filters.status == "yellow" %} selected{% endif %}>Alerta</option>
+                        <option value="green"{% if inventory_filters.status == "green" %} selected{% endif %}>Seguro</option>
+                    </select>
+                </label>
+                <div class="filter-actions">
+                    <button class="btn btn-secondary" type="submit">Filtrar</button>
+                    <a class="btn btn-secondary" href="/inventario">Limpiar</a>
+                    <a class="btn btn-secondary" href="/inventario/export?search={{ inventory_filters.search }}&category={{ inventory_filters.category }}&status={{ inventory_filters.status }}{% if scope.organization_id %}&organization_id={{ scope.organization_id }}{% endif %}{% if scope.location_id %}&location_id={{ scope.location_id }}{% endif %}">Exportar</a>
+                </div>
+            </form>
+            <div class="table-wrap">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Producto</th>
+                            <th>Marca</th>
+                            <th>Proveedor</th>
+                            <th>Codigo</th>
+                            <th>Categoria</th>
+                            <th>Lote</th>
+                            <th>Cantidad</th>
+                            <th>Estado</th>
+                            <th>Sede / area</th>
+                            {% if permissions.manage_inventory %}<th>Accion</th>{% endif %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in inventory_alerts %}
+                        <tr>
+                            <td>{{ item.name }}</td>
+                            <td>{{ item.brand }}</td>
+                            <td>{{ item.supplier or 'Sin proveedor' }}</td>
+                            <td>{{ item.barcode or 'Sin codigo' }}</td>
+                            <td>{{ item.category }}</td>
+                            <td>{{ item.lot }}</td>
+                            <td>{{ item.quantity }}</td>
+                            <td><span class="table-badge table-badge-{{ item.badge_class }}">{{ item.badge }} | {{ item.days_left }}</span></td>
+                            <td>{{ item.site_name }}<br><span class="table-subline">{{ item.location }}{% if item.requires_cold_chain %} | cadena fria{% endif %}</span></td>
+                            {% if permissions.manage_inventory %}
+                            <td><form action="/inventory/{{ item.id }}/delete" method="post" class="inline-form"><input type="hidden" name="organization_id" value="{{ scope.organization_id }}"><input type="hidden" name="location_id" value="{{ scope.location_id }}"><button class="action-button action-danger" type="submit">Eliminar</button></form></td>
+                            {% endif %}
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="{% if permissions.manage_inventory %}10{% else %}9{% endif %}">No hay resultados para los filtros aplicados.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </article>
+        <aside class="side-stack">
+            {% if permissions.manage_inventory %}
+            <article class="panel-card">
+                <div class="section-heading"><p class="eyebrow">Nuevo producto</p><h3>Registrar insumo</h3></div>
+                <form action="/inventory" method="post" class="inventory-form">
+                    <input type="hidden" name="organization_id" value="{{ scope.selected_organization.id if scope.selected_organization else scope.organizations[0].id }}">
+                    <input type="hidden" name="location_id" value="{{ scope.selected_location.id if scope.selected_location else scope.locations[0].id if scope.locations else '' }}">
+                    <label><span>Nombre</span><input type="text" name="name" placeholder="Ej. Anestesico 2%" required></label>
+                    <label><span>Codigo / GTIN</span><input type="text" name="barcode" placeholder="Escaneo o digitacion rapida"></label>
+                    <label><span>Marca</span><input type="text" name="brand" placeholder="Laboratorio o fabricante" required></label>
+                    <label><span>Proveedor</span><input type="text" name="supplier" placeholder="Distribuidor o laboratorio"></label>
+                    <label><span>Categoria</span><select name="category"><option selected>{{ inventory_form_defaults.category }}</option><option>Veterinaria</option><option>General</option><option>Procedimientos</option><option>Farmacia</option></select></label>
+                    <label><span>Autoridad regulatoria</span><select name="regulatory_agency"><option selected>{{ inventory_form_defaults.regulatory_agency }}</option><option>ICA</option><option>Otro</option></select></label>
+                    <label><span>Registro</span><input type="text" name="regulatory_code" placeholder="Codigo regulatorio" required></label>
+                    <label><span>Lote</span><input type="text" name="lot" placeholder="Ej. LT-2026-04" required></label>
+                    <div class="form-grid">
+                        <label><span>Cantidad</span><input type="number" min="0" name="quantity" value="1" required></label>
+                        <label><span>Minimo</span><input type="number" min="0" name="min_stock" value="1" required></label>
+                    </div>
+                    <div class="form-grid">
+                        <label><span>Costo unitario</span><input type="number" min="0" step="0.01" name="unit_cost" value="0"></label>
+                        <label><span>Precio referencia</span><input type="number" min="0" step="0.01" name="sale_price" value="0"></label>
+                    </div>
+                    <div class="form-grid">
+                        <label><span>Condicion almacenamiento</span><input type="text" name="storage_condition" placeholder="Ambiente, refrigerado, controlado"></label>
+                        <label><span>Ultimo conteo</span><input type="date" name="last_counted_at"></label>
+                    </div>
+                    <label class="checkbox-row"><input type="checkbox" name="requires_cold_chain" value="1"><span>Requiere cadena de frio</span></label>
+                    <label><span>Ubicacion</span><select name="location"><option selected>{{ inventory_form_defaults.location }}</option><option>Consultorio 1</option><option>Consultorio 2</option><option>Nevera A</option><option>Cirugia menor</option></select></label>
+                    <label><span>Vencimiento</span><input type="date" name="expiry_date" required></label>
+                    <button class="btn btn-primary btn-block" type="submit">Guardar producto</button>
+                </form>
+            </article>
+            <article class="panel-card">
+                <div class="section-heading"><p class="eyebrow">Movimiento</p><h3>Entrada o salida</h3></div>
+                <form action="/inventory/movements" method="post" class="inventory-form">
+                    <input type="hidden" name="organization_id" value="{{ scope.organization_id }}">
+                    <input type="hidden" name="location_id" value="{{ scope.location_id }}">
+                    <label><span>Producto</span><select name="item_id" required>{% for option in inventory_item_options %}<option value="{{ option.id }}">{{ option.label }}</option>{% endfor %}</select></label>
+                    <div class="form-grid">
+                        <label><span>Tipo</span><select name="movement_type"><option value="in">Entrada</option><option value="out">Salida</option></select></label>
+                        <label><span>Cantidad</span><input type="number" min="1" name="quantity" value="1" required></label>
+                    </div>
+                    <label><span>Nota</span><input type="text" name="note" placeholder="Compra, consumo, ajuste..." required></label>
+                    <button class="btn btn-primary btn-block" type="submit">Guardar movimiento</button>
+                </form>
+            </article>
+            {% endif %}
+            <article class="panel-card">
+                <div class="section-heading"><p class="eyebrow">Trazabilidad</p><h3>Movimientos recientes</h3></div>
+                <p class="muted-line">Preparado para flujos con codigo GS1 / GTIN y captura por escaneo en fases siguientes.</p>
+                <div class="movement-list">
+                    {% for movement in recent_movements %}
+                    <div class="movement-item">
+                        <div>
+                            <strong>{{ movement.item_name }}</strong>
+                            <p>{{ movement.site_name }} | {{ movement.storage_area }}</p>
+                            <p>Lote {{ movement.lot }} | {{ movement.note }}</p>
+                        </div>
+                        <div class="queue-meta">
+                            <span class="table-badge table-badge-{{ movement.tone }}">{{ movement.direction }} {{ movement.quantity }}</span>
+                            <span>{{ movement.created_at }}</span>
+                        </div>
+                    </div>
+                    {% else %}
+                    <p class="muted-line">Todavia no hay movimientos registrados.</p>
+                    {% endfor %}
+                </div>
+            </article>
+        </aside>
+    </div>
+</section>

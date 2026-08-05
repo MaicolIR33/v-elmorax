@@ -1,0 +1,272 @@
+{% extends "base.html" %}
+
+{% block title %}Velmorax | Admin{% endblock %}
+
+{% block content %}
+<section class="module-section">
+    <div class="section-heading">
+        <p class="eyebrow">Administracion</p>
+        <h2 class="page-title">Red, sedes, equipo y despliegue</h2>
+    </div>
+
+    {% if permission_error %}
+    <div class="flash-message flash-message-error">{{ permission_error }}</div>
+    {% endif %}
+    {% if organization_saved %}
+    <div class="flash-message">Organizacion creada correctamente.</div>
+    {% endif %}
+    {% if location_saved %}
+    <div class="flash-message">Sede creada correctamente.</div>
+    {% endif %}
+    {% if user_saved %}
+    <div class="flash-message">Usuario creado correctamente.</div>
+    {% endif %}
+    {% if organization_updated %}
+    <div class="flash-message">Organizacion actualizada correctamente.</div>
+    {% endif %}
+    {% if location_updated %}
+    <div class="flash-message">Sede actualizada correctamente.</div>
+    {% endif %}
+    {% if user_updated %}
+    <div class="flash-message">Usuario actualizado correctamente.</div>
+    {% endif %}
+    {% if catalog_imported %}
+    <div class="flash-message">Catalogo odontologico importado correctamente.</div>
+    {% endif %}
+    {% if catalog_synced %}
+    <div class="flash-message">Catalogo odontologico nacional sincronizado desde fuente oficial.</div>
+    {% endif %}
+    {% if catalog_veterinary_synced %}
+    <div class="flash-message">Catalogo veterinario nacional sincronizado desde fuente publica del ICA.</div>
+    {% endif %}
+    {% if settings_saved %}
+    <div class="flash-message">Configuracion general actualizada correctamente.</div>
+    {% endif %}
+    {% if catalog_error %}
+    <div class="flash-message flash-message-error">{{ catalog_error }}</div>
+    {% endif %}
+
+    <div class="inventory-metrics">
+        <div class="metric-chip">Base activa: {{ database_mode }}</div>
+        <div class="metric-chip">Organizaciones: {{ admin_organizations|length }}</div>
+        <div class="metric-chip">Sedes: {{ admin_locations|length }}</div>
+        <div class="metric-chip">Usuarios: {{ admin_users|length }}</div>
+    </div>
+
+    <div class="module-grid">
+        <article class="panel-card">
+            <div class="section-heading">
+                <p class="eyebrow">Escalabilidad</p>
+                <h3>Mejoras para una red real</h3>
+            </div>
+            <div class="movement-list">
+                {% for item in admin_highlights %}
+                <div class="movement-item">
+                    <div>
+                        <strong>{{ item }}</strong>
+                        <p>{{ database_url_masked }}</p>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <div class="section-heading">
+                <p class="eyebrow">Organizaciones</p>
+                <h3>Editar datos base</h3>
+            </div>
+            <div class="movement-list admin-edit-list">
+                {% for item in admin_organizations %}
+                <form action="/admin/organizations/{{ item.id }}" method="post" class="admin-inline-form">
+                    <input type="text" name="name" value="{{ item.name }}" required>
+                    <input type="text" name="country" value="{{ item.country }}" required>
+                    <input type="text" name="timezone" value="{{ item.timezone }}" required>
+                    <input type="email" name="contact_email" value="{{ item.contact_email }}" placeholder="Correo contacto">
+                    <input type="text" name="contact_phone" value="{{ item.contact_phone }}" placeholder="Telefono contacto">
+                    <button class="action-button" type="submit">Guardar</button>
+                </form>
+                {% endfor %}
+            </div>
+
+            <div class="section-heading">
+                <p class="eyebrow">Sedes</p>
+                <h3>Editar o desactivar</h3>
+            </div>
+            <div class="movement-list admin-edit-list">
+                {% for item in admin_locations %}
+                <div class="admin-edit-row">
+                    <form action="/admin/locations/{{ item.id }}" method="post" class="admin-inline-form">
+                        <select name="organization_id">
+                            {% for option in admin_organizations %}
+                            <option value="{{ option.id }}"{% if option.id == item.organization_id %} selected{% endif %}>{{ option.name }}</option>
+                            {% endfor %}
+                        </select>
+                        <input type="text" name="name" value="{{ item.name }}" required>
+                        <input type="text" name="city" value="{{ item.city }}" required>
+                        <input type="text" name="sector" value="{{ item.sector }}" placeholder="Sector o zona">
+                        <input type="text" name="address" value="{{ item.address }}" required>
+                        <input type="text" name="phone" value="{{ item.phone }}" placeholder="Telefono sede">
+                        <input type="text" name="opening_hours" value="{{ item.opening_hours }}" placeholder="Horario">
+                        <button class="action-button" type="submit">Guardar</button>
+                    </form>
+                    <form action="/admin/locations/{{ item.id }}/toggle" method="post" class="inline-form">
+                        <input type="hidden" name="is_active" value="{{ 1 if item.is_active else 0 }}">
+                        <input type="hidden" name="organization_id" value="{{ item.organization_id }}">
+                        <input type="hidden" name="name" value="{{ item.name }}">
+                        <button class="action-button {% if item.is_active %}action-danger{% endif %}" type="submit">
+                            {% if item.is_active %}Desactivar{% else %}Activar{% endif %}
+                        </button>
+                    </form>
+                </div>
+                {% endfor %}
+            </div>
+
+            <div class="section-heading">
+                <p class="eyebrow">Usuarios y roles</p>
+                <h3>Equipo configurado</h3>
+            </div>
+            <div class="movement-list admin-edit-list">
+                {% for item in admin_users %}
+                <div class="admin-edit-row">
+                    <form action="/admin/users/{{ item.id }}" method="post" class="admin-inline-form">
+                        <input type="text" name="full_name" value="{{ item.full_name }}" required>
+                        <input type="email" name="email" value="{{ item.email }}" required>
+                        <input type="password" name="password" placeholder="Nueva clave opcional">
+                        <select name="role">
+                            <option value="admin"{% if item.role == 'admin' %} selected{% endif %}>admin</option>
+                            <option value="clinical"{% if item.role == 'clinical' %} selected{% endif %}>clinical</option>
+                            <option value="inventory"{% if item.role == 'inventory' %} selected{% endif %}>inventory</option>
+                        </select>
+                        <input type="text" name="specialty" value="{{ item.specialty }}" placeholder="Especialidad">
+                        <select name="organization_id">
+                            {% for option in admin_organizations %}
+                            <option value="{{ option.id }}"{% if option.id == item.organization_id %} selected{% endif %}>{{ option.name }}</option>
+                            {% endfor %}
+                        </select>
+                        <select name="location_id">
+                            {% for option in admin_locations %}
+                            <option value="{{ option.id }}"{% if option.id == item.location_id %} selected{% endif %}>{{ option.organization_name }} | {{ option.name }}</option>
+                            {% endfor %}
+                        </select>
+                        <button class="action-button" type="submit">Guardar</button>
+                    </form>
+                    <form action="/admin/users/{{ item.id }}/toggle" method="post" class="inline-form">
+                        <input type="hidden" name="is_active" value="{{ 1 if item.is_active else 0 }}">
+                        <input type="hidden" name="organization_id" value="{{ item.organization_id }}">
+                        <input type="hidden" name="location_id" value="{{ item.location_id }}">
+                        <input type="hidden" name="full_name" value="{{ item.full_name }}">
+                        <button class="action-button {% if item.is_active %}action-danger{% endif %}" type="submit">
+                            {% if item.is_active %}Desactivar{% else %}Activar{% endif %}
+                        </button>
+                    </form>
+                </div>
+                {% endfor %}
+            </div>
+        </article>
+
+        <aside class="side-stack">
+            <article class="panel-card">
+                <div class="section-heading"><p class="eyebrow">Importacion masiva</p><h3>Cargar catalogo odontologico</h3></div>
+                <p class="muted-line">Usa un CSV con instituciones y sedes para poblar la red nacional sin editar codigo. La plantilla base esta en <a href="/static/templates/odontologia_catalogo_template.csv">odontologia_catalogo_template.csv</a>.</p>
+                <div class="inventory-metrics">
+                    <span class="metric-chip">Formato nacional</span>
+                    <span class="metric-chip">Actualiza por nombre</span>
+                    <span class="metric-chip">Activa o inactiva sedes</span>
+                </div>
+                <div class="daily-summary-actions">
+                    <a class="btn btn-secondary" href="/admin/auditoria/export">Exportar auditoria</a>
+                    <a class="btn btn-secondary" href="/admin/backup">Descargar respaldo</a>
+                </div>
+                <div class="compact-card">
+                    <p class="panel-label">Fuente sugerida</p>
+                    <p class="muted-line">Para cargar prestadores odontologicos reales de Colombia, puedes importar un CSV propio o sincronizar desde la fuente abierta nacional. Asi evitas mezclar sedes verificadas con datos inventados.</p>
+                </div>
+                <form action="/admin/catalogs/sync/national" method="post" class="inventory-form">
+                    <button class="btn btn-secondary btn-block" type="submit">Sincronizar red nacional completa</button>
+                </form>
+                <form action="/admin/catalogs/sync/odontology" method="post" class="inventory-form">
+                    <button class="btn btn-secondary btn-block" type="submit">Sincronizar odontologia nacional</button>
+                </form>
+                <form action="/admin/catalogs/sync/veterinary" method="post" class="inventory-form">
+                    <button class="btn btn-secondary btn-block" type="submit">Sincronizar veterinaria nacional</button>
+                </form>
+                <form action="/admin/catalogs/import/odontology" method="post" enctype="multipart/form-data" class="inventory-form">
+                    <label><span>Archivo CSV</span><input type="file" name="catalog_file" accept=".csv" required></label>
+                    <button class="btn btn-primary btn-block" type="submit">Importar catalogo</button>
+                </form>
+            </article>
+
+            <article class="panel-card">
+                <div class="section-heading"><p class="eyebrow">Nueva organizacion</p><h3>Agregar red</h3></div>
+                <form action="/admin/organizations" method="post" class="inventory-form">
+                    <label><span>Nombre</span><input type="text" name="name" required></label>
+                    <label><span>Pais</span><input type="text" name="country" value="Colombia" required></label>
+                    <label><span>Zona horaria</span><input type="text" name="timezone" value="America/Bogota" required></label>
+                    <label><span>Correo contacto</span><input type="email" name="contact_email"></label>
+                    <label><span>Telefono contacto</span><input type="text" name="contact_phone"></label>
+                    <button class="btn btn-primary btn-block" type="submit">Guardar organizacion</button>
+                </form>
+            </article>
+
+            <article class="panel-card">
+                <div class="section-heading"><p class="eyebrow">Nueva sede</p><h3>Agregar ubicacion</h3></div>
+                <form action="/admin/locations" method="post" class="inventory-form">
+                    <label><span>Organizacion</span><select name="organization_id">{% for option in admin_organizations %}<option value="{{ option.id }}">{{ option.name }}</option>{% endfor %}</select></label>
+                    <label><span>Nombre sede</span><input type="text" name="name" required></label>
+                    <label><span>Ciudad</span><input type="text" name="city" required></label>
+                    <label><span>Sector</span><input type="text" name="sector" placeholder="Zona o barrio"></label>
+                    <label><span>Direccion</span><input type="text" name="address" required></label>
+                    <label><span>Telefono</span><input type="text" name="phone"></label>
+                    <label><span>Horario</span><input type="text" name="opening_hours" placeholder="Lun-Vie 7:00-17:00"></label>
+                    <button class="btn btn-primary btn-block" type="submit">Guardar sede</button>
+                </form>
+            </article>
+
+            <article class="panel-card">
+                <div class="section-heading"><p class="eyebrow">Nuevo usuario</p><h3>Agregar acceso</h3></div>
+                <form action="/admin/users" method="post" class="inventory-form">
+                    <label><span>Nombre completo</span><input type="text" name="full_name" required></label>
+                    <label><span>Correo</span><input type="email" name="email" required></label>
+                    <label><span>Clave temporal</span><input type="password" name="password" required></label>
+                    <div class="form-grid">
+                        <label><span>Rol</span><select name="role"><option value="admin">admin</option><option value="clinical">clinical</option><option value="inventory">inventory</option></select></label>
+                        <label><span>Especialidad</span><input type="text" name="specialty" placeholder="Odontologia, Veterinaria..."></label>
+                    </div>
+                    <label><span>Organizacion</span><select name="organization_id">{% for option in admin_organizations %}<option value="{{ option.id }}">{{ option.name }}</option>{% endfor %}</select></label>
+                    <label><span>Sede</span><select name="location_id">{% for option in admin_locations %}<option value="{{ option.id }}">{{ option.organization_name }} | {{ option.name }}</option>{% endfor %}</select></label>
+                    <button class="btn btn-primary btn-block" type="submit">Crear usuario</button>
+                </form>
+            </article>
+
+            <article class="panel-card">
+                <div class="section-heading"><p class="eyebrow">Configuracion</p><h3>Seguridad y soporte</h3></div>
+                <form action="/admin/settings" method="post" class="inventory-form">
+                    <label><span>Correo soporte</span><input type="email" name="support_email" value="{{ app_settings.get('support_email', '') }}"></label>
+                    <label><span>Telefono soporte</span><input type="text" name="support_phone" value="{{ app_settings.get('support_phone', '') }}"></label>
+                    <label><span>Nota de seguridad</span><input type="text" name="security_note" value="{{ app_settings.get('security_note', '') }}"></label>
+                    <label><span>Nota de despliegue</span><input type="text" name="deployment_note" value="{{ app_settings.get('deployment_note', '') }}"></label>
+                    <button class="btn btn-primary btn-block" type="submit">Guardar configuracion</button>
+                </form>
+            </article>
+
+            <article class="panel-card">
+                <div class="section-heading"><p class="eyebrow">Auditoria</p><h3>Actividad reciente</h3></div>
+                <div class="movement-list">
+                    {% for item in audit_events %}
+                    <div class="movement-item">
+                        <div>
+                            <strong>{{ item.action }} | {{ item.entity_type }}</strong>
+                            <p>{{ item.entity_label }}</p>
+                            <p>{{ item.detail }}</p>
+                        </div>
+                        <div class="queue-meta">
+                            <span>{{ item.user_name }}</span>
+                            <span>{{ item.created_at }}</span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </article>
+        </aside>
+    </div>
+</section>
+{% endblock %}

@@ -1,0 +1,2085 @@
+import csv
+import json
+from io import StringIO
+from datetime import UTC, datetime, timedelta
+from pathlib import Path
+from urllib.parse import quote
+
+from fastapi import APIRouter, File, Form, Query, Request, UploadFile
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
+from fastapi.templating import Jinja2Templates
+
+from app.core.config import get_settings
+from app.core.database import get_database_dialect, get_database_url, sqlite_db_path
+from app.services.appointments import (
+    create_appointment,
+    delete_appointment,
+    update_appointment_status,
+)
+from app.services.auth import (
+    authenticate_user,
+    consume_password_reset_token,
+    create_user,
+    create_password_reset_token,
+    get_user_by_id,
+    login_lock_message,
+    list_users,
+    mark_password_change_completed,
+    register_failed_login,
+    requires_push_approval,
+    reset_failed_login,
+    role_label,
+    role_permissions,
+    set_user_active,
+    update_user,
+)
+from app.services.clinical import (
+    create_clinical_record,
+    create_patient,
+    delete_clinical_record,
+    delete_patient,
+    list_clinical_records,
+    update_clinical_record_status,
+)
+from app.services.dashboard import get_dashboard_context
+from app.services.inventory import (
+    create_inventory_item,
+    create_inventory_movement,
+    delete_inventory_item,
+    list_inventory_items,
+)
+from app.services.mailer import (
+    send_password_reset_email,
+    send_password_reset_sms,
+    smtp_is_configured,
+    sms_is_configured,
+)
+from app.services.network import (
+    create_location,
+    create_organization,
+    entry_flows,
+    get_app_settings,
+    get_location_by_id,
+    import_organization_location_catalog,
+    list_locations,
+    list_organizations,
+    log_audit_event,
+    module_path_for_intent,
+    search_location_candidates,
+    save_app_settings,
+    set_location_active,
+    list_recent_activity,
+    sync_official_national_catalog,
+    sync_official_odontology_catalog,
+    sync_official_veterinary_catalog,
+    update_location,
+    update_organization,
+)
+
+
+router = APIRouter()
+templates = Jinja2Templates(directory="app/templates")
+settings = get_settings()
+SESSION_IDLE_TIMEOUT = timedelta(minutes=settings.session_idle_timeout_minutes)
+SESSION_REMEMBER_TIMEOUT = timedelta(days=settings.session_remember_idle_days)
+
+
+def current_user_from_request(request: Request) -> dict | None:
+    last_seen_raw = request.session.get("last_seen_at")
+    if last_seen_raw:
+        try:
+            last_seen = datetime.fromisoformat(last_seen_raw)
+            if last_seen.tzinfo is None:
+                last_seen = last_seen.replace(tzinfo=UTC)
+            idle_timeout = SESSION_REMEMBER_TIMEOUT if request.session.get("remember_me") else SESSION_IDLE_TIMEOUT
+            if datetime.now(UTC) - last_seen > idle_timeout:
+                request.session.clear()
+                request.session["login_notice"] = "Tu sesion vencio por inactividad. Vuelve a ingresar."
+                request.session["login_notice_type"] = "error"
+                return None
+        except ValueError:
+            request.session.clear()
+            request.session["login_notice"] = "Tu sesion ya no es valida. Ingresa de nuevo."
+            request.session["login_notice_type"] = "error"
+            return None
+    user_id = request.session.get("user_id")
+    user = get_user_by_id(user_id)
+    if user:
+        request.session["last_seen_at"] = datetime.now(UTC).isoformat()
+    return user
+
+
+def redirect_to_login(intent: str = "") -> RedirectResponse:
+    suffix = f"?intent={intent}" if intent else ""
+    return RedirectResponse(url=f"/login{suffix}", status_code=303)
+
+
+def complete_login_session(
+    request: Request,
+    *,
+    user: dict,
+    selected_intent: str,
+    effective_organization_id: str,
+    effective_location_id: str,
+    remember_me: bool,
+) -> RedirectResponse:
+    request.session["user_id"] = user["id"]
+    request.session["entry_intent"] = selected_intent
+    request.session["preferred_organization_id"] = effective_organization_id
+    request.session["preferred_location_id"] = effective_location_id
+    request.session["last_seen_at"] = datetime.now(UTC).isoformat()
+    request.session["remember_me"] = remember_me
+
+    if user.get("must_change_password"):
+        token = create_password_reset_token(user["email"])
+        if token:
+            return RedirectResponse(
+                url=f"/password-reset/confirm?token={token}&success={encoded_message('Debes definir una nueva clave antes de continuar.')}",
+                status_code=303,
+            )
+
+    permissions = role_permissions(user["role"])
+    destination = module_path_for_intent(selected_intent, permissions)
+    scope_query = build_scope_query(
+        organization_id=effective_organization_id,
+        location_id=effective_location_id,
+    )
+    return RedirectResponse(
+        url=f"{destination}?{scope_query}" if scope_query else destination,
+        status_code=303,
+    )
+
+
+def redirect_to_module_with_error(path: str, message: str) -> RedirectResponse:
+    return RedirectResponse(url=f"{path}?permission_error={message}", status_code=303)
+
+
+def user_with_permissions(request: Request) -> dict | None:
+    user = current_user_from_request(request)
+    if user is None:
+        return None
+    return {**user, "permissions": role_permissions(user["role"])}
+
+
+def build_scope_query(organization_id: str = "", location_id: str = "", day: str = "") -> str:
+    parts: list[str] = []
+    if organization_id:
+        parts.append(f"organization_id={organization_id}")
+    if location_id:
+        parts.append(f"location_id={location_id}")
+    if day:
+        parts.append(f"day={day}")
+    return "&".join(parts)
+
+
+def encoded_message(value: str) -> str:
+    return quote(value, safe="")
+
+
+def context_for_authenticated_user(
+    request: Request,
+    *,
+    search: str = "",
+    category: str = "",
+    status: str = "",
+    day: str = "",
+    organization_id: str = "",
+    location_id: str = "",
+    active_path: str = "/",
+) -> tuple[dict, dict] | tuple[None, None]:
+    user = user_with_permissions(request)
+    if user is None:
+        return None, None
+
+    session_organization_id = request.session.get("preferred_organization_id", "")
+    session_location_id = request.session.get("preferred_location_id", "")
+    effective_organization_id = organization_id or session_organization_id
+    effective_location_id = location_id or session_location_id
+
+    context = get_dashboard_context(
+        search=search,
+        category=category,
+        status=status,
+        day=day,
+        organization_id=effective_organization_id,
+        location_id=effective_location_id,
+    )
+    request.session["preferred_organization_id"] = context["scope"]["organization_id"]
+    request.session["preferred_location_id"] = context["scope"]["location_id"]
+    context["request"] = request
+    context["current_user"] = {**user, "role_label": role_label(user["role"])}
+    context["permissions"] = user["permissions"]
+    context["active_path"] = active_path
+    context["scope_query"] = build_scope_query(
+        context["scope"]["organization_id"],
+        context["scope"]["location_id"],
+    )
+    return context, user
+
+
+def render_authenticated_page(
+    request: Request,
+    template_name: str,
+    *,
+    saved: int = 0,
+    moved: int = 0,
+    appointment_saved: int = 0,
+    patient_saved: int = 0,
+    record_saved: int = 0,
+    movement_error: str = "",
+    permission_error: str = "",
+    search: str = "",
+    category: str = "",
+    status: str = "",
+    day: str = "",
+    organization_id: str = "",
+    location_id: str = "",
+    active_path: str = "/",
+    extra_context: dict | None = None,
+):
+    context, _user = context_for_authenticated_user(
+        request,
+        search=search,
+        category=category,
+        status=status,
+        day=day,
+        organization_id=organization_id,
+        location_id=location_id,
+        active_path=active_path,
+    )
+    if context is None:
+        return None
+
+    context["saved"] = saved
+    context["moved"] = moved
+    context["appointment_saved"] = appointment_saved
+    context["patient_saved"] = patient_saved
+    context["record_saved"] = record_saved
+    context["movement_error"] = movement_error
+    context["permission_error"] = permission_error
+    if extra_context:
+        context.update(extra_context)
+    return templates.TemplateResponse(
+        request=request,
+        name=template_name,
+        context=context,
+    )
+
+
+def build_daily_summary_csv(context: dict) -> str:
+    output = StringIO()
+    writer = csv.writer(output)
+    summary = context["daily_financial_summary"]
+    scope = context["scope"]
+
+    writer.writerow(["Velmorax - Cierre diario"])
+    writer.writerow(["Fecha", summary["date"]])
+    writer.writerow(["Contexto", scope["scope_label"]])
+    writer.writerow([])
+    writer.writerow(["Resumen por especialidad"])
+    writer.writerow(["Especialidad", "Pacientes", "Pagaron", "Total recogido"])
+    for item in summary["specialties"]:
+        writer.writerow(
+            [
+                item["label"],
+                item["patients_total"],
+                item["paying_patients"],
+                f"{item['total_collected']:.0f}",
+            ]
+        )
+
+    writer.writerow([])
+    writer.writerow(
+        [
+            "Total general",
+            summary["patients_total"],
+            summary["paying_patients"],
+            f"{summary['total_collected']:.0f}",
+        ]
+    )
+
+    writer.writerow([])
+    writer.writerow(["Resumen por medio de pago"])
+    writer.writerow(["Medio", "Atenciones", "Total"])
+    for item in summary["by_payment_method"]:
+        writer.writerow([item["label"], item["count"], f"{item['total_collected']:.0f}"])
+
+    writer.writerow([])
+    writer.writerow(["Resumen por profesional"])
+    writer.writerow(["Profesional", "Atenciones", "Total"])
+    for item in summary["by_professional"]:
+        writer.writerow([item["label"], item["count"], f"{item['total_collected']:.0f}"])
+    writer.writerow([])
+    writer.writerow(["Detalle de atenciones del dia"])
+    writer.writerow(
+        [
+            "Fecha",
+            "Especialidad",
+            "Paciente",
+            "Motivo",
+            "Profesional",
+            "Estado",
+            "Pago",
+            "Medio de pago",
+            "Sede",
+        ]
+    )
+    for record in context["clinical_records"]:
+        if record["encounter_date"] != summary["date"]:
+            continue
+        writer.writerow(
+            [
+                record["encounter_date"],
+                record["specialty"],
+                record["display_name"],
+                record["reason"],
+                record["professional"],
+                record["status"],
+                f"{float(record['payment_amount'] or 0):.0f}",
+                record["payment_method"],
+                record["site_name"],
+            ]
+        )
+
+    return output.getvalue()
+
+
+def build_inventory_csv(items: list[dict]) -> str:
+    output = StringIO()
+    writer = csv.writer(output)
+    writer.writerow(
+        [
+            "Producto",
+            "Categoria",
+            "Marca",
+            "Proveedor",
+            "Registro",
+            "Lote",
+            "Cantidad",
+            "Stock minimo",
+            "Costo",
+            "Precio",
+            "Cadena de frio",
+            "Condicion",
+            "Area",
+            "Vencimiento",
+            "Sede",
+        ]
+    )
+    for item in items:
+        writer.writerow(
+            [
+                item["name"],
+                item["category"],
+                item["brand"],
+                item["supplier"],
+                item["regulatory_code"],
+                item["lot"],
+                item["quantity"],
+                item["min_stock"],
+                f"{item['unit_cost']:.2f}",
+                f"{item['sale_price']:.2f}",
+                "Si" if item["requires_cold_chain"] else "No",
+                item["storage_condition"],
+                item["location"],
+                item["expiry_date"],
+                item["site_name"],
+            ]
+        )
+    return output.getvalue()
+
+
+def build_activity_csv(items: list[dict]) -> str:
+    output = StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["Fecha", "Usuario", "Accion", "Entidad", "Etiqueta", "Detalle", "Organizacion", "Sede"])
+    for item in items:
+        writer.writerow(
+            [
+                item["created_at"],
+                item["user_name"],
+                item["action"],
+                item["entity_type"],
+                item["entity_label"],
+                item["detail"],
+                item["organization_name"],
+                item["location_name"],
+            ]
+        )
+    return output.getvalue()
+
+
+def build_backup_snapshot() -> bytes:
+    payload = {
+        "generated_at": datetime.now(UTC).isoformat(),
+        "database": get_database_dialect(),
+        "files": {},
+    }
+    data_dir = Path("data")
+    if data_dir.exists():
+        for path in sorted(data_dir.glob("*.db")):
+            payload["files"][path.name] = {"size": path.stat().st_size}
+    return json.dumps(payload, ensure_ascii=True, indent=2).encode("utf-8")
+
+
+@router.get("/login", response_class=HTMLResponse)
+async def login_page(
+    request: Request,
+    error: str = "",
+    success: str = "",
+    intent: str = Query(default=""),
+    organization_id: str = Query(default=""),
+    location_id: str = Query(default=""),
+) -> HTMLResponse:
+    user = current_user_from_request(request)
+    if user:
+        return RedirectResponse(url="/", status_code=303)
+
+    selected_intent = intent or request.session.get("entry_intent", "")
+    selected_organization_id = organization_id or request.session.get("preferred_organization_id", "")
+    selected_location_id = location_id or request.session.get("preferred_location_id", "")
+    if selected_intent:
+        request.session["entry_intent"] = selected_intent
+    if selected_organization_id:
+        request.session["preferred_organization_id"] = selected_organization_id
+    if selected_location_id:
+        request.session["preferred_location_id"] = selected_location_id
+
+    session_notice = request.session.pop("login_notice", "")
+    session_notice_type = request.session.pop("login_notice_type", "")
+    effective_error = error or (session_notice if session_notice_type == "error" else "")
+    effective_success = success or (session_notice if session_notice_type == "success" else "")
+    selected_location = get_location_by_id(selected_location_id) if selected_location_id else None
+
+    return templates.TemplateResponse(
+        request=request,
+        name="login.html",
+        context={
+            "request": request,
+            "error": effective_error,
+            "success": effective_success,
+            "selected_intent": selected_intent,
+            "selected_organization_id": selected_organization_id,
+            "selected_location_id": selected_location_id,
+            "selected_location": selected_location,
+            "show_demo_access": settings.show_demo_access,
+            "entry_flows": entry_flows(),
+            "demo_users": [
+                {"email": "admin@velmorax.local", "role": "Administrador"},
+                {"email": "clinica@velmorax.local", "role": "Equipo clinico"},
+                {"email": "inventario@velmorax.local", "role": "Inventario"},
+            ],
+        },
+)
+
+
+@router.get("/password-reset", response_class=HTMLResponse)
+async def password_reset_request_page(request: Request, error: str = "", success: str = "") -> HTMLResponse:
+    return templates.TemplateResponse(
+        request=request,
+        name="password_reset_request.html",
+        context={
+            "request": request,
+            "error": error,
+            "success": success,
+            "email_enabled": smtp_is_configured(),
+            "sms_enabled": sms_is_configured(),
+        },
+    )
+
+
+@router.post("/password-reset")
+async def password_reset_request_action(
+    request: Request,
+    email: str = Form(...),
+    method: str = Form("email"),
+    phone: str = Form(""),
+) -> RedirectResponse:
+    token = create_password_reset_token(email.strip())
+    if token is None:
+        return RedirectResponse(
+            url=f"/password-reset?success={encoded_message('Si el correo existe, se genero un enlace de recuperacion.')}",
+            status_code=303,
+        )
+
+    reset_url = f"{settings.public_base_url}/password-reset/confirm?token={token}"
+    local_path = reset_url.replace(settings.public_base_url, "")
+    smtp_ready = smtp_is_configured()
+    sms_ready = sms_is_configured()
+    if method == "local" and not smtp_ready:
+        log_audit_event(
+            user_id=None,
+            organization_id=None,
+            location_id=None,
+            action="Recuperacion",
+            entity_type="Credencial",
+            entity_label=email.strip().lower(),
+            detail="Token generado para cambio de clave mediante enlace local",
+        )
+        return RedirectResponse(
+            url=f"/password-reset?success={encoded_message(f'Enlace local generado: {local_path}')}",
+            status_code=303,
+        )
+    if method == "phone":
+        normalized_phone = phone.strip()
+        if not normalized_phone:
+            return RedirectResponse(
+                url=f"/password-reset?error={encoded_message('Debes escribir un telefono para enviar el enlace por SMS.')}",
+                status_code=303,
+            )
+        sms_sent = False
+        try:
+            sms_sent = send_password_reset_sms(phone_number=normalized_phone, reset_url=reset_url)
+        except Exception as exc:
+            log_audit_event(
+                user_id=None,
+                organization_id=None,
+                location_id=None,
+                action="Error",
+                entity_type="SMS",
+                entity_label=normalized_phone,
+                detail=f"Fallo envio reset SMS: {exc}",
+            )
+        log_audit_event(
+            user_id=None,
+            organization_id=None,
+            location_id=None,
+            action="Recuperacion",
+            entity_type="Credencial",
+            entity_label=email.strip().lower(),
+            detail=f"Token generado para cambio de clave por SMS. SMS enviado: {'si' if sms_sent else 'no'} | telefono: {normalized_phone}",
+        )
+        success_message = "Si la cuenta existe, enviaremos instrucciones al telefono registrado."
+        if not sms_ready or not sms_sent:
+            success_message = (
+                "Canal SMS no configurado por ahora. "
+                f"Usa este enlace local temporal: {local_path}"
+            )
+        return RedirectResponse(
+            url=f"/password-reset?success={encoded_message(success_message)}",
+            status_code=303,
+        )
+
+    email_sent = False
+    try:
+        email_sent = send_password_reset_email(to_email=email.strip(), reset_url=reset_url)
+    except Exception as exc:
+        log_audit_event(
+            user_id=None,
+            organization_id=None,
+            location_id=None,
+            action="Error",
+            entity_type="Correo",
+            entity_label=email.strip().lower(),
+            detail=f"Fallo envio reset: {exc}",
+        )
+    log_audit_event(
+        user_id=None,
+        organization_id=None,
+        location_id=None,
+        action="Recuperacion",
+        entity_type="Credencial",
+        entity_label=email.strip().lower(),
+        detail=f"Token generado para cambio de clave. Email enviado: {'si' if email_sent else 'no'}",
+    )
+    success_message = "Si el correo existe, enviamos instrucciones para restablecer la clave."
+    if not email_sent:
+        success_message = f"Correo no configurado. Usa este enlace local: {local_path}"
+    return RedirectResponse(
+        url=f"/password-reset?success={encoded_message(success_message)}",
+        status_code=303,
+    )
+
+
+@router.get("/password-reset/confirm", response_class=HTMLResponse)
+async def password_reset_confirm_page(
+    request: Request,
+    token: str = Query(default=""),
+    error: str = "",
+    success: str = "",
+) -> HTMLResponse:
+    return templates.TemplateResponse(
+        request=request,
+        name="password_reset_form.html",
+        context={
+            "request": request,
+            "error": error,
+            "success": success,
+            "token": token,
+        },
+    )
+
+
+@router.post("/password-reset/confirm")
+async def password_reset_confirm_action(
+    request: Request,
+    token: str = Form(...),
+    password: str = Form(...),
+    password_confirm: str = Form(...),
+) -> RedirectResponse:
+    if len(password) < 8:
+        return RedirectResponse(
+            url=f"/password-reset/confirm?token={token}&error={encoded_message('La clave debe tener al menos 8 caracteres.')}",
+            status_code=303,
+        )
+    if password != password_confirm:
+        return RedirectResponse(
+            url=f"/password-reset/confirm?token={token}&error={encoded_message('La confirmacion de clave no coincide.')}",
+            status_code=303,
+        )
+
+    user = consume_password_reset_token(token, password)
+    if user is None:
+        return RedirectResponse(
+            url=f"/password-reset/confirm?error={encoded_message('El enlace ya no es valido o ya fue usado.')}",
+            status_code=303,
+        )
+
+    mark_password_change_completed(user["id"])
+    log_audit_event(
+        user_id=user["id"],
+        organization_id=user["organization_id"],
+        location_id=user["location_id"],
+        action="Actualizacion",
+        entity_type="Credencial",
+        entity_label=user["email"],
+        detail="Clave actualizada por flujo de recuperacion",
+    )
+    return RedirectResponse(
+        url=f"/login?success={encoded_message('Clave actualizada. Ya puedes iniciar sesion.')}",
+        status_code=303,
+    )
+
+
+@router.get("/api/login/locations")
+async def login_location_search(
+    q: str = Query(default="", max_length=160),
+    limit: int = Query(default=12, ge=1, le=20),
+    intent: str = Query(default="", max_length=40),
+) -> JSONResponse:
+    results = search_location_candidates(q, limit=limit, intent=intent)
+    return JSONResponse({"results": results})
+
+
+@router.post("/login")
+async def login_action(
+    request: Request,
+    email: str = Form(...),
+    password: str = Form(...),
+    remember_me: str = Form("0"),
+    intent: str = Form(""),
+    organization_id: str = Form(""),
+    location_id: str = Form(""),
+) -> RedirectResponse:
+    selected_intent = intent or request.session.get("entry_intent", "")
+    if not selected_intent:
+        return RedirectResponse(
+            url="/login?error=Debes%20seleccionar%20un%20flujo%20clinico%20antes%20de%20iniciar%20sesion",
+            status_code=303,
+        )
+
+    user = authenticate_user(email=email, password=password)
+    if user is None:
+        register_failed_login(email)
+        message = login_lock_message(email) or "Credenciales invalidas. Usa la clave demo 'velmorax123'"
+        return RedirectResponse(
+            url=(
+                f"/login?intent={selected_intent}"
+                f"&error={encoded_message(message)}"
+            ),
+            status_code=303,
+        )
+
+    reset_failed_login(user["id"])
+    effective_organization_id = str(
+        organization_id
+        or request.session.get("preferred_organization_id", "")
+        or user.get("organization_id", "")
+        or ""
+    )
+    effective_location_id = str(
+        location_id
+        or request.session.get("preferred_location_id", "")
+        or user.get("location_id", "")
+        or ""
+    )
+    remember_me_value = remember_me in {"1", "true", "on", "yes"}
+
+    if requires_push_approval(user["role"]):
+        request.session["pending_login"] = {
+            "user_id": user["id"],
+            "entry_intent": selected_intent,
+            "organization_id": effective_organization_id,
+            "location_id": effective_location_id,
+            "remember_me": remember_me_value,
+            "requested_at": datetime.now(UTC).isoformat(),
+        }
+        request.session.pop("user_id", None)
+        return RedirectResponse(url="/login/push-approval", status_code=303)
+
+    return complete_login_session(
+        request,
+        user=user,
+        selected_intent=selected_intent,
+        effective_organization_id=effective_organization_id,
+        effective_location_id=effective_location_id,
+        remember_me=remember_me_value,
+    )
+
+
+@router.get("/login/push-approval", response_class=HTMLResponse)
+async def login_push_approval_page(request: Request, error: str = "") -> HTMLResponse:
+    pending_login = request.session.get("pending_login")
+    if not pending_login:
+        return RedirectResponse(url="/login", status_code=303)
+
+    user = get_user_by_id(pending_login.get("user_id"))
+    if user is None:
+        request.session.pop("pending_login", None)
+        return RedirectResponse(url="/login?error=Tu%20solicitud%20de%20verificacion%20ya%20no%20es%20valida", status_code=303)
+
+    return templates.TemplateResponse(
+        request=request,
+        name="push_approval.html",
+        context={
+            "request": request,
+            "error": error,
+            "user": user,
+            "intent": pending_login.get("entry_intent", ""),
+            "trusted_device_label": "Telefono confiable",
+        },
+    )
+
+
+@router.post("/login/push-approval")
+async def login_push_approval_action(request: Request, approve: str = Form("0")) -> RedirectResponse:
+    pending_login = request.session.get("pending_login")
+    if not pending_login:
+        return RedirectResponse(url="/login", status_code=303)
+
+    if approve not in {"1", "true", "yes", "on"}:
+        request.session.pop("pending_login", None)
+        request.session["login_notice"] = "Intento de ingreso rechazado desde la verificacion en dos pasos."
+        request.session["login_notice_type"] = "error"
+        return RedirectResponse(url="/login", status_code=303)
+
+    user = get_user_by_id(pending_login.get("user_id"))
+    if user is None:
+        request.session.pop("pending_login", None)
+        return RedirectResponse(url="/login?error=Tu%20verificacion%20ya%20no%20es%20valida", status_code=303)
+
+    request.session.pop("pending_login", None)
+    return complete_login_session(
+        request,
+        user=user,
+        selected_intent=pending_login.get("entry_intent", ""),
+        effective_organization_id=str(pending_login.get("organization_id", "")),
+        effective_location_id=str(pending_login.get("location_id", "")),
+        remember_me=bool(pending_login.get("remember_me")),
+    )
+
+
+@router.post("/logout")
+async def logout_action(request: Request) -> RedirectResponse:
+    request.session.clear()
+    request.session["login_notice"] = "Sesion cerrada correctamente."
+    request.session["login_notice_type"] = "success"
+    return RedirectResponse(url="/login", status_code=303)
+
+
+@router.get("/", response_class=HTMLResponse)
+async def home(
+    request: Request,
+    saved: int = 0,
+    moved: int = 0,
+    appointment_saved: int = 0,
+    patient_saved: int = 0,
+    record_saved: int = 0,
+    movement_error: str = "",
+    permission_error: str = "",
+    search: str = Query(default=""),
+    category: str = Query(default=""),
+    status: str = Query(default=""),
+    day: str = Query(default=""),
+    organization_id: str = Query(default=""),
+    location_id: str = Query(default=""),
+):
+    response = render_authenticated_page(
+        request,
+        "dashboard.html",
+        saved=saved,
+        moved=moved,
+        appointment_saved=appointment_saved,
+        patient_saved=patient_saved,
+        record_saved=record_saved,
+        movement_error=movement_error,
+        permission_error=permission_error,
+        search=search,
+        category=category,
+        status=status,
+        day=day,
+        organization_id=organization_id,
+        location_id=location_id,
+        active_path="/",
+    )
+    if response is None:
+        return redirect_to_login(request.session.get("entry_intent", ""))
+    return response
+
+
+@router.get("/agenda", response_class=HTMLResponse)
+async def agenda_page(
+    request: Request,
+    appointment_saved: int = 0,
+    permission_error: str = "",
+    day: str = Query(default=""),
+    organization_id: str = Query(default=""),
+    location_id: str = Query(default=""),
+):
+    response = render_authenticated_page(
+        request,
+        "agenda.html",
+        appointment_saved=appointment_saved,
+        permission_error=permission_error,
+        day=day,
+        organization_id=organization_id,
+        location_id=location_id,
+        active_path="/agenda",
+    )
+    if response is None:
+        return redirect_to_login(request.session.get("entry_intent", "agenda"))
+    return response
+
+
+@router.get("/inventario", response_class=HTMLResponse)
+async def inventory_page(
+    request: Request,
+    saved: int = 0,
+    moved: int = 0,
+    movement_error: str = "",
+    permission_error: str = "",
+    search: str = Query(default=""),
+    category: str = Query(default=""),
+    status: str = Query(default=""),
+    organization_id: str = Query(default=""),
+    location_id: str = Query(default=""),
+):
+    response = render_authenticated_page(
+        request,
+        "inventory.html",
+        saved=saved,
+        moved=moved,
+        movement_error=movement_error,
+        permission_error=permission_error,
+        search=search,
+        category=category,
+        status=status,
+        organization_id=organization_id,
+        location_id=location_id,
+        active_path="/inventario",
+    )
+    if response is None:
+        return redirect_to_login("inventario")
+    return response
+
+
+@router.get("/clinica", response_class=HTMLResponse)
+async def clinical_page(
+    request: Request,
+    patient_saved: int = 0,
+    record_saved: int = 0,
+    permission_error: str = "",
+    day: str = Query(default=""),
+    organization_id: str = Query(default=""),
+    location_id: str = Query(default=""),
+):
+    response = render_authenticated_page(
+        request,
+        "clinical.html",
+        patient_saved=patient_saved,
+        record_saved=record_saved,
+        permission_error=permission_error,
+        day=day,
+        organization_id=organization_id,
+        location_id=location_id,
+        active_path="/clinica",
+    )
+    if response is None:
+        return redirect_to_login(request.session.get("entry_intent", "odontologia"))
+    return response
+
+
+@router.get("/clinica/cierre-diario/export")
+async def export_daily_closure(
+    request: Request,
+    day: str = Query(default=""),
+    organization_id: str = Query(default=""),
+    location_id: str = Query(default=""),
+):
+    context, user = context_for_authenticated_user(
+        request,
+        day=day,
+        organization_id=organization_id,
+        location_id=location_id,
+        active_path="/clinica",
+    )
+    if context is None or user is None:
+        return redirect_to_login(request.session.get("entry_intent", "odontologia"))
+    if not user["permissions"]["view_clinical"]:
+        return redirect_to_module_with_error("/clinica", "Tu rol no puede exportar el cierre diario.")
+
+    csv_content = build_daily_summary_csv(context)
+    filename = f"velmorax-cierre-diario-{context['daily_financial_summary']['date']}.csv"
+    return Response(
+        content=csv_content,
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@router.get("/clinica/cierre-diario/imprimir", response_class=HTMLResponse)
+async def print_daily_closure(
+    request: Request,
+    day: str = Query(default=""),
+    organization_id: str = Query(default=""),
+    location_id: str = Query(default=""),
+):
+    context, user = context_for_authenticated_user(
+        request,
+        day=day,
+        organization_id=organization_id,
+        location_id=location_id,
+        active_path="/clinica",
+    )
+    if context is None or user is None:
+        return redirect_to_login(request.session.get("entry_intent", "odontologia"))
+    if not user["permissions"]["view_clinical"]:
+        return redirect_to_module_with_error("/clinica", "Tu rol no puede imprimir el cierre diario.")
+
+    context["daily_records_for_print"] = [
+        item
+        for item in context["clinical_records"]
+        if item["encounter_date"] == context["daily_financial_summary"]["date"]
+    ]
+    return templates.TemplateResponse(
+        request=request,
+        name="daily_summary_print.html",
+        context=context,
+    )
+
+
+@router.get("/admin", response_class=HTMLResponse)
+async def admin_page(
+    request: Request,
+    permission_error: str = "",
+    organization_saved: int = 0,
+    location_saved: int = 0,
+    user_saved: int = 0,
+    organization_updated: int = 0,
+    location_updated: int = 0,
+    user_updated: int = 0,
+    catalog_imported: int = 0,
+    catalog_synced: int = 0,
+    catalog_veterinary_synced: int = 0,
+    settings_saved: int = 0,
+    catalog_error: str = "",
+    organization_id: str = Query(default=""),
+    location_id: str = Query(default=""),
+):
+    context, user = context_for_authenticated_user(
+        request,
+        organization_id=organization_id,
+        location_id=location_id,
+        active_path="/admin",
+    )
+    if context is None:
+        return redirect_to_login("general")
+    if not user["permissions"]["manage_admin"]:
+        return redirect_to_module_with_error("/", "Tu rol no puede administrar la red.")
+
+    context.update(
+        {
+            "permission_error": permission_error,
+            "organization_saved": organization_saved,
+            "location_saved": location_saved,
+            "user_saved": user_saved,
+            "organization_updated": organization_updated,
+            "location_updated": location_updated,
+            "user_updated": user_updated,
+            "catalog_imported": catalog_imported,
+            "catalog_synced": catalog_synced,
+            "catalog_veterinary_synced": catalog_veterinary_synced,
+            "settings_saved": settings_saved,
+            "catalog_error": catalog_error,
+            "admin_users": list_users(),
+            "admin_organizations": list_organizations(),
+            "admin_locations": list_locations(include_inactive=True),
+            "app_settings": get_app_settings(),
+            "audit_events": list_recent_activity(limit=24),
+            "database_mode": get_database_dialect(),
+            "database_url_masked": get_database_url().split("@")[-1] if "@" in get_database_url() else get_database_url(),
+            "entry_flows": entry_flows(),
+            "admin_highlights": [
+                "Bloqueo por intentos fallidos, cambio forzado de clave temporal y recuperacion por token.",
+                "RBAC por rol y sede disminuye errores de acceso y privilegios excesivos.",
+                "La app soporta SQLite y PostgreSQL por DATABASE_URL, con auditoria y exportaciones operativas.",
+            ],
+        }
+    )
+    return templates.TemplateResponse(request=request, name="admin.html", context=context)
+
+
+@router.post("/admin/settings")
+async def update_admin_settings(
+    request: Request,
+    support_email: str = Form(""),
+    support_phone: str = Form(""),
+    security_note: str = Form(""),
+    deployment_note: str = Form(""),
+) -> RedirectResponse:
+    user = user_with_permissions(request)
+    if user is None:
+        return redirect_to_login()
+    if not user["permissions"]["manage_admin"]:
+        return redirect_to_module_with_error("/", "Tu rol no puede actualizar ajustes.")
+
+    save_app_settings(
+        {
+            "support_email": support_email,
+            "support_phone": support_phone,
+            "security_note": security_note,
+            "deployment_note": deployment_note,
+        }
+    )
+    log_audit_event(
+        user_id=user["id"],
+        organization_id=None,
+        location_id=None,
+        action="Actualizacion",
+        entity_type="Configuracion",
+        entity_label="Ajustes globales",
+        detail="Se actualizaron datos de soporte, seguridad y despliegue",
+    )
+    return RedirectResponse(url="/admin?settings_saved=1", status_code=303)
+
+
+@router.get("/admin/auditoria/export")
+async def export_audit_activity(request: Request):
+    user = user_with_permissions(request)
+    if user is None:
+        return redirect_to_login()
+    if not user["permissions"]["manage_admin"]:
+        return redirect_to_module_with_error("/", "Tu rol no puede exportar auditoria.")
+    csv_content = build_activity_csv(list_recent_activity(limit=500))
+    return Response(
+        content=csv_content,
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": 'attachment; filename="velmorax-auditoria.csv"'},
+    )
+
+
+@router.get("/admin/backup")
+async def export_backup_snapshot(request: Request):
+    user = user_with_permissions(request)
+    if user is None:
+        return redirect_to_login()
+    if not user["permissions"]["manage_admin"]:
+        return redirect_to_module_with_error("/", "Tu rol no puede descargar respaldos.")
+
+    if get_database_dialect() == "sqlite":
+        db_path = sqlite_db_path()
+        if db_path.exists():
+            return Response(
+                content=db_path.read_bytes(),
+                media_type="application/octet-stream",
+                headers={"Content-Disposition": f'attachment; filename="{db_path.name}"'},
+            )
+
+    return Response(
+        content=build_backup_snapshot(),
+        media_type="application/json; charset=utf-8",
+        headers={"Content-Disposition": 'attachment; filename="velmorax-backup.json"'},
+    )
+
+
+@router.post("/admin/catalogs/import/odontology")
+async def import_odontology_catalog(
+    request: Request,
+    catalog_file: UploadFile = File(...),
+) -> RedirectResponse:
+    user = user_with_permissions(request)
+    if user is None:
+        return redirect_to_login()
+    if not user["permissions"]["manage_admin"]:
+        return redirect_to_module_with_error("/", "Tu rol no puede importar catalogos.")
+
+    try:
+        payload = await catalog_file.read()
+        summary = import_organization_location_catalog(payload)
+    except ValueError as exc:
+        return RedirectResponse(
+            url=f"/admin?catalog_error={str(exc).replace(' ', '%20')}",
+            status_code=303,
+        )
+
+    detail = (
+        f"Organizaciones nuevas {summary['organizations_created']}, "
+        f"organizaciones actualizadas {summary['organizations_updated']}, "
+        f"sedes nuevas {summary['locations_created']}, "
+        f"sedes actualizadas {summary['locations_updated']}"
+    )
+    log_audit_event(
+        user_id=user["id"],
+        organization_id=None,
+        location_id=None,
+        action="Importacion",
+        entity_type="Catalogo odontologico",
+        entity_label=catalog_file.filename or "catalogo.csv",
+        detail=detail,
+    )
+    return RedirectResponse(url="/admin?catalog_imported=1", status_code=303)
+
+
+@router.post("/admin/catalogs/sync/odontology")
+async def sync_odontology_catalog_from_official_source(request: Request) -> RedirectResponse:
+    user = user_with_permissions(request)
+    if user is None:
+        return redirect_to_login()
+    if not user["permissions"]["manage_admin"]:
+        return redirect_to_module_with_error("/", "Tu rol no puede sincronizar catalogos.")
+
+    try:
+        summary = sync_official_odontology_catalog()
+    except Exception as exc:
+        return RedirectResponse(
+            url=f"/admin?catalog_error={str(exc).replace(' ', '%20')}",
+            status_code=303,
+        )
+
+    detail = (
+        f"Fuente oficial sincronizada. Filas procesadas {summary['rows_processed']}, "
+        f"organizaciones nuevas {summary['organizations_created']}, "
+        f"organizaciones actualizadas {summary['organizations_updated']}, "
+        f"sedes nuevas {summary['locations_created']}, "
+        f"sedes actualizadas {summary['locations_updated']}"
+    )
+    log_audit_event(
+        user_id=user["id"],
+        organization_id=None,
+        location_id=None,
+        action="Sincronizacion",
+        entity_type="Catalogo odontologico oficial",
+        entity_label="REPS / datos.gov.co",
+        detail=detail,
+    )
+    return RedirectResponse(url="/admin?catalog_synced=1", status_code=303)
+
+
+@router.post("/admin/catalogs/sync/national")
+async def sync_national_catalog_from_official_source(request: Request) -> RedirectResponse:
+    user = user_with_permissions(request)
+    if user is None:
+        return redirect_to_login()
+    if not user["permissions"]["manage_admin"]:
+        return redirect_to_module_with_error("/", "Tu rol no puede sincronizar catalogos.")
+
+    try:
+        summary = sync_official_national_catalog()
+    except Exception as exc:
+        return RedirectResponse(
+            url=f"/admin?catalog_error={str(exc).replace(' ', '%20')}",
+            status_code=303,
+        )
+
+    detail = (
+        f"Fuente oficial nacional sincronizada. Filas procesadas {summary['rows_processed']}, "
+        f"organizaciones nuevas {summary['organizations_created']}, "
+        f"organizaciones actualizadas {summary['organizations_updated']}, "
+        f"sedes nuevas {summary['locations_created']}, "
+        f"sedes actualizadas {summary['locations_updated']}"
+    )
+    log_audit_event(
+        user_id=user["id"],
+        organization_id=None,
+        location_id=None,
+        action="Sincronizacion",
+        entity_type="Catalogo nacional oficial",
+        entity_label="REPS / datos.gov.co",
+        detail=detail,
+    )
+    return RedirectResponse(url="/admin?catalog_synced=1", status_code=303)
+
+
+@router.post("/admin/catalogs/sync/veterinary")
+async def sync_veterinary_catalog_from_official_source(request: Request) -> RedirectResponse:
+    user = user_with_permissions(request)
+    if user is None:
+        return redirect_to_login()
+    if not user["permissions"]["manage_admin"]:
+        return redirect_to_module_with_error("/", "Tu rol no puede sincronizar catalogos.")
+
+    try:
+        summary = sync_official_veterinary_catalog()
+    except Exception as exc:
+        return RedirectResponse(
+            url=f"/admin?catalog_error={str(exc).replace(' ', '%20')}",
+            status_code=303,
+        )
+
+    detail = (
+        f"Fuente oficial veterinaria sincronizada. Filas procesadas {summary['rows_processed']}, "
+        f"organizaciones nuevas {summary['organizations_created']}, "
+        f"organizaciones actualizadas {summary['organizations_updated']}, "
+        f"sedes nuevas {summary['locations_created']}, "
+        f"sedes actualizadas {summary['locations_updated']}"
+    )
+    log_audit_event(
+        user_id=user["id"],
+        organization_id=None,
+        location_id=None,
+        action="Sincronizacion",
+        entity_type="Catalogo veterinario oficial",
+        entity_label="ICA",
+        detail=detail,
+    )
+    return RedirectResponse(url="/admin?catalog_veterinary_synced=1", status_code=303)
+
+
+@router.post("/admin/organizations")
+async def create_new_organization(
+    request: Request,
+    name: str = Form(...),
+    country: str = Form(...),
+    timezone: str = Form(...),
+    contact_email: str = Form(""),
+    contact_phone: str = Form(""),
+) -> RedirectResponse:
+    user = user_with_permissions(request)
+    if user is None:
+        return redirect_to_login()
+    if not user["permissions"]["manage_admin"]:
+        return redirect_to_module_with_error("/", "Tu rol no puede crear organizaciones.")
+
+    create_organization(
+        {
+            "name": name.strip(),
+            "country": country.strip(),
+            "timezone": timezone.strip(),
+            "contact_email": contact_email.strip(),
+            "contact_phone": contact_phone.strip(),
+        }
+    )
+    log_audit_event(
+        user_id=user["id"],
+        organization_id=None,
+        location_id=None,
+        action="Creacion",
+        entity_type="Organizacion",
+        entity_label=name.strip(),
+        detail=f"{country.strip()} | {timezone.strip()} | {contact_email.strip()}",
+    )
+    return RedirectResponse(url="/admin?organization_saved=1", status_code=303)
+
+
+@router.post("/admin/organizations/{organization_id}")
+async def update_existing_organization(
+    request: Request,
+    organization_id: int,
+    name: str = Form(...),
+    country: str = Form(...),
+    timezone: str = Form(...),
+    contact_email: str = Form(""),
+    contact_phone: str = Form(""),
+) -> RedirectResponse:
+    user = user_with_permissions(request)
+    if user is None:
+        return redirect_to_login()
+    if not user["permissions"]["manage_admin"]:
+        return redirect_to_module_with_error("/", "Tu rol no puede editar organizaciones.")
+
+    update_organization(
+        organization_id,
+        {
+            "name": name.strip(),
+            "country": country.strip(),
+            "timezone": timezone.strip(),
+            "contact_email": contact_email.strip(),
+            "contact_phone": contact_phone.strip(),
+        },
+    )
+    log_audit_event(
+        user_id=user["id"],
+        organization_id=organization_id,
+        location_id=None,
+        action="Actualizacion",
+        entity_type="Organizacion",
+        entity_label=name.strip(),
+        detail=f"{country.strip()} | {timezone.strip()} | {contact_email.strip()}",
+    )
+    return RedirectResponse(url="/admin?organization_updated=1", status_code=303)
+
+
+@router.post("/admin/locations")
+async def create_new_location(
+    request: Request,
+    organization_id: int = Form(...),
+    name: str = Form(...),
+    city: str = Form(...),
+    address: str = Form(...),
+    sector: str = Form(""),
+    phone: str = Form(""),
+    opening_hours: str = Form(""),
+) -> RedirectResponse:
+    user = user_with_permissions(request)
+    if user is None:
+        return redirect_to_login()
+    if not user["permissions"]["manage_admin"]:
+        return redirect_to_module_with_error("/", "Tu rol no puede crear sedes.")
+
+    create_location(
+        {
+            "organization_id": organization_id,
+            "name": name.strip(),
+            "city": city.strip(),
+            "address": address.strip(),
+            "sector": sector.strip(),
+            "phone": phone.strip(),
+            "opening_hours": opening_hours.strip(),
+        }
+    )
+    log_audit_event(
+        user_id=user["id"],
+        organization_id=organization_id,
+        location_id=None,
+        action="Creacion",
+        entity_type="Sede",
+        entity_label=name.strip(),
+        detail=f"{city.strip()} | {sector.strip()} | {address.strip()}",
+    )
+    return RedirectResponse(url="/admin?location_saved=1", status_code=303)
+
+
+@router.post("/admin/locations/{location_id}")
+async def update_existing_location(
+    request: Request,
+    location_id: int,
+    organization_id: int = Form(...),
+    name: str = Form(...),
+    city: str = Form(...),
+    address: str = Form(...),
+    sector: str = Form(""),
+    phone: str = Form(""),
+    opening_hours: str = Form(""),
+) -> RedirectResponse:
+    user = user_with_permissions(request)
+    if user is None:
+        return redirect_to_login()
+    if not user["permissions"]["manage_admin"]:
+        return redirect_to_module_with_error("/", "Tu rol no puede editar sedes.")
+
+    update_location(
+        location_id,
+        {
+            "organization_id": organization_id,
+            "name": name.strip(),
+            "city": city.strip(),
+            "address": address.strip(),
+            "sector": sector.strip(),
+            "phone": phone.strip(),
+            "opening_hours": opening_hours.strip(),
+        },
+    )
+    log_audit_event(
+        user_id=user["id"],
+        organization_id=organization_id,
+        location_id=location_id,
+        action="Actualizacion",
+        entity_type="Sede",
+        entity_label=name.strip(),
+        detail=f"{city.strip()} | {sector.strip()} | {address.strip()}",
+    )
+    return RedirectResponse(url="/admin?location_updated=1", status_code=303)
+
+
+@router.post("/admin/locations/{location_id}/toggle")
+async def toggle_location(
+    request: Request,
+    location_id: int,
+    is_active: int = Form(...),
+    organization_id: int = Form(0),
+    name: str = Form(""),
+) -> RedirectResponse:
+    user = user_with_permissions(request)
+    if user is None:
+        return redirect_to_login()
+    if not user["permissions"]["manage_admin"]:
+        return redirect_to_module_with_error("/", "Tu rol no puede desactivar sedes.")
+
+    next_state = not bool(is_active)
+    set_location_active(location_id, next_state)
+    log_audit_event(
+        user_id=user["id"],
+        organization_id=organization_id or None,
+        location_id=location_id,
+        action="Actualizacion",
+        entity_type="Sede",
+        entity_label=name or f"Sede #{location_id}",
+        detail="Activada" if next_state else "Desactivada",
+    )
+    return RedirectResponse(url="/admin?location_updated=1", status_code=303)
+
+
+@router.post("/admin/users")
+async def create_new_user(
+    request: Request,
+    full_name: str = Form(...),
+    email: str = Form(...),
+    password: str = Form(...),
+    role: str = Form(...),
+    organization_id: int = Form(...),
+    location_id: int = Form(...),
+    specialty: str = Form(""),
+) -> RedirectResponse:
+    user = user_with_permissions(request)
+    if user is None:
+        return redirect_to_login()
+    if not user["permissions"]["manage_admin"]:
+        return redirect_to_module_with_error("/", "Tu rol no puede crear usuarios.")
+
+    create_user(
+        {
+            "full_name": full_name.strip(),
+            "email": email.strip().lower(),
+            "password": password,
+            "role": role.strip(),
+            "organization_id": organization_id,
+            "location_id": location_id,
+            "specialty": specialty.strip(),
+        }
+    )
+    log_audit_event(
+        user_id=user["id"],
+        organization_id=organization_id,
+        location_id=location_id,
+        action="Creacion",
+        entity_type="Usuario",
+        entity_label=full_name.strip(),
+        detail=f"{role.strip()} | {specialty.strip()}",
+    )
+    return RedirectResponse(url="/admin?user_saved=1", status_code=303)
+
+
+@router.post("/admin/users/{user_id}")
+async def update_existing_user(
+    request: Request,
+    user_id: int,
+    full_name: str = Form(...),
+    email: str = Form(...),
+    password: str = Form(""),
+    role: str = Form(...),
+    organization_id: int = Form(...),
+    location_id: int = Form(...),
+    specialty: str = Form(""),
+) -> RedirectResponse:
+    user = user_with_permissions(request)
+    if user is None:
+        return redirect_to_login()
+    if not user["permissions"]["manage_admin"]:
+        return redirect_to_module_with_error("/", "Tu rol no puede editar usuarios.")
+
+    update_user(
+        user_id,
+        {
+            "full_name": full_name.strip(),
+            "email": email.strip().lower(),
+            "password": password,
+            "role": role.strip(),
+            "organization_id": organization_id,
+            "location_id": location_id,
+            "specialty": specialty.strip(),
+        },
+    )
+    log_audit_event(
+        user_id=user["id"],
+        organization_id=organization_id,
+        location_id=location_id,
+        action="Actualizacion",
+        entity_type="Usuario",
+        entity_label=full_name.strip(),
+        detail=f"{role.strip()} | {specialty.strip()}" + (" | clave reiniciada" if password.strip() else ""),
+    )
+    return RedirectResponse(url="/admin?user_updated=1", status_code=303)
+
+
+@router.post("/admin/users/{user_id}/toggle")
+async def toggle_user(
+    request: Request,
+    user_id: int,
+    is_active: int = Form(...),
+    organization_id: int = Form(0),
+    location_id: int = Form(0),
+    full_name: str = Form(""),
+) -> RedirectResponse:
+    user = user_with_permissions(request)
+    if user is None:
+        return redirect_to_login()
+    if not user["permissions"]["manage_admin"]:
+        return redirect_to_module_with_error("/", "Tu rol no puede activar o desactivar usuarios.")
+
+    next_state = not bool(is_active)
+    set_user_active(user_id, next_state)
+    log_audit_event(
+        user_id=user["id"],
+        organization_id=organization_id or None,
+        location_id=location_id or None,
+        action="Actualizacion",
+        entity_type="Usuario",
+        entity_label=full_name or f"Usuario #{user_id}",
+        detail="Activado" if next_state else "Desactivado",
+    )
+    return RedirectResponse(url="/admin?user_updated=1", status_code=303)
+
+
+@router.post("/inventory")
+async def create_inventory(
+    request: Request,
+    organization_id: int = Form(...),
+    location_id: int = Form(...),
+    name: str = Form(...),
+    barcode: str = Form(""),
+    category: str = Form(...),
+    brand: str = Form(...),
+    regulatory_agency: str = Form(...),
+    regulatory_code: str = Form(...),
+    supplier: str = Form(""),
+    lot: str = Form(...),
+    quantity: int = Form(...),
+    min_stock: int = Form(...),
+    unit_cost: float = Form(0),
+    sale_price: float = Form(0),
+    storage_condition: str = Form(""),
+    requires_cold_chain: int = Form(0),
+    location: str = Form(...),
+    last_counted_at: str = Form(""),
+    expiry_date: str = Form(...),
+) -> RedirectResponse:
+    user = user_with_permissions(request)
+    if user is None:
+        return redirect_to_login()
+    if not user["permissions"]["manage_inventory"]:
+        return redirect_to_module_with_error("/inventario", "Tu rol no puede registrar productos.")
+
+    create_inventory_item(
+        {
+            "organization_id": organization_id,
+            "location_id": location_id,
+            "name": name.strip(),
+            "barcode": barcode.strip(),
+            "category": category.strip(),
+            "brand": brand.strip(),
+            "regulatory_agency": regulatory_agency.strip(),
+            "regulatory_code": regulatory_code.strip(),
+            "supplier": supplier.strip(),
+            "lot": lot.strip(),
+            "quantity": quantity,
+            "min_stock": min_stock,
+            "unit_cost": unit_cost,
+            "sale_price": sale_price,
+            "storage_condition": storage_condition.strip(),
+            "requires_cold_chain": requires_cold_chain,
+            "location": location.strip(),
+            "last_counted_at": last_counted_at,
+            "expiry_date": expiry_date,
+        }
+    )
+    log_audit_event(
+        user_id=user["id"],
+        organization_id=organization_id,
+        location_id=location_id,
+        action="Creacion",
+        entity_type="Inventario",
+        entity_label=name.strip(),
+        detail=f"Lote {lot.strip()} | proveedor {supplier.strip() or 'sin proveedor'} | stock inicial {quantity}",
+    )
+    suffix = build_scope_query(str(organization_id), str(location_id))
+    return RedirectResponse(url=f"/inventario?saved=1&{suffix}", status_code=303)
+
+
+@router.get("/inventario/export")
+async def export_inventory(
+    request: Request,
+    search: str = Query(default=""),
+    category: str = Query(default=""),
+    status: str = Query(default=""),
+    organization_id: str = Query(default=""),
+    location_id: str = Query(default=""),
+):
+    user = user_with_permissions(request)
+    if user is None:
+        return redirect_to_login()
+    if not user["permissions"]["view_inventory"]:
+        return redirect_to_module_with_error("/inventario", "Tu rol no puede exportar inventario.")
+    items = list_inventory_items(
+        search=search,
+        category=category,
+        status=status,
+        organization_id=organization_id or request.session.get("preferred_organization_id", ""),
+        location_id=location_id or request.session.get("preferred_location_id", ""),
+    )
+    return Response(
+        content=build_inventory_csv(items),
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": 'attachment; filename="velmorax-inventario.csv"'},
+    )
+
+
+@router.post("/inventory/{item_id}/delete")
+async def delete_inventory(
+    request: Request,
+    item_id: int,
+    organization_id: int = Form(0),
+    location_id: int = Form(0),
+) -> RedirectResponse:
+    user = user_with_permissions(request)
+    if user is None:
+        return redirect_to_login()
+    if not user["permissions"]["manage_inventory"]:
+        return redirect_to_module_with_error("/inventario", "Tu rol no puede eliminar productos.")
+
+    delete_inventory_item(item_id)
+    log_audit_event(
+        user_id=user["id"],
+        organization_id=organization_id or None,
+        location_id=location_id or None,
+        action="Eliminacion",
+        entity_type="Inventario",
+        entity_label=f"Item #{item_id}",
+        detail="Producto eliminado desde tablero web",
+    )
+    suffix = build_scope_query(str(organization_id or ""), str(location_id or ""))
+    return RedirectResponse(url=f"/inventario?{suffix}" if suffix else "/inventario", status_code=303)
+
+
+@router.post("/inventory/movements")
+async def create_movement(
+    request: Request,
+    item_id: int = Form(...),
+    movement_type: str = Form(...),
+    quantity: int = Form(...),
+    note: str = Form(...),
+    organization_id: int = Form(0),
+    location_id: int = Form(0),
+) -> RedirectResponse:
+    user = user_with_permissions(request)
+    if user is None:
+        return redirect_to_login()
+    if not user["permissions"]["manage_inventory"]:
+        return redirect_to_module_with_error("/inventario", "Tu rol no puede registrar movimientos.")
+
+    ok, message = create_inventory_movement(
+        item_id=item_id,
+        movement_type=movement_type.strip(),
+        quantity=quantity,
+        note=note,
+        user_id=user["id"],
+    )
+    suffix = build_scope_query(str(organization_id or ""), str(location_id or ""))
+    if ok:
+        log_audit_event(
+            user_id=user["id"],
+            organization_id=organization_id or None,
+            location_id=location_id or None,
+            action="Movimiento",
+            entity_type="Inventario",
+            entity_label=f"Item #{item_id}",
+            detail=f"{movement_type.strip()} x{quantity} | {note.strip()}",
+        )
+        return RedirectResponse(
+            url=f"/inventario?moved=1&{suffix}" if suffix else "/inventario?moved=1",
+            status_code=303,
+        )
+
+    return RedirectResponse(
+        url=f"/inventario?movement_error={message}&{suffix}" if suffix else f"/inventario?movement_error={message}",
+        status_code=303,
+    )
+
+
+@router.post("/appointments")
+async def create_new_appointment(
+    request: Request,
+    organization_id: int = Form(...),
+    location_id: int = Form(...),
+    appointment_date: str = Form(...),
+    appointment_time: str = Form(...),
+    patient_name: str = Form(...),
+    service: str = Form(...),
+    channel: str = Form(...),
+    status: str = Form(...),
+    specialty: str = Form(...),
+    note: str = Form(...),
+) -> RedirectResponse:
+    user = user_with_permissions(request)
+    if user is None:
+        return redirect_to_login()
+    if not user["permissions"]["manage_agenda"]:
+        return redirect_to_module_with_error("/agenda", "Tu rol no puede registrar citas.")
+
+    create_appointment(
+        {
+            "organization_id": organization_id,
+            "location_id": location_id,
+            "appointment_date": appointment_date,
+            "appointment_time": appointment_time,
+            "patient_name": patient_name.strip(),
+            "service": service.strip(),
+            "channel": channel.strip(),
+            "status": status.strip(),
+            "specialty": specialty.strip(),
+            "note": note.strip(),
+        }
+    )
+    log_audit_event(
+        user_id=user["id"],
+        organization_id=organization_id,
+        location_id=location_id,
+        action="Creacion",
+        entity_type="Agenda",
+        entity_label=patient_name.strip(),
+        detail=f"{appointment_date} {appointment_time} | {service.strip()}",
+    )
+    suffix = build_scope_query(str(organization_id), str(location_id), appointment_date)
+    return RedirectResponse(url=f"/agenda?appointment_saved=1&{suffix}", status_code=303)
+
+
+@router.post("/appointments/{appointment_id}/status")
+async def update_appointment(
+    request: Request,
+    appointment_id: int,
+    status: str = Form(...),
+    day: str = Form(""),
+    organization_id: int = Form(0),
+    location_id: int = Form(0),
+) -> RedirectResponse:
+    user = user_with_permissions(request)
+    if user is None:
+        return redirect_to_login()
+    if not user["permissions"]["manage_agenda"]:
+        return redirect_to_module_with_error("/agenda", "Tu rol no puede actualizar citas.")
+
+    update_appointment_status(appointment_id, status)
+    log_audit_event(
+        user_id=user["id"],
+        organization_id=organization_id or None,
+        location_id=location_id or None,
+        action="Actualizacion",
+        entity_type="Agenda",
+        entity_label=f"Cita #{appointment_id}",
+        detail=f"Estado cambiado a {status.strip()}",
+    )
+    suffix = build_scope_query(str(organization_id or ""), str(location_id or ""), day)
+    return RedirectResponse(url=f"/agenda?{suffix}" if suffix else "/agenda", status_code=303)
+
+
+@router.post("/appointments/{appointment_id}/delete")
+async def remove_appointment(
+    request: Request,
+    appointment_id: int,
+    day: str = Form(""),
+    organization_id: int = Form(0),
+    location_id: int = Form(0),
+) -> RedirectResponse:
+    user = user_with_permissions(request)
+    if user is None:
+        return redirect_to_login()
+    if not user["permissions"]["manage_agenda"]:
+        return redirect_to_module_with_error("/agenda", "Tu rol no puede eliminar citas.")
+
+    delete_appointment(appointment_id)
+    log_audit_event(
+        user_id=user["id"],
+        organization_id=organization_id or None,
+        location_id=location_id or None,
+        action="Eliminacion",
+        entity_type="Agenda",
+        entity_label=f"Cita #{appointment_id}",
+        detail="Cita eliminada desde el modulo de agenda",
+    )
+    suffix = build_scope_query(str(organization_id or ""), str(location_id or ""), day)
+    return RedirectResponse(url=f"/agenda?{suffix}" if suffix else "/agenda", status_code=303)
+
+
+@router.post("/patients")
+async def create_new_patient(
+    request: Request,
+    organization_id: int = Form(...),
+    location_id: int = Form(...),
+    display_name: str = Form(...),
+    patient_type: str = Form(...),
+    specialty: str = Form(...),
+    owner_name: str = Form(""),
+    phone: str = Form(""),
+    document_number: str = Form(""),
+    birth_date: str = Form(""),
+    sex: str = Form(""),
+    insurance_name: str = Form(""),
+    species: str = Form(""),
+    breed: str = Form(""),
+    weight_kg: float = Form(0),
+    vaccine_status: str = Form("No aplica"),
+) -> RedirectResponse:
+    user = user_with_permissions(request)
+    if user is None:
+        return redirect_to_login()
+    if not user["permissions"]["manage_clinical"]:
+        return redirect_to_module_with_error("/clinica", "Tu rol no puede registrar pacientes.")
+
+    create_patient(
+        {
+            "organization_id": organization_id,
+            "location_id": location_id,
+            "display_name": display_name.strip(),
+            "patient_type": patient_type.strip(),
+            "specialty": specialty.strip(),
+            "owner_name": owner_name.strip(),
+            "phone": phone.strip(),
+            "last_visit": "",
+            "document_number": document_number.strip(),
+            "birth_date": birth_date,
+            "sex": sex.strip(),
+            "insurance_name": insurance_name.strip(),
+            "species": species.strip(),
+            "breed": breed.strip(),
+            "weight_kg": weight_kg,
+            "vaccine_status": vaccine_status.strip(),
+        }
+    )
+    log_audit_event(
+        user_id=user["id"],
+        organization_id=organization_id,
+        location_id=location_id,
+        action="Creacion",
+        entity_type="Paciente",
+        entity_label=display_name.strip(),
+        detail=f"{patient_type.strip()} | {specialty.strip()} | {document_number.strip() or owner_name.strip() or 'sin identificacion'}",
+    )
+    suffix = build_scope_query(str(organization_id), str(location_id))
+    return RedirectResponse(url=f"/clinica?patient_saved=1&{suffix}", status_code=303)
+
+
+@router.post("/patients/{patient_id}/delete")
+async def remove_patient(
+    request: Request,
+    patient_id: int,
+    organization_id: int = Form(0),
+    location_id: int = Form(0),
+) -> RedirectResponse:
+    user = user_with_permissions(request)
+    if user is None:
+        return redirect_to_login()
+    if not user["permissions"]["manage_clinical"]:
+        return redirect_to_module_with_error("/clinica", "Tu rol no puede eliminar pacientes.")
+
+    delete_patient(patient_id)
+    log_audit_event(
+        user_id=user["id"],
+        organization_id=organization_id or None,
+        location_id=location_id or None,
+        action="Eliminacion",
+        entity_type="Paciente",
+        entity_label=f"Paciente #{patient_id}",
+        detail="Paciente y sus registros relacionados fueron eliminados",
+    )
+    suffix = build_scope_query(str(organization_id or ""), str(location_id or ""))
+    return RedirectResponse(url=f"/clinica?{suffix}" if suffix else "/clinica", status_code=303)
+
+
+@router.post("/clinical-records")
+async def create_new_record(
+    request: Request,
+    organization_id: int = Form(...),
+    location_id: int = Form(...),
+    patient_id: int = Form(...),
+    encounter_date: str = Form(...),
+    specialty: str = Form(...),
+    reason: str = Form(...),
+    note: str = Form(...),
+    status: str = Form(...),
+    professional: str = Form(...),
+    diagnosis: str = Form(""),
+    treatment_plan: str = Form(""),
+    allergies: str = Form(""),
+    vital_signs: str = Form(""),
+    prescription: str = Form(""),
+    discharge_notes: str = Form(""),
+    service_performed: str = Form(""),
+    follow_up_date: str = Form(""),
+    next_vaccine_due: str = Form(""),
+    dental_chart: str = Form(""),
+    current_weight_kg: float = Form(0),
+    payment_amount: float = Form(0),
+    payment_method: str = Form("Sin definir"),
+) -> RedirectResponse:
+    user = user_with_permissions(request)
+    if user is None:
+        return redirect_to_login()
+    if not user["permissions"]["manage_clinical"]:
+        return redirect_to_module_with_error("/clinica", "Tu rol no puede registrar atenciones.")
+
+    create_clinical_record(
+        {
+            "patient_id": patient_id,
+            "organization_id": organization_id,
+            "location_id": location_id,
+            "encounter_date": encounter_date,
+            "specialty": specialty.strip(),
+            "reason": reason.strip(),
+            "note": note.strip(),
+            "status": status.strip(),
+            "professional": professional.strip(),
+            "diagnosis": diagnosis.strip(),
+            "treatment_plan": treatment_plan.strip(),
+            "allergies": allergies.strip(),
+            "vital_signs": vital_signs.strip(),
+            "prescription": prescription.strip(),
+            "discharge_notes": discharge_notes.strip(),
+            "service_performed": service_performed.strip(),
+            "follow_up_date": follow_up_date,
+            "next_vaccine_due": next_vaccine_due,
+            "dental_chart": dental_chart.strip(),
+            "current_weight_kg": current_weight_kg,
+            "payment_amount": payment_amount,
+            "payment_method": payment_method.strip(),
+        }
+    )
+    log_audit_event(
+        user_id=user["id"],
+        organization_id=organization_id,
+        location_id=location_id,
+        action="Creacion",
+        entity_type="Historia",
+        entity_label=f"Paciente #{patient_id}",
+        detail=f"{specialty.strip()} | {reason.strip()} | dx {diagnosis.strip() or 'sin dx'} | pago {payment_amount:.0f}",
+    )
+    suffix = build_scope_query(str(organization_id), str(location_id), encounter_date)
+    return RedirectResponse(url=f"/clinica?record_saved=1&{suffix}", status_code=303)
+
+
+@router.get("/clinica/reportes/atenciones/export")
+async def export_clinical_records_report(
+    request: Request,
+    organization_id: str = Query(default=""),
+    location_id: str = Query(default=""),
+):
+    user = user_with_permissions(request)
+    if user is None:
+        return redirect_to_login()
+    if not user["permissions"]["view_clinical"]:
+        return redirect_to_module_with_error("/clinica", "Tu rol no puede exportar atenciones.")
+    records = list_clinical_records(
+        limit=500,
+        organization_id=organization_id or request.session.get("preferred_organization_id", ""),
+        location_id=location_id or request.session.get("preferred_location_id", ""),
+    )
+    output = StringIO()
+    writer = csv.writer(output)
+    writer.writerow(
+        [
+            "Fecha",
+            "Paciente",
+            "Especialidad",
+            "Servicio",
+            "Diagnostico",
+            "Profesional",
+            "Estado",
+            "Pago",
+            "Medio",
+            "Sede",
+        ]
+    )
+    for item in records:
+        writer.writerow(
+            [
+                item["encounter_date"],
+                item["display_name"],
+                item["specialty"],
+                item["service_performed"],
+                item["diagnosis"],
+                item["professional"],
+                item["status"],
+                f"{float(item['payment_amount'] or 0):.0f}",
+                item["payment_method"],
+                item["site_name"],
+            ]
+        )
+    return Response(
+        content=output.getvalue(),
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": 'attachment; filename="velmorax-atenciones.csv"'},
+    )
+
+
+@router.post("/clinical-records/{record_id}/status")
+async def update_record(
+    request: Request,
+    record_id: int,
+    status: str = Form(...),
+    organization_id: int = Form(0),
+    location_id: int = Form(0),
+) -> RedirectResponse:
+    user = user_with_permissions(request)
+    if user is None:
+        return redirect_to_login()
+    if not user["permissions"]["manage_clinical"]:
+        return redirect_to_module_with_error("/clinica", "Tu rol no puede actualizar atenciones.")
+
+    update_clinical_record_status(record_id, status)
+    log_audit_event(
+        user_id=user["id"],
+        organization_id=organization_id or None,
+        location_id=location_id or None,
+        action="Actualizacion",
+        entity_type="Historia",
+        entity_label=f"Registro #{record_id}",
+        detail=f"Estado cambiado a {status.strip()}",
+    )
+    suffix = build_scope_query(str(organization_id or ""), str(location_id or ""))
+    return RedirectResponse(url=f"/clinica?{suffix}" if suffix else "/clinica", status_code=303)
+
+
+@router.post("/clinical-records/{record_id}/delete")
+async def remove_record(
+    request: Request,
+    record_id: int,
+    organization_id: int = Form(0),
+    location_id: int = Form(0),
+) -> RedirectResponse:
+    user = user_with_permissions(request)
+    if user is None:
+        return redirect_to_login()
+    if not user["permissions"]["manage_clinical"]:
+        return redirect_to_module_with_error("/clinica", "Tu rol no puede eliminar atenciones.")
+
+    delete_clinical_record(record_id)
+    log_audit_event(
+        user_id=user["id"],
+        organization_id=organization_id or None,
+        location_id=location_id or None,
+        action="Eliminacion",
+        entity_type="Historia",
+        entity_label=f"Registro #{record_id}",
+        detail="Registro clinico eliminado desde la interfaz",
+    )
+    suffix = build_scope_query(str(organization_id or ""), str(location_id or ""))
+    return RedirectResponse(url=f"/clinica?{suffix}" if suffix else "/clinica", status_code=303)
+
+
+@router.get("/health")
+async def healthcheck() -> dict:
+    return {
+        "status": "ok",
+        "service": "velmorax-web",
+        "database": get_database_dialect(),
+        "version": settings.app_version,
+        "session_idle_timeout_minutes": settings.session_idle_timeout_minutes,
+    }
