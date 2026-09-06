@@ -1,8 +1,8 @@
 <section class="module-section" id="inventario">
     <div class="section-heading split-heading">
         <div>
-            <p class="eyebrow">Inventario</p>
-            <h2 class="page-title">Control de insumos y movimientos</h2>
+            <p class="eyebrow">{% if is_veterinary_flow %}Insumos veterinarios{% else %}Inventario{% endif %}</p>
+            <h2 class="page-title">{% if is_veterinary_flow %}Stock y movimientos{% else %}Control de insumos y movimientos{% endif %}</h2>
         </div>
         <div class="legend-row">
             <span><i class="dot dot-red"></i> Critico</span>

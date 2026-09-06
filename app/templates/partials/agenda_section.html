@@ -1,7 +1,7 @@
 <section class="module-section" id="agenda">
     <div class="section-heading">
-        <p class="eyebrow">Agenda</p>
-        <h2 class="page-title">Gestion diaria de citas</h2>
+        <p class="eyebrow">{% if is_veterinary_flow %}Agenda veterinaria{% else %}Agenda{% endif %}</p>
+        <h2 class="page-title">{% if is_veterinary_flow %}Citas y atenciones{% else %}Gestion diaria de citas{% endif %}</h2>
     </div>
     {% if permission_error %}
     <div class="flash-message flash-message-error">{{ permission_error }}</div>
@@ -9,16 +9,20 @@
     {% if appointment_saved %}
     <div class="flash-message">Cita registrada correctamente en la agenda.</div>
     {% endif %}
+    {% if appointment_updated %}
+    <div class="flash-message">Cita actualizada correctamente.</div>
+    {% endif %}
+    {% if agenda_error %}<div class="flash-message flash-message-error">{{ agenda_error }}</div>{% endif %}
     <div class="inventory-metrics">
-        <div class="metric-chip">Fecha: {{ agenda_day }}</div>
         <div class="metric-chip">Total: {{ agenda_summary.total }}</div>
-        <div class="metric-chip metric-chip-green">Confirmadas: {{ agenda_summary.confirmed }}</div>
         <div class="metric-chip metric-chip-yellow">Pendientes: {{ agenda_summary.pending }}</div>
-        <div class="metric-chip">Virtuales: {{ agenda_summary.virtual }}</div>
+        <div class="metric-chip">En espera: {{ agenda_summary.waiting }}</div>
+        <div class="metric-chip metric-chip-green">En consulta: {{ agenda_summary.in_consultation }}</div>
+        <div class="metric-chip vet-urgent-metric">Urgencias: {{ agenda_summary.urgent }}</div>
     </div>
-    <div class="module-grid">
+    <div class="module-grid vet-agenda-module-grid">
         <article class="panel-card">
-            <form action="/agenda" method="get" class="filter-bar">
+            <form action="/agenda" method="get" class="filter-bar vet-agenda-toolbar">
                 <input type="hidden" name="organization_id" value="{{ scope.organization_id }}">
                 <input type="hidden" name="location_id" value="{{ scope.location_id }}">
                 <label>
@@ -26,47 +30,73 @@
                     <input type="date" name="day" value="{{ agenda_day }}">
                 </label>
                 <div class="filter-actions">
-                    <button class="btn btn-secondary" type="submit">Ver agenda</button>
+                    <a class="vet-day-control" href="/agenda?organization_id={{ scope.organization_id }}&location_id={{ scope.location_id }}&day={{ agenda_previous_day }}" aria-label="Día anterior">‹</a>
+                    <a class="vet-today-control" href="/agenda?organization_id={{ scope.organization_id }}&location_id={{ scope.location_id }}&day={{ agenda_today }}">Hoy</a>
+                    <a class="vet-day-control" href="/agenda?organization_id={{ scope.organization_id }}&location_id={{ scope.location_id }}&day={{ agenda_next_day }}" aria-label="Día siguiente">›</a>
+                    <button class="btn btn-secondary vet-agenda-toolbar-button" type="submit">Ver agenda</button>
+                    {% if permissions.manage_agenda %}<button class="btn btn-primary vet-agenda-toolbar-button vet-new-appointment-button" type="button" data-new-appointment><span aria-hidden="true">＋</span>Nueva cita</button>{% endif %}
                 </div>
             </form>
+            {% if permissions.manage_agenda %}
+            <form action="/appointments" method="post" class="inventory-form vet-new-appointment-form" data-new-appointment-form hidden>
+                <input type="hidden" name="organization_id" value="{{ scope.selected_organization.id if scope.selected_organization else scope.organizations[0].id }}">
+                <input type="hidden" name="location_id" value="{{ scope.selected_location.id if scope.selected_location else scope.locations[0].id if scope.locations else '' }}">
+                <input type="hidden" name="specialty" value="Veterinaria">
+                <input type="hidden" name="appointment_date" value="{{ agenda_day }}">
+                <div class="vet-inline-edit-heading"><span class="vet-drawer-icon">＋</span><div><p class="eyebrow">Agenda</p><strong>Nueva cita</strong></div></div>
+                <div class="form-grid"><label><span>Paciente</span><select name="patient_id" required><option value="">Seleccionar mascota</option>{% for patient in patients %}<option value="{{ patient.id }}">{{ patient.display_name }}{% if patient.species %} · {{ patient.species }}{% endif %}{% if patient.owner_name %} · {{ patient.owner_name }}{% endif %}</option>{% endfor %}</select><small>¿No aparece? <a href="/clinica?organization_id={{ scope.organization_id }}&location_id={{ scope.location_id }}#nuevo-paciente">Registrar paciente</a></small></label><label><span>Tipo de atención</span><input type="text" name="service" placeholder="Control, vacuna, valoración..." required></label></div>
+                <div class="form-grid"><label><span>Veterinario responsable</span><select name="veterinarian_user_id" data-agenda-provider required><option value="">Seleccionar profesional</option>{% for professional in agenda_professionals %}<option value="{{ professional.id }}">{{ professional.full_name }}</option>{% endfor %}</select></label><label><span>Duración</span><select name="duration_minutes" data-agenda-duration><option value="20">20 min</option><option value="30" selected>30 min</option><option value="45">45 min</option><option value="60">1 hora</option></select></label></div>
+                <div class="vet-slot-picker" data-slot-picker hidden><span>Selecciona una hora disponible</span><div data-slot-list>{% for professional_id, durations in agenda_available_slots.items() %}{% for duration_value, slots in durations.items() %}{% for time in slots %}<label class="vet-slot-option" data-slot-provider="{{ professional_id }}" data-slot-duration="{{ duration_value }}" hidden><input type="radio" name="appointment_time" value="{{ time }}"><span>{{ time }}</span></label>{% endfor %}{% endfor %}{% endfor %}</div><small data-slot-empty hidden>Sin disponibilidad para este profesional y duración.</small><small class="vet-slot-required" data-slot-required hidden>Selecciona una hora para continuar.</small></div>
+                <div class="form-grid"><label><span>Prioridad</span><select name="priority" data-agenda-priority><option>Normal</option><option>Urgente</option></select><small>Urgente permite ingreso inmediato, incluso fuera del horario regular.</small></label><label data-emergency-time hidden><span>Hora de ingreso</span><input type="time" name="appointment_time" value="{{ agenda_emergency_time }}" disabled required></label></div>
+                <div class="form-grid vet-triage-fields" data-triage-fields hidden><label><span>Clasificación de triaje</span><select name="triage_level" disabled><option value="Rojo">Rojo · atención inmediata</option><option value="Naranja">Naranja · muy urgente</option><option value="Amarillo" selected>Amarillo · urgente</option><option value="Verde">Verde · estable</option><option value="Azul">Azul · no urgente</option></select></label><label><span>Hallazgo de ingreso</span><input name="triage_note" disabled placeholder="Signos observados y riesgo principal"></label></div>
+                <div class="form-grid"><label><span>Canal</span><select name="channel"><option selected>{{ appointment_form_defaults.channel }}</option><option>Virtual</option><option>Telefonica</option></select></label><label><span>Estado</span><select name="status">{% for state in ['Pendiente','Confirmada','En espera'] %}<option{% if appointment_form_defaults.status == state %} selected{% endif %}>{{ state }}</option>{% endfor %}</select></label></div>
+                <label><span>Nota</span><input type="text" name="note" placeholder="Motivo o indicación breve" required></label>
+                <div class="vet-inline-edit-actions"><button class="btn btn-secondary" type="button" data-cancel-new-appointment>Cancelar</button><button class="btn btn-primary" type="submit">Guardar cita</button></div>
+            </form>
+            {% endif %}
             <div class="timeline">
                 {% for appointment in appointments %}
-                <div class="timeline-row">
-                    <div class="timeline-time">{{ appointment.time }}</div>
-                    <div class="timeline-body">
+                <div class="timeline-row" data-appointment-row>
+                    <div class="timeline-time" data-appointment-view>{{ appointment.time }}</div>
+                    <div class="timeline-body" data-appointment-view>
                         <strong>{{ appointment.patient }}</strong>
-                        <p>{{ appointment.service }} | {{ appointment.specialty }} | {{ appointment.channel }}</p>
-                        <p>{{ appointment.site_name }}{% if appointment.site_city %} | {{ appointment.site_city }}{% endif %}</p>
+                        <p>{{ appointment.service }} · {{ appointment.duration_minutes }} min · {{ appointment.channel }}</p>
+                        <p>{{ appointment.veterinarian or 'Profesional sin asignar' }}</p>
+                        {% if appointment.status == 'Cancelada' and appointment.cancellation_reason %}<p class="vet-cancellation-note">Motivo: {{ appointment.cancellation_reason }}</p>{% endif %}
                     </div>
-                    <div class="row-actions">
-                        <span class="mini-badge">{{ appointment.status }}</span>
+                    <div class="row-actions" data-appointment-view>
+                        <span class="mini-badge vet-status-{{ appointment.status|lower|replace(' ', '-') }}">{{ appointment.status }}</span>{% if appointment.priority == 'Urgente' %}<span class="mini-badge vet-priority-urgent">{% if appointment.triage_level %}Triaje {{ appointment.triage_level }}{% else %}Urgente{% endif %}</span>{% endif %}
                         {% if permissions.manage_agenda %}
-                        <form action="/appointments/{{ appointment.id }}/status" method="post" class="inline-form">
-                            <input type="hidden" name="day" value="{{ agenda_day }}">
-                            <input type="hidden" name="organization_id" value="{{ scope.organization_id }}">
-                            <input type="hidden" name="location_id" value="{{ scope.location_id }}">
-                            <select name="status">
-                                <option{% if appointment.status == "Confirmada" %} selected{% endif %}>Confirmada</option>
-                                <option{% if appointment.status == "En espera" %} selected{% endif %}>En espera</option>
-                                <option{% if appointment.status == "Llamar" %} selected{% endif %}>Llamar</option>
-                            </select>
-                            <button class="action-button" type="submit">Actualizar</button>
-                        </form>
-                        <form action="/appointments/{{ appointment.id }}/delete" method="post" class="inline-form">
-                            <input type="hidden" name="day" value="{{ agenda_day }}">
-                            <input type="hidden" name="organization_id" value="{{ scope.organization_id }}">
-                            <input type="hidden" name="location_id" value="{{ scope.location_id }}">
-                            <button class="action-button action-danger" type="submit">Eliminar</button>
-                        </form>
+                        {% if appointment.status == 'Pendiente' %}{% set next_status, action_label = 'Confirmada', 'Confirmar' %}{% elif appointment.status == 'Confirmada' %}{% set next_status, action_label = 'En espera', 'Registrar llegada' %}{% elif appointment.status == 'En espera' %}{% set next_status, action_label = 'En consulta', 'Iniciar' %}{% elif appointment.status == 'En consulta' %}{% set next_status, action_label = 'Atendida', 'Finalizar' %}{% else %}{% set next_status, action_label = '', '' %}{% endif %}{% if next_status %}<form action="/appointments/{{ appointment.id }}/status" method="post" class="inline-form"><input type="hidden" name="status" value="{{ next_status }}"><input type="hidden" name="day" value="{{ agenda_day }}"><input type="hidden" name="organization_id" value="{{ scope.organization_id }}"><input type="hidden" name="location_id" value="{{ scope.location_id }}"><button class="action-button vet-compact-action {% if next_status == 'Atendida' %}vet-finish-action{% else %}vet-start-action{% endif %}" type="submit">{{ action_label }}</button></form>{% endif %}
+                        {% if appointment.status == 'Atendida' and appointment.patient_id %}<a class="action-button vet-compact-action vet-start-action" href="/clinica?organization_id={{ scope.organization_id }}&location_id={{ scope.location_id }}&patient_id={{ appointment.patient_id }}#registro-clinico">Abrir consulta</a>{% endif %}
+                        <div class="vet-appointment-actions">
+                            <button class="vet-icon-action" type="button" data-edit-appointment title="Editar cita"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 16-.8 4.8L8 20l10.6-10.6a2 2 0 0 0 0-2.8l-1.2-1.2a2 2 0 0 0-2.8 0Z"></path><path d="m13.5 6.5 4 4"></path></svg><span>Editar</span></button>
+                            {% if appointment.status != 'Cancelada' %}<button class="vet-icon-action vet-icon-action-danger" type="button" data-cancel-appointment-action title="Cancelar cita"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="m9 9 6 6m0-6-6 6"></path></svg><span>Cancelar</span></button><form action="/appointments/{{ appointment.id }}/status" method="post" data-cancel-appointment-form hidden><input type="hidden" name="status" value="Cancelada"><input type="hidden" name="day" value="{{ agenda_day }}"><input type="hidden" name="organization_id" value="{{ scope.organization_id }}"><input type="hidden" name="location_id" value="{{ scope.location_id }}"><input type="hidden" name="cancellation_reason" value=""></form>{% endif %}
+                            {% if permissions.manage_admin %}<button class="vet-icon-action vet-icon-action-admin" type="button" data-delete-appointment-action title="Eliminar registro creado por error" aria-label="Eliminar registro"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3m3 0-1 13H7L6 7m4 4v5m4-5v5"></path></svg></button><form action="/appointments/{{ appointment.id }}/delete" method="post" data-delete-appointment-form hidden><input type="hidden" name="day" value="{{ agenda_day }}"><input type="hidden" name="organization_id" value="{{ scope.organization_id }}"><input type="hidden" name="location_id" value="{{ scope.location_id }}"></form>{% endif %}
+                        </div>
                         {% endif %}
                     </div>
+                    {% if permissions.manage_agenda %}
+                    <form action="/appointments/{{ appointment.id }}" method="post" class="inventory-form vet-inline-appointment-form" data-inline-appointment-form hidden>
+                        <input type="hidden" name="organization_id" value="{{ scope.organization_id }}">
+                        <input type="hidden" name="location_id" value="{{ scope.location_id }}">
+                        <input type="hidden" name="specialty" value="Veterinaria">
+                        <div class="vet-inline-edit-heading"><span class="vet-drawer-icon">✎</span><div><p class="eyebrow">Editando cita</p><strong>{{ appointment.patient }}</strong></div></div>
+                        <div class="form-grid"><label><span>Fecha</span><input type="date" name="appointment_date" value="{{ appointment.date }}" required></label><label><span>Hora</span><input type="time" name="appointment_time" value="{{ appointment.time }}" required></label></div>
+                        <div class="form-grid"><label><span>Paciente</span><select name="patient_id" required>{% for patient in patients %}<option value="{{ patient.id }}"{% if appointment.patient_id == patient.id or (not appointment.patient_id and appointment.patient == patient.display_name) %} selected{% endif %}>{{ patient.display_name }} · {{ patient.species }}</option>{% endfor %}</select></label><label><span>Servicio</span><input name="service" value="{{ appointment.service }}" required></label></div>
+                        <div class="form-grid"><label><span>Duración</span><select name="duration_minutes">{% for minutes in [20,30,45,60] %}<option value="{{ minutes }}"{% if appointment.duration_minutes == minutes %} selected{% endif %}>{{ minutes }} min</option>{% endfor %}</select></label><label><span>Veterinario</span><select name="veterinarian_user_id" required>{% for professional in agenda_professionals %}<option value="{{ professional.id }}"{% if appointment.veterinarian_user_id == professional.id or (not appointment.veterinarian_user_id and appointment.veterinarian == professional.full_name) %} selected{% endif %}>{{ professional.full_name }}</option>{% endfor %}</select></label></div>
+                        <div class="form-grid"><label><span>Prioridad</span><select name="priority"><option{% if appointment.priority != 'Urgente' %} selected{% endif %}>Normal</option><option{% if appointment.priority == 'Urgente' %} selected{% endif %}>Urgente</option></select></label><label><span>Triaje</span><select name="triage_level"><option value="">No aplica</option>{% for level in ['Rojo','Naranja','Amarillo','Verde','Azul'] %}<option{% if appointment.triage_level == level %} selected{% endif %}>{{ level }}</option>{% endfor %}</select></label></div><div class="form-grid"><label><span>Canal</span><select name="channel"><option{% if appointment.channel == 'Presencial' %} selected{% endif %}>Presencial</option><option{% if appointment.channel == 'Virtual' %} selected{% endif %}>Virtual</option><option{% if appointment.channel == 'Telefonica' %} selected{% endif %}>Telefonica</option></select></label><label><span>Estado</span><select name="status">{% for state in ['Pendiente','Confirmada','En espera','En consulta','Atendida','Cancelada'] %}<option{% if appointment.status == state %} selected{% endif %}>{{ state }}</option>{% endfor %}</select></label></div>
+                        <div class="form-grid"><label><span>Nota</span><input name="note" value="{{ appointment.note }}"></label><label><span>Hallazgo de triaje</span><input name="triage_note" value="{{ appointment.triage_note }}"></label></div>
+                        <div class="vet-inline-edit-actions"><button class="btn btn-secondary" type="button" data-cancel-appointment>Cancelar</button><button class="btn btn-primary" type="submit">Actualizar cita</button></div>
+                    </form>
+                    {% endif %}
                 </div>
                 {% else %}
-                <div class="timeline-row">
-                    <div class="timeline-time">--</div>
+                <div class="timeline-row vet-agenda-empty-row">
+                    <div class="vet-agenda-empty-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 3v3M17 3v3M4 9h16M5 5h14a1 1 0 0 1 1 1v14H4V6a1 1 0 0 1 1-1Z"></path><path d="m9 15 2 2 4-5"></path></svg></div>
                     <div class="timeline-body">
                         <strong>No hay citas para esta fecha</strong>
-                        <p>Registra una nueva cita desde el formulario lateral.</p>
+                        <p>Usa “Nueva cita” para agregar la primera atención del día.</p>
                     </div>
                     <span class="mini-badge">Libre</span>
                 </div>
@@ -77,7 +107,7 @@
             <article class="panel-card">
                 <div class="section-heading">
                     <p class="eyebrow">Fila activa</p>
-                    <h3>Atencion en curso</h3>
+                    <h3>Atención en curso</h3>
                 </div>
                 <div class="queue-list">
                     {% for item in patient_queue %}
@@ -93,33 +123,106 @@
                         </div>
                     </div>
                     {% endfor %}
+                    {% if not patient_queue %}<div class="vet-queue-empty"><span>✓</span><strong>Sin pacientes en atención</strong><p>Al iniciar una cita aparecerá aquí.</p></div>{% endif %}
                 </div>
             </article>
-            {% if permissions.manage_agenda %}
-            <article class="panel-card">
-                <div class="section-heading">
-                    <p class="eyebrow">Nueva cita</p>
-                    <h3>Registrar agenda</h3>
-                </div>
-                <form action="/appointments" method="post" class="inventory-form">
-                    <input type="hidden" name="organization_id" value="{{ scope.selected_organization.id if scope.selected_organization else scope.organizations[0].id }}">
-                    <input type="hidden" name="location_id" value="{{ scope.selected_location.id if scope.selected_location else scope.locations[0].id if scope.locations else '' }}">
-                    <div class="form-grid">
-                        <label><span>Fecha</span><input type="date" name="appointment_date" value="{{ agenda_day }}" required></label>
-                        <label><span>Hora</span><input type="time" name="appointment_time" required></label>
-                    </div>
-                    <label><span>Paciente o responsable</span><input type="text" name="patient_name" placeholder="Nombre del paciente o mascota / propietario" required></label>
-                    <label><span>Servicio</span><input type="text" name="service" placeholder="Ej. Control, vacuna, valoracion" required></label>
-                    <div class="form-grid">
-                        <label><span>Canal</span><select name="channel"><option selected>{{ appointment_form_defaults.channel }}</option><option>Virtual</option><option>Telefonica</option></select></label>
-                        <label><span>Estado</span><select name="status"><option selected>{{ appointment_form_defaults.status }}</option><option>En espera</option><option>Llamar</option></select></label>
-                    </div>
-                    <label><span>Especialidad</span><select name="specialty"><option selected>{{ appointment_form_defaults.specialty }}</option><option>Veterinaria</option><option>Consulta general</option></select></label>
-                    <label><span>Nota</span><input type="text" name="note" placeholder="Motivo o comentario corto" required></label>
-                    <button class="btn btn-primary btn-block" type="submit">Guardar cita</button>
-                </form>
-            </article>
-            {% endif %}
+            {% if permissions.manage_admin %}<details class="panel-card vet-availability-card"><summary><span>Disponibilidad</span><small>Horarios y ausencias</small></summary><div>{% for professional in agenda_professionals %}<form action="/agenda/professionals/{{ professional.id }}/schedule" method="post" class="inventory-form"><input type="hidden" name="day" value="{{ agenda_day }}"><input type="hidden" name="organization_id" value="{{ scope.organization_id }}"><input type="hidden" name="location_id" value="{{ scope.location_id }}"><strong>{{ professional.full_name }}</strong><fieldset><legend>Días laborales</legend>{% for value,label in [(0,'L'),(1,'M'),(2,'X'),(3,'J'),(4,'V'),(5,'S'),(6,'D')] %}<label><input type="checkbox" name="working_days" value="{{ value }}"{% if value|string in professional.working_days.split(',') %} checked{% endif %}><span>{{ label }}</span></label>{% endfor %}</fieldset><div class="form-grid"><label><span>Inicio</span><input type="time" name="work_start" value="{{ professional.work_start }}" required></label><label><span>Fin</span><input type="time" name="work_end" value="{{ professional.work_end }}" required></label></div><div class="form-grid"><label><span>Descanso</span><input type="time" name="break_start" value="{{ professional.break_start }}"></label><label><span>Regreso</span><input type="time" name="break_end" value="{{ professional.break_end }}"></label></div><label><span>Ausencias</span><input name="unavailable_dates" value="{{ professional.unavailable_dates }}" placeholder="2026-09-10, 2026-09-18"></label><button class="btn btn-secondary" type="submit">Guardar disponibilidad</button></form>{% endfor %}</div></details>{% endif %}
         </aside>
     </div>
 </section>
+<dialog class="vet-confirm-dialog" data-agenda-confirm><form method="dialog"><span class="vet-drawer-icon">!</span><div><p class="eyebrow">Confirmación</p><h3 data-confirm-title>¿Continuar con esta acción?</h3><p data-confirm-copy>El cambio quedará registrado en la agenda.</p><label class="vet-dialog-reason" data-confirm-reason hidden><span>Motivo de cancelación</span><input type="text" placeholder="Escribe un motivo breve"></label></div><div class="vet-inline-edit-actions"><button class="btn btn-secondary" value="cancel">Volver</button><button class="btn btn-primary" value="confirm" data-confirm-submit>Confirmar</button></div></form></dialog>
+{% if is_veterinary_flow %}
+<script>
+(() => {
+    const newButton = document.querySelector('[data-new-appointment]');
+    const newForm = document.querySelector('[data-new-appointment-form]');
+    if (newButton && newForm) {
+        newButton.addEventListener('click', () => {
+            newForm.hidden = false;
+            newButton.hidden = true;
+            newForm.querySelector('select[name="patient_id"]').focus();
+        });
+        const provider = newForm.querySelector('[data-agenda-provider]');
+        const picker = newForm.querySelector('[data-slot-picker]');
+        const list = newForm.querySelector('[data-slot-list]');
+        const empty = newForm.querySelector('[data-slot-empty]');
+        const required = newForm.querySelector('[data-slot-required]');
+        const duration = newForm.querySelector('[data-agenda-duration]');
+        const priority = newForm.querySelector('[data-agenda-priority]');
+        const emergencyTime = newForm.querySelector('[data-emergency-time]');
+        const emergencyInput = emergencyTime?.querySelector('input');
+        const triageFields = newForm.querySelector('[data-triage-fields]');
+        const renderSlots = () => {
+            const isEmergency = priority?.value === 'Urgente';
+            const options = [...list.querySelectorAll('[data-slot-provider]')];
+            let visibleCount = 0;
+            options.forEach(option => {
+                const visible = !isEmergency && option.dataset.slotProvider === provider.value && option.dataset.slotDuration === duration.value;
+                option.hidden = !visible;
+                option.querySelector('input').disabled = isEmergency;
+                if (isEmergency) option.querySelector('input').checked = false;
+                if (visible) visibleCount += 1;
+            });
+            if (emergencyTime && emergencyInput) { emergencyTime.hidden = !isEmergency; emergencyInput.disabled = !isEmergency; }
+            if (triageFields) { triageFields.hidden = !isEmergency; triageFields.querySelectorAll('input,select').forEach(field => field.disabled = !isEmergency); }
+            required.hidden = true;
+            picker.hidden = isEmergency || !provider.value;
+            empty.hidden = isEmergency || visibleCount > 0;
+        };
+        provider?.addEventListener('change', renderSlots);
+        duration?.addEventListener('change', renderSlots);
+        priority?.addEventListener('change', renderSlots);
+        list.addEventListener('change', () => { required.hidden = true; });
+        newForm.addEventListener('submit', event => { if (priority?.value !== 'Urgente' && !newForm.querySelector('input[name="appointment_time"]:checked')) { event.preventDefault(); required.hidden = false; picker.hidden = false; required.scrollIntoView({block: 'nearest'}); } });
+        newForm.querySelector('[data-cancel-new-appointment]').addEventListener('click', () => {
+            newForm.reset();
+            newForm.hidden = true;
+            newButton.hidden = false;
+        });
+        {% if open_new_appointment %}newButton.click();{% endif %}
+    }
+    document.querySelectorAll('[data-appointment-row]').forEach((row) => {
+        const form = row.querySelector('[data-inline-appointment-form]');
+        if (!form) return;
+        const views = row.querySelectorAll('[data-appointment-view]');
+        row.querySelector('[data-edit-appointment]').addEventListener('click', () => {
+            views.forEach((item) => item.hidden = true);
+            form.hidden = false;
+            row.classList.add('is-editing');
+            form.querySelector('input:not([type="hidden"])').focus();
+        });
+        form.querySelector('[data-cancel-appointment]').addEventListener('click', () => {
+            form.reset();
+            form.hidden = true;
+            views.forEach((item) => item.hidden = false);
+            row.classList.remove('is-editing');
+        });
+    });
+    const dialog = document.querySelector('[data-agenda-confirm]');
+    let pendingForm = null;
+    let pendingMode = '';
+    const reasonBox = dialog?.querySelector('[data-confirm-reason]');
+    const reasonInput = reasonBox?.querySelector('input');
+    document.querySelectorAll('[data-cancel-appointment-action]').forEach(button => button.addEventListener('click', () => {
+        pendingForm = button.parentElement.querySelector('[data-cancel-appointment-form]'); pendingMode = 'cancel';
+        dialog.querySelector('[data-confirm-title]').textContent = 'Cancelar esta cita';
+        dialog.querySelector('[data-confirm-copy]').textContent = 'La cita seguirá visible como cancelada para conservar su trazabilidad.';
+        reasonBox.hidden = false; reasonInput.value = '';
+        dialog.showModal();
+    }));
+    document.querySelectorAll('[data-delete-appointment-action]').forEach(button => button.addEventListener('click', () => {
+        pendingForm = button.parentElement.querySelector('[data-delete-appointment-form]'); pendingMode = 'delete';
+        dialog.querySelector('[data-confirm-title]').textContent = 'Eliminar registro';
+        dialog.querySelector('[data-confirm-copy]').textContent = 'Úsalo solamente si la cita fue creada por error. Esta acción no se puede deshacer.';
+        reasonBox.hidden = true;
+        dialog.showModal();
+    }));
+    dialog?.querySelector('[data-confirm-submit]').addEventListener('click', event => {
+        if (pendingMode === 'cancel' && !reasonInput.value.trim()) { event.preventDefault(); reasonInput.setCustomValidity('Escribe el motivo de cancelación.'); reasonInput.reportValidity(); return; }
+        reasonInput.setCustomValidity('');
+        if (pendingMode === 'cancel') pendingForm.querySelector('[name="cancellation_reason"]').value = reasonInput.value.trim();
+    });
+    dialog?.addEventListener('close', () => { if (dialog.returnValue === 'confirm' && pendingForm) pendingForm.submit(); pendingForm = null; pendingMode = ''; });
+})();
+</script>
+{% endif %}

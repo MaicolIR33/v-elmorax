@@ -1,7 +1,7 @@
 <section class="module-section" id="especialidades">
     <div class="section-heading">
-        <p class="eyebrow">Clinica</p>
-        <h2 class="page-title">Pacientes, especialidades y notas</h2>
+        <p class="eyebrow">{% if is_veterinary_flow %}Clinica veterinaria{% else %}Clinica{% endif %}</p>
+        <h2 class="page-title">{% if is_veterinary_flow %}Pacientes y consultas{% else %}Pacientes, especialidades y notas{% endif %}</h2>
     </div>
     {% if patient_saved %}
     <div class="flash-message">Paciente registrado correctamente.</div>
@@ -22,7 +22,7 @@
     <article class="panel-card daily-summary-card">
         <div class="split-heading">
             <div>
-                <p class="eyebrow">Cierre diario</p>
+                <p class="eyebrow">{% if is_veterinary_flow %}Cierre veterinario{% else %}Cierre diario{% endif %}</p>
                 <h3>Pacientes y recaudo del dia</h3>
             </div>
             <div class="queue-meta">
@@ -175,15 +175,15 @@
     </div>
     <div class="clinical-grid">
         {% if permissions.manage_clinical %}
-        <article class="panel-card">
+        <article class="panel-card" id="nuevo-paciente">
             <div class="section-heading"><p class="eyebrow">Paciente</p><h3>Registrar paciente</h3></div>
             <form action="/patients" method="post" class="inventory-form" data-patient-form>
                 <input type="hidden" name="organization_id" value="{{ scope.selected_organization.id if scope.selected_organization else scope.organizations[0].id }}">
                 <input type="hidden" name="location_id" value="{{ scope.selected_location.id if scope.selected_location else scope.locations[0].id if scope.locations else '' }}">
                 <label><span>Nombre visible</span><input type="text" name="display_name" placeholder="Paciente o mascota" required></label>
                 <div class="form-grid">
-                    <label><span>Tipo</span><select name="patient_type" data-patient-type><option selected>{{ patient_form_defaults.patient_type }}</option><option>Animal</option></select></label>
-                    <label><span>Especialidad</span><select name="specialty" data-patient-specialty><option selected>{{ patient_form_defaults.specialty }}</option><option>Veterinaria</option><option>Consulta general</option></select></label>
+                    <label><span>Tipo</span><select name="patient_type" data-patient-type>{% if is_veterinary_flow %}<option selected>Animal</option>{% else %}<option selected>{{ patient_form_defaults.patient_type }}</option><option>Animal</option>{% endif %}</select></label>
+                    <label><span>Especialidad</span><select name="specialty" data-patient-specialty>{% if is_veterinary_flow %}<option selected>Veterinaria</option>{% else %}<option selected>{{ patient_form_defaults.specialty }}</option><option>Veterinaria</option><option>Consulta general</option>{% endif %}</select></label>
                 </div>
                 <div class="form-grid">
                     <label><span>Documento</span><input type="text" name="document_number" placeholder="CC, TI o identificador interno"></label>
@@ -206,15 +206,15 @@
                 <button class="btn btn-primary btn-block" type="submit">Guardar paciente</button>
             </form>
         </article>
-        <article class="panel-card">
+        <article class="panel-card" id="registro-clinico">
             <div class="section-heading"><p class="eyebrow">Atencion</p><h3>Registrar nota clinica</h3></div>
             <form action="/clinical-records" method="post" class="inventory-form" data-record-form>
                 <input type="hidden" name="organization_id" value="{{ scope.selected_organization.id if scope.selected_organization else scope.organizations[0].id }}">
                 <input type="hidden" name="location_id" value="{{ scope.selected_location.id if scope.selected_location else scope.locations[0].id if scope.locations else '' }}">
-                <label><span>Paciente</span><select name="patient_id">{% for option in patient_options %}<option value="{{ option.id }}">{{ option.label }}</option>{% endfor %}</select></label>
+                <label><span>Paciente</span><select name="patient_id">{% for option in patient_options %}<option value="{{ option.id }}"{% if selected_patient_id == option.id %} selected{% endif %}>{{ option.label }}</option>{% endfor %}</select></label>
                 <div class="form-grid">
                     <label><span>Fecha</span><input type="date" name="encounter_date" value="{{ clinical_form_defaults.encounter_date }}" required></label>
-                    <label><span>Especialidad</span><select name="specialty" data-record-specialty><option selected>{{ clinical_form_defaults.specialty }}</option><option>Veterinaria</option><option>Consulta general</option></select></label>
+                    <label><span>Especialidad</span><select name="specialty" data-record-specialty>{% if is_veterinary_flow %}<option selected>Veterinaria</option>{% else %}<option selected>{{ clinical_form_defaults.specialty }}</option><option>Veterinaria</option><option>Consulta general</option>{% endif %}</select></label>
                 </div>
                 <label><span>Motivo</span><input type="text" name="reason" placeholder="Motivo de consulta" required></label>
                 <label><span>Nota clinica</span><input type="text" name="note" placeholder="Resumen clinico corto" required></label>

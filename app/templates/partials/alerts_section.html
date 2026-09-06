@@ -1,0 +1,109 @@
+<section class="module-section vet-alert-center">
+    <div class="vet-alert-center-heading">
+        <div><p class="eyebrow">Seguimiento</p><h2 class="page-title">Centro de alertas</h2></div>
+        <div class="vet-alert-summary" aria-label="Resumen de alertas"><span><b>{{ due_alerts_total }}</b> pendientes</span><span class="is-urgent"><b>{{ urgent_alerts_total }}</b> urgentes</span><span><b>{{ scheduled_alerts_total }}</b> programadas</span></div>
+    </div>
+    {% if alert_saved %}<div class="flash-message">Alerta programada.</div>{% endif %}
+    {% if alert_updated %}<div class="flash-message">Alerta actualizada.</div>{% endif %}
+    {% if alert_notice %}<div class="flash-message" role="status">{{ alert_notice }}</div>{% endif %}
+
+    <div class="vet-alert-layout">
+        <article class="panel-card vet-alert-feed">
+            <div class="vet-alert-tabs" role="group" aria-label="Filtrar alertas"><button type="button" class="is-active" data-alert-filter="pending">Pendientes</button><button type="button" data-alert-filter="scheduled">Programadas{% if scheduled_alerts_total %} · {{ scheduled_alerts_total }}{% endif %}</button><button type="button" data-alert-filter="automatic">Automáticas</button><button type="button" data-alert-filter="manual">Manuales</button><button type="button" data-alert-filter="acknowledged">Leídas</button><button type="button" data-alert-filter="resolved">Historial{% if resolved_alerts %} · {{ resolved_alerts|length }}{% endif %}</button></div>
+            <div class="vet-alert-cards">
+                {% for alert in alerts + resolved_alerts %}
+                <article class="vet-alert-card is-{{ alert.priority }}{% if alert.acknowledged %} is-acknowledged{% endif %}{% if alert.status == 'resolved' %} is-resolved{% endif %}" data-alert-source="{{ alert.source }}" data-alert-status="{{ alert.status }}" data-alert-due="{{ 'true' if alert.is_due else 'false' }}" data-alert-acknowledged="{{ 'true' if alert.acknowledged else 'false' }}"{% if not alert.is_due or alert.acknowledged or alert.status == 'resolved' %} hidden{% endif %}>
+                    <span class="vet-alert-card-icon" aria-hidden="true">{% if alert.source == 'automatic' %}⚡{% else %}◷{% endif %}</span>
+                    <div class="vet-alert-card-copy">
+                        <div><strong>{{ alert.title }}</strong><span class="vet-alert-priority">{{ alert.priority_label }}</span></div>
+                        <p>{{ alert.message or 'Sin nota adicional' }}</p>
+                        <small>{% if alert.status_label %}<b class="vet-alert-state">{{ alert.status_label }}</b> · {% endif %}{{ alert.recurrence_label }}{% if alert.source == 'manual' and alert.escalation_minutes %} · {{ alert.escalation_label }}{% endif %}{% if alert.assigned_name %} · {{ alert.assigned_name }}{% endif %} · {{ alert.due_at|replace('T', ' ') }}{% if alert.acknowledged %}<br><b class="vet-alert-read">Leída por {{ alert.acknowledged_by }} · {{ alert.acknowledged_at|replace('T', ' ') }}</b>{% endif %}</small>
+                    </div>
+                    <div class="vet-alert-operations">
+                    {% if alert.is_due and not alert.acknowledged %}<form action="/alerts/acknowledge" method="post"><input type="hidden" name="alert_key" value="{{ alert.key }}"><input type="hidden" name="organization_id" value="{{ scope.organization_id }}"><input type="hidden" name="location_id" value="{{ scope.location_id }}"><button class="vet-alert-ack" type="submit" title="Registrar quién revisó la alerta">Confirmar lectura</button></form>{% endif %}
+                    {% if alert.source == 'manual' and alert.status != 'resolved' %}
+                    <div class="vet-alert-quick-actions">
+                        <form action="/alerts/{{ alert.id }}/snooze" method="post" class="vet-alert-snooze"><input type="hidden" name="organization_id" value="{{ scope.organization_id }}"><input type="hidden" name="location_id" value="{{ scope.location_id }}"><select name="hours" aria-label="Tiempo para posponer"><option value="1">1 h</option><option value="4">4 h</option><option value="8">8 h</option><option value="24" selected>24 h</option><option value="72">3 días</option><option value="168">7 días</option></select><button type="submit" title="Ocultar hasta el tiempo elegido">Posponer</button></form>
+                        <form action="/alerts/{{ alert.id }}/resolve" method="post"><input type="hidden" name="organization_id" value="{{ scope.organization_id }}"><input type="hidden" name="location_id" value="{{ scope.location_id }}"><button class="is-resolve" type="submit" title="Retirar de pendientes">Marcar resuelta</button></form>
+                        <details class="vet-alert-edit"><summary>Editar</summary><form action="/alerts/{{ alert.id }}/edit" method="post"><input type="hidden" name="organization_id" value="{{ scope.organization_id }}"><input type="hidden" name="location_id" value="{{ scope.location_id }}"><label><span>Insumo o equipo</span><input name="title" value="{{ alert.title }}" required></label><label><span>Acción</span><input name="message" value="{{ alert.message }}"></label><label><span>Fecha y hora</span><input type="datetime-local" name="due_at" value="{{ alert.due_at }}" required></label><div class="form-grid"><label><span>Prioridad</span><select name="priority"><option value="normal"{% if alert.priority == 'normal' %} selected{% endif %}>Normal</option><option value="important"{% if alert.priority == 'important' %} selected{% endif %}>Importante</option><option value="urgent"{% if alert.priority == 'urgent' %} selected{% endif %}>Urgente</option></select></label><label><span>Repetir</span><select name="recurrence"><option value="once"{% if alert.recurrence == 'once' %} selected{% endif %}>Una vez</option><option value="daily"{% if alert.recurrence == 'daily' %} selected{% endif %}>Cada día</option><option value="weekly"{% if alert.recurrence == 'weekly' %} selected{% endif %}>Cada semana</option><option value="monthly"{% if alert.recurrence == 'monthly' %} selected{% endif %}>Cada mes</option></select></label></div><label><span>Escalamiento</span><select name="escalation_minutes"><option value="0">Sin escalamiento</option>{% for minutes, label in [(15,'15 min'),(30,'30 min'),(60,'1 hora'),(120,'2 horas'),(240,'4 horas')] %}<option value="{{ minutes }}"{% if alert.escalation_minutes == minutes %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></label><label><span>Responsable</span><select name="assigned_user_id"><option value="0">Sin asignar</option>{% for person in alert_assignees %}<option value="{{ person.id }}"{% if alert.assigned_user_id == person.id %} selected{% endif %}>{{ person.full_name }}</option>{% endfor %}</select></label><div class="vet-alert-edit-actions"><button type="button" data-close-alert-edit>Cancelar</button><button class="action-button" type="submit">Guardar cambios</button></div></form></details>
+                        {% if permissions.manage_inventory %}<button class="vet-alert-delete" type="button" data-delete-alert data-alert-title="{{ alert.title }}" data-delete-action="/alerts/{{ alert.id }}/delete" title="Eliminar alerta" aria-label="Eliminar {{ alert.title }}">×</button>{% endif %}
+                    </div>
+                    {% elif alert.status == 'resolved' %}
+                    <div class="vet-alert-auto-actions"><span class="vet-auto-label">Resuelta {{ alert.resolved_at|replace('T', ' ') }}</span>{% if permissions.manage_inventory %}<button class="vet-alert-delete" type="button" data-delete-alert data-alert-title="{{ alert.title }}" data-delete-action="/alerts/{{ alert.id }}/delete" title="Eliminar del historial" aria-label="Eliminar {{ alert.title }}">×</button>{% endif %}</div>
+                    {% else %}
+                    <div class="vet-alert-auto-actions">
+                        <span class="vet-auto-label">Automática</span>
+                        {% if alert.entity_type == 'inventory' %}
+                        <a class="vet-alert-manage" href="/inventario{% if scope_query %}?{{ scope_query }}{% endif %}#inventory-item-{{ alert.entity_id }}">Gestionar lote</a>
+                        {% elif alert.entity_type == 'appointment' %}
+                        <a class="vet-alert-manage" href="/agenda{% if scope_query %}?{{ scope_query }}{% endif %}">Ver cita</a>
+                        {% else %}
+                        <a class="vet-alert-manage" href="/clinica{% if scope_query %}?{{ scope_query }}{% endif %}">Ver paciente</a>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                    </div>
+                </article>
+                {% endfor %}
+                <div class="vet-stock-empty" data-alert-empty{% if due_alerts_total %} hidden{% endif %}><span>✓</span><strong>Sin alertas en esta vista</strong></div>
+            </div>
+        </article>
+
+        <aside class="vet-alert-sidebar">
+            <details class="vet-inventory-drawer">
+                <summary><span class="vet-drawer-icon">＋</span><span><strong>Nueva alerta</strong><small>Insumos e instrumental</small></span><b>›</b></summary>
+                <form action="/alerts" method="post" class="inventory-form vet-drawer-form">
+                    <input type="hidden" name="organization_id" value="{{ scope.selected_organization.id if scope.selected_organization else scope.organizations[0].id }}">
+                    <input type="hidden" name="location_id" value="{{ scope.selected_location.id if scope.selected_location else scope.locations[0].id if scope.locations else '' }}">
+                    <label><span>Insumo o equipo</span><input name="title" required placeholder="Ej. Autoclave principal"></label>
+                    <label><span>Acción requerida</span><input name="message" placeholder="Esterilizar, reponer, revisar..."></label>
+                    <label><span>Fecha y hora</span><input type="datetime-local" name="due_at" value="{{ alert_default_due }}" required></label>
+                    <div class="form-grid"><label><span>Prioridad</span><select name="priority"><option value="normal">Normal</option><option value="important">Importante</option><option value="urgent">Urgente</option></select></label><label><span>Repetir</span><select name="recurrence"><option value="once">Una vez</option><option value="daily">Cada día</option><option value="weekly">Cada semana</option><option value="monthly">Cada mes</option></select></label></div>
+                    <label><span>Escalar si nadie actúa</span><select name="escalation_minutes"><option value="0">No escalar</option><option value="15">Después de 15 min</option><option value="30">Después de 30 min</option><option value="60">Después de 1 hora</option><option value="120">Después de 2 horas</option><option value="240">Después de 4 horas</option></select></label>
+                    <label><span>Responsable</span><select name="assigned_user_id"><option value="0">Sin asignar</option>{% for person in alert_assignees %}<option value="{{ person.id }}">{{ person.full_name }}</option>{% endfor %}</select></label>
+                    <button class="btn btn-primary btn-block" type="submit">Programar alerta</button>
+                </form>
+            </details>
+            <div class="vet-rule-card"><span>⚡</span><div><strong>Cómo funciona</strong><small>Las automáticas se cierran al corregir el lote en Insumos. Las manuales permiten posponer, resolver o eliminar según el permiso.</small></div></div>
+        </aside>
+    </div>
+</section>
+<dialog class="vet-confirm-dialog" data-delete-alert-dialog aria-labelledby="delete-alert-title">
+    <form method="dialog" class="vet-confirm-card">
+        <span class="vet-confirm-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M7 7l1 13h8l1-13M10 11v5M14 11v5"></path></svg></span>
+        <div class="vet-confirm-copy"><p class="eyebrow">Eliminar alerta</p><h3 id="delete-alert-title">¿Eliminarla definitivamente?</h3><p><strong data-delete-alert-name></strong></p><small>No volverá a aparecer. Si la revisión sigue pendiente, usa “Posponer 24 h”.</small></div>
+        <div class="vet-confirm-actions"><button class="btn btn-secondary" value="cancel">Cancelar</button><button class="btn vet-confirm-danger" type="button" data-confirm-delete-alert>Eliminar</button></div>
+    </form>
+</dialog>
+<form method="post" hidden data-delete-alert-form><input type="hidden" name="organization_id" value="{{ scope.organization_id }}"><input type="hidden" name="location_id" value="{{ scope.location_id }}"></form>
+<script>
+(() => {
+    document.querySelectorAll('[data-alert-filter]').forEach((button) => {
+        button.addEventListener('click', () => {
+            document.querySelectorAll('[data-alert-filter]').forEach((item) => item.classList.toggle('is-active', item === button));
+            document.querySelectorAll('[data-alert-source]').forEach((card) => {
+                const filter = button.dataset.alertFilter;
+                if (filter === 'pending') card.hidden = card.dataset.alertDue !== 'true' || card.dataset.alertAcknowledged === 'true';
+                else if (filter === 'scheduled') card.hidden = card.dataset.alertDue !== 'false';
+                else if (filter === 'acknowledged') card.hidden = card.dataset.alertAcknowledged !== 'true' || card.dataset.alertStatus === 'resolved';
+                else if (filter === 'resolved') card.hidden = card.dataset.alertStatus !== 'resolved';
+                else card.hidden = card.dataset.alertSource !== filter || card.dataset.alertStatus === 'resolved';
+            });
+            const visible = [...document.querySelectorAll('[data-alert-source]')].some((card) => !card.hidden);
+            document.querySelector('[data-alert-empty]').hidden = visible;
+        });
+    });
+    const dialog = document.querySelector('[data-delete-alert-dialog]');
+    const form = document.querySelector('[data-delete-alert-form]');
+    document.querySelectorAll('[data-delete-alert]').forEach((button) => button.addEventListener('click', () => {
+        form.action = button.dataset.deleteAction;
+        dialog.querySelector('[data-delete-alert-name]').textContent = button.dataset.alertTitle;
+        dialog.showModal();
+    }));
+    dialog.querySelector('[data-confirm-delete-alert]').addEventListener('click', () => { dialog.close(); form.submit(); });
+    dialog.addEventListener('click', (event) => { if (event.target === dialog) dialog.close(); });
+    document.querySelectorAll('[data-close-alert-edit]').forEach((button) => button.addEventListener('click', () => {
+        button.closest('.vet-alert-edit').removeAttribute('open');
+    }));
+})();
+</script>

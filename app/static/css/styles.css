@@ -16,7 +16,6 @@
     --safe: #54d6c6;
     --safe-soft: rgba(84, 214, 198, 0.14);
 }
-
 * {
     box-sizing: border-box;
 }
@@ -3169,6 +3168,94 @@ textarea:focus-visible {
     background: rgba(6, 17, 22, 0.56);
     color: var(--text);
 }
+
+.admin-permissions {
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    background: rgba(6, 17, 22, 0.24);
+}
+
+.admin-permissions summary {
+    cursor: pointer;
+    padding: 12px 14px;
+    color: var(--muted);
+    font-weight: 800;
+}
+
+.admin-permission-form {
+    display: grid;
+    gap: 12px;
+    padding: 0 14px 14px;
+}
+
+.permission-mode-row,
+.admin-permission-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.permission-mode-row label,
+.permission-check {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 38px;
+    padding: 8px 12px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    color: var(--muted);
+    background: rgba(7, 31, 36, 0.58);
+}
+
+.permission-check input,
+.permission-mode-row input {
+    accent-color: var(--accent);
+}
+
+.vet-handoff {
+    overflow: hidden;
+}
+
+.vet-handoff > summary {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 18px;
+    cursor: pointer;
+    list-style: none;
+}
+
+.vet-handoff > summary span:nth-child(2) {
+    display: grid;
+    gap: 2px;
+    flex: 1;
+}
+
+.vet-handoff > summary small {
+    color: var(--accent-soft);
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+}
+
+.vet-handoff[open] > summary > b { transform: rotate(90deg); }
+
+.vet-handoff-latest,
+.vet-handoff-form {
+    display: grid;
+    gap: 10px;
+    margin: 0 18px 18px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+}
+
+.vet-handoff-form .form-grid { grid-template-columns: 1fr; }
+.vet-handoff-form input,
+.vet-handoff-form select { width: 100%; }
+
+.vet-handoff-latest span,
+.vet-handoff-latest small { color: var(--muted); }
 
 .is-hidden {
     display: none !important;

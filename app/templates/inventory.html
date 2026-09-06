@@ -3,5 +3,9 @@
 {% block title %}Velmorax | Inventario{% endblock %}
 
 {% block content %}
+{% if is_veterinary_flow %}
+{% include "partials/veterinary_inventory_section.html" %}
+{% else %}
 {% include "partials/inventory_section.html" %}
+{% endif %}
 {% endblock %}

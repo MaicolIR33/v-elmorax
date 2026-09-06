@@ -1,0 +1,387 @@
+<section class="module-section vet-inventory" id="inventario">
+  <div class="vet-inventory-heading"><div><p class="eyebrow">Insumos</p><h2 class="page-title">Inventario</h2></div><a class="vet-export-action" href="/inventario/export?search={{ inventory_filters.search }}&status={{ inventory_filters.status }}&organization_id={{ scope.organization_id }}&location_id={{ scope.location_id }}" title="Descargar el inventario visible en formato CSV"><span aria-hidden="true">⇩</span>Exportar inventario</a></div>
+  {% if saved %}<div class="flash-message vet-operation-toast" data-operation-toast><strong>✓ Guardado</strong><span>{{ inventory_notice or 'La información quedó actualizada.' }}</span></div>{% endif %}{% if moved %}<div class="flash-message vet-operation-toast" data-operation-toast><strong>✓ Movimiento completado</strong><span>{{ inventory_notice or 'Existencias y trazabilidad actualizadas.' }}</span></div>{% endif %}{% if movement_error %}<div class="flash-message flash-message-error vet-operation-toast" data-operation-toast><strong>No se pudo completar</strong><span>{{ movement_error }}</span></div>{% endif %}{% if permission_error %}<div class="flash-message flash-message-error">{{ permission_error }}</div>{% endif %}
+  <div class="vet-inventory-signals"><div><span>Lotes activos</span><strong>{{ inventory_summary.total_items }}</strong></div><div class="is-warning"><span>Stock bajo</span><strong>{{ inventory_summary.low_stock }}</strong></div><div class="is-critical"><span>Críticos</span><strong>{{ inventory_summary.critical }}</strong></div></div>
+  <div class="vet-inventory-layout">
+    <article class="panel-card vet-stock-card">
+      <form action="/inventario" method="get" class="vet-stock-filter"><input type="hidden" name="organization_id" value="{{ scope.organization_id }}"><input type="hidden" name="location_id" value="{{ scope.location_id }}"><label class="vet-search-field"><span class="sr-only">Buscar</span><input type="search" name="search" value="{{ inventory_filters.search }}" placeholder="Buscar producto, lote o escanear código" data-inventory-search></label><label><span class="sr-only">Estado</span><select name="status"><option value="">Estado</option><option value="red"{% if inventory_filters.status == 'red' %} selected{% endif %}>Crítico</option><option value="low"{% if inventory_filters.status == 'low' %} selected{% endif %}>Stock bajo</option><option value="green"{% if inventory_filters.status == 'green' %} selected{% endif %}>Disponible</option><option value="retired"{% if inventory_filters.status == 'retired' %} selected{% endif %}>Retirados</option></select></label><button class="btn btn-primary">Buscar</button><button class="vet-scan-button" type="button" data-open-scanner title="Escanear código">⌗<span>Escanear</span></button><details class="vet-filter-more"><summary>Filtros</summary><div><select name="item_type"><option value="">Tipo</option>{% for type in inventory_item_types %}<option{% if inventory_filters.item_type == type %} selected{% endif %}>{{ type }}</option>{% endfor %}</select><select name="expiry"><option value="">Vencimiento</option><option value="expired"{% if inventory_filters.expiry == 'expired' %} selected{% endif %}>Vencidos</option><option value="soon"{% if inventory_filters.expiry == 'soon' %} selected{% endif %}>Próximos 90 días</option></select><input name="storage_area" value="{{ inventory_filters.storage_area }}" placeholder="Ubicación"><input name="supplier" value="{{ inventory_filters.supplier }}" placeholder="Proveedor"></div></details></form>
+      <div class="vet-stock-list">
+      {% for item in inventory_alerts %}<details class="vet-stock-item{% if item.is_test %} is-test-lot{% endif %}{% if item.is_quarantined %} is-quarantined{% endif %}" id="inventory-item-{{ item.id }}"><summary><i class="dot dot-{{ item.badge_class }}"></i><span class="vet-stock-name"><strong>{{ item.name }}{% if item.is_test %}<em>Prueba</em>{% endif %}</strong><small>{{ item.item_type }} · Lote {{ item.lot }} · {{ item.days_left }}</small></span><span class="vet-stock-count"><strong>{{ item.quantity }}</strong><small>{{ item.unit_measure }}</small></span><span class="table-badge table-badge-{{ item.badge_class }}">{{ item.badge }}</span></summary>
+        <div class="vet-stock-detail vet-stock-detail-stack"><dl><div><dt>Marca</dt><dd>{{ item.brand or '—' }}</dd></div><div><dt>Proveedor</dt><dd>{{ item.supplier or '—' }}</dd></div><div><dt>Código</dt><dd>{{ item.barcode or '—' }}</dd></div><div><dt>Ubicación</dt><dd>{{ item.location }}{% if item.requires_cold_chain %} · 2–8 °C{% endif %}</dd></div></dl>
+        <details class="vet-trace-panel"><summary><span>Trazabilidad</span><small>{{ item.document_number or 'Registro inicial' }}</small><b>⌄</b></summary><dl><div><dt>Recepción</dt><dd>{{ item.received_date or item.created_at }}</dd></div><div><dt>Responsable</dt><dd>{{ item.received_by_name }}</dd></div><div><dt>Fabricante</dt><dd>{{ item.manufacturer or item.brand or '—' }}</dd></div><div><dt>Documento</dt><dd>{{ item.document_number or '—' }}</dd></div>{% if item.replenishment_request_id %}<div><dt>Solicitud</dt><dd>#{{ item.replenishment_request_id }}</dd></div>{% endif %}{% if item.presentation %}<div><dt>Presentación</dt><dd>{{ item.presentation }}</dd></div>{% endif %}{% if item.concentration %}<div><dt>Concentración</dt><dd>{{ item.concentration }}</dd></div>{% endif %}{% if item.serial_number %}<div><dt>Serie</dt><dd>{{ item.serial_number }}</dd></div>{% endif %}{% if item.reception_temperature_c is not none %}<div><dt>Temperatura recibida</dt><dd>{{ item.reception_temperature_c }} °C</dd></div>{% endif %}</dl>{% if item.reception_note %}<p>{{ item.reception_note }}</p>{% endif %}</details>
+        {% if permissions.manage_inventory and item.lot_status == 'active' %}<div class="vet-lot-actions">
+          <details><summary>Editar</summary><form action="/inventory/{{ item.id }}/edit" method="post" class="inventory-form vet-inline-operation"><input type="hidden" name="organization_id" value="{{ scope.organization_id }}"><input type="hidden" name="location_id" value="{{ scope.location_id }}"><div class="form-grid"><label><span>Producto</span><input name="name" value="{{ item.name }}" required></label><label><span>Tipo</span><select name="item_type">{% for type in inventory_item_types %}<option{% if item.item_type == type %} selected{% endif %}>{{ type }}</option>{% endfor %}</select></label></div><div class="form-grid"><label><span>Marca</span><input name="brand" value="{{ item.brand }}" required></label><label><span>Proveedor</span><input name="supplier" value="{{ item.supplier }}"></label></div><div class="form-grid"><label><span>Código</span><input name="barcode" value="{{ item.barcode }}"></label><label><span>Registro ICA</span><input name="regulatory_code" value="{{ item.regulatory_code }}" required></label></div><div class="form-grid"><label><span>Lote</span><input name="lot" value="{{ item.lot }}" required></label><label><span>Vencimiento</span><input type="date" name="expiry_date" value="{{ item.expiry_date }}" required></label></div><div class="form-grid"><label><span>Mínimo</span><input type="number" min="0" step="any" name="min_stock" value="{{ item.min_stock }}" required></label><label><span>Unidad</span><select name="unit_measure">{% for unit in inventory_units %}<option{% if item.unit_measure == unit %} selected{% endif %}>{{ unit }}</option>{% endfor %}</select></label></div><div class="form-grid"><label><span>Costo</span><input type="number" min="0" step=".01" name="unit_cost" value="{{ item.unit_cost }}"></label><label><span>Precio</span><input type="number" min="0" step=".01" name="sale_price" value="{{ item.sale_price }}"></label></div><div class="form-grid"><label><span>Ubicación</span><input name="location" value="{{ item.location }}" required></label><label><span>Conservación</span><input name="storage_condition" value="{{ item.storage_condition }}"></label></div><label class="checkbox-row"><input type="checkbox" name="requires_cold_chain" value="1"{% if item.requires_cold_chain %} checked{% endif %}><span>Cadena de frío</span></label><button class="btn btn-primary vet-save-action" type="submit">Guardar edición</button></form></details>
+          <details><summary>Conteo</summary><form action="/inventory/{{ item.id }}/count" method="post" class="vet-inline-operation"><input type="hidden" name="organization_id" value="{{ scope.organization_id }}"><input type="hidden" name="location_id" value="{{ scope.location_id }}"><label><span>Cantidad física</span><input type="number" min="0" step="any" name="counted_quantity" value="{{ item.quantity }}" required></label><input type="hidden" name="note" value="Conteo físico"><button class="btn btn-primary">Guardar</button></form></details>
+          {% if item.requires_cold_chain %}<details><summary>Temperatura</summary><form action="/inventory/{{ item.id }}/cold-chain" method="post" class="vet-inline-operation"><input type="hidden" name="organization_id" value="{{ scope.organization_id }}"><input type="hidden" name="location_id" value="{{ scope.location_id }}"><label><span>Lectura °C</span><input type="number" step=".1" name="temperature_c" required></label><label><span>Nota</span><input name="note"></label><button class="btn btn-primary">Registrar</button></form></details>{% endif %}
+          <details><summary>{% if item.is_quarantined %}Liberar{% else %}Cuarentena{% endif %}</summary><form action="/inventory/{{ item.id }}/quarantine" method="post" class="vet-inline-operation"><input type="hidden" name="organization_id" value="{{ scope.organization_id }}"><input type="hidden" name="location_id" value="{{ scope.location_id }}"><input type="hidden" name="enabled" value="{% if item.is_quarantined %}0{% else %}1{% endif %}">{% if item.is_quarantined %}<p class="vet-operation-note">Bloqueado: {{ item.quarantine_reason }}</p><input type="hidden" name="reason" value="Liberado tras verificación"><button class="btn btn-primary">Liberar lote</button>{% else %}<label><span>Motivo del bloqueo</span><input name="reason" placeholder="Retiro preventivo, alerta sanitaria…" required></label><button class="btn vet-confirm-danger">Bloquear uso</button>{% endif %}</form></details>
+          <button class="action-button action-danger" type="button" data-retire-lot data-item-id="{{ item.id }}" data-item-name="{{ item.name }}" data-item-lot="{{ item.lot }}" data-item-quantity="{{ item.quantity }}" data-item-unit="{{ item.unit_measure }}" data-retire-reason="{% if item.is_test %}Cierre de prueba{% endif %}">{% if item.is_test %}Cerrar prueba{% else %}Retirar{% endif %}</button>
+        </div>{% endif %}</div></details>{% else %}<div class="vet-stock-empty"><span class="vet-stock-empty-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m4 7 8-4 8 4-8 4-8-4Z"></path><path d="M4 7v10l8 4 8-4V7M12 11v10"></path></svg></span><strong>{% if inventory_filters.search or inventory_filters.status or inventory_filters.item_type or inventory_filters.expiry %}Sin coincidencias{% else %}Inventario listo para comenzar{% endif %}</strong><small>{% if inventory_filters.search or inventory_filters.status or inventory_filters.item_type or inventory_filters.expiry %}Ajusta los filtros para ver otros lotes.{% else %}Los lotes registrados aparecerán aquí.{% endif %}</small></div>{% endfor %}
+      </div>
+    </article>
+    <aside class="vet-inventory-actions">
+      {% if permissions.manage_inventory %}
+      <details class="vet-inventory-drawer">
+        <summary><span class="vet-drawer-icon">＋</span><span><strong>Nuevo lote</strong><small>Recepción trazable</small></span><b>›</b></summary>
+        <form action="/inventory" method="post" class="inventory-form vet-drawer-form vet-lot-wizard" data-new-lot-form>
+          <input type="hidden" name="organization_id" value="{{ scope.organization_id }}">
+          <input type="hidden" name="location_id" value="{{ scope.location_id }}">
+          <input type="hidden" name="category" value="Veterinaria">
+          <input type="hidden" name="regulatory_agency" value="ICA">
+          <input type="hidden" name="last_counted_at" value="">
+
+          <nav class="vet-wizard-progress" aria-label="Progreso de la recepción">
+            <button type="button" class="is-active" data-step-target="1"><i>1</i><span>Producto</span></button>
+            <button type="button" data-step-target="2"><i>2</i><span>Recepción</span></button>
+            <button type="button" data-step-target="3"><i>3</i><span>Verificar</span></button>
+          </nav>
+
+          <section class="vet-wizard-step is-active" data-wizard-step="1">
+            <div class="vet-wizard-intro"><strong>Identifica el producto</strong><small>Selecciona uno guardado o crea su ficha una sola vez.</small></div>
+            <label class="vet-field-wide"><span>Producto guardado</span>
+              <select name="product_id" data-product-select>
+                <option value="0">Crear producto nuevo</option>
+                {% for product in inventory_products %}
+                <option value="{{ product.id }}" data-name="{{ product.name }}" data-brand="{{ product.brand }}" data-barcode="{{ product.barcode }}" data-regulatory-code="{{ product.regulatory_code }}" data-item-type="{{ product.item_type }}" data-unit="{{ product.unit_measure }}" data-storage="{{ product.storage_condition }}" data-cold="{{ product.requires_cold_chain }}" data-manufacturer="{{ product.manufacturer }}" data-presentation="{{ product.presentation }}" data-concentration="{{ product.concentration }}">{{ product.name }} · {{ product.brand }}</option>
+                {% endfor %}
+              </select>
+            </label>
+            <div class="form-grid"><label><span>Producto</span><input name="name" required></label><label><span>Tipo</span><select name="item_type" data-item-type>{% for type in inventory_item_types %}<option>{{ type }}</option>{% endfor %}</select></label></div>
+            <div class="form-grid"><label><span>Marca</span><input name="brand" required></label><label><span>Fabricante</span><input name="manufacturer"></label></div>
+            <div class="form-grid"><label><span>Código</span><input name="barcode"></label><label><span>Registro ICA</span><input name="regulatory_code" required></label></div>
+            <div class="form-grid" data-medication-fields><label><span>Presentación</span><input name="presentation" placeholder="Ej. Frasco 100 ml"></label><label><span>Concentración</span><input name="concentration" placeholder="Ej. 50 mg/ml"></label></div>
+            <label data-serial-field hidden><span>Número de serie</span><input name="serial_number"></label>
+            <div class="vet-wizard-actions"><button type="button" class="btn btn-primary" data-next-step>Continuar</button></div>
+          </section>
+
+          <section class="vet-wizard-step" data-wizard-step="2" hidden>
+            <div class="vet-wizard-intro"><strong>Registra la recepción</strong><small>La sede, el responsable y la hora se guardan automáticamente.</small></div>
+            <div class="form-grid"><label><span>Proveedor</span><input name="supplier" required></label><label><span>Factura o remisión</span><input name="document_number" required></label></div>
+            <label><span>Solicitud aprobada · opcional</span><select name="replenishment_request_id"><option value="0">Recepción independiente</option>{% for request in inventory_replenishments %}{% if request.status == 'Aprobada' %}<option value="{{ request.id }}">#{{ request.id }} · {{ request.item_name }} · {{ request.requested_quantity }} {{ request.unit_measure }}</option>{% endif %}{% endfor %}</select></label>
+            <div class="form-grid"><label><span>Lote</span><input name="lot" required></label><label><span>Vencimiento</span><input type="date" name="expiry_date" min="{{ agenda_today }}" required></label></div>
+            <div class="form-grid"><label><span>Recepción</span><input type="date" name="received_date" value="{{ agenda_today }}" max="{{ agenda_today }}" required></label><label><span>Ubicación</span><input name="location" value="{{ inventory_form_defaults.location }}" required></label></div>
+            <div class="form-grid"><label><span>Cantidad</span><input type="number" min="0" step="any" name="quantity" value="1" required></label><label><span>Unidad</span><select name="unit_measure">{% for unit in inventory_units %}<option>{{ unit }}</option>{% endfor %}</select></label></div>
+            <label><span>Stock mínimo</span><input type="number" min="0" step="any" name="min_stock" value="1" required></label>
+            <div class="vet-wizard-actions"><button type="button" class="btn btn-secondary" data-back-step>Anterior</button><button type="button" class="btn btn-primary" data-next-step>Continuar</button></div>
+          </section>
+
+          <section class="vet-wizard-step" data-wizard-step="3" hidden>
+            <div class="vet-wizard-intro"><strong>Verifica y conserva</strong><small>Completa únicamente las condiciones que aplican al lote.</small></div>
+            <div class="form-grid"><label><span>Conservación</span><input name="storage_condition" placeholder="Ej. Refrigerado 2–8 °C"></label><label class="checkbox-row"><input type="checkbox" name="requires_cold_chain" value="1" data-cold-chain><span>Cadena de frío</span></label></div>
+            <div class="form-grid" data-cold-fields hidden><label><span>Temperatura recibida °C</span><input type="number" step=".1" name="reception_temperature_c" data-cold-temperature></label><label><span>Observación</span><input name="reception_note" placeholder="Opcional"></label></div>
+            <div class="form-grid"><label><span>Costo</span><input type="number" min="0" step=".01" name="unit_cost" value="0"></label><label><span>Precio</span><input type="number" min="0" step=".01" name="sale_price" value="0"></label></div><label class="checkbox-row vet-test-toggle"><input type="checkbox" name="is_test" value="1"><span>Lote de prueba</span></label>
+            <div class="vet-reception-review" data-reception-review></div>
+            <div class="vet-wizard-actions"><button type="button" class="btn btn-secondary" data-back-step>Anterior</button><button type="button" class="btn btn-primary vet-save-action" data-save-lot>Guardar lote</button></div>
+          </section>
+        </form>
+      </details>
+      {% endif %}
+      {% if permissions.manage_inventory %}
+      <details class="vet-inventory-drawer">
+        <summary><span class="vet-drawer-icon">↻</span><span><strong>Abastecimiento</strong><small>Solicitar y aprobar reposición</small></span><b>›</b></summary>
+        <form action="/inventory/replenishments" method="post" class="inventory-form vet-drawer-form vet-supply-form">
+          <input type="hidden" name="organization_id" value="{{ scope.organization_id }}"><input type="hidden" name="location_id" value="{{ scope.location_id }}">
+          <label><span>Producto de referencia</span><select name="item_id" required>{% for option in inventory_item_options %}<option value="{{ option.id }}">{{ option.label }}</option>{% endfor %}</select></label>
+          <div class="form-grid"><label><span>Cantidad solicitada</span><input type="number" min=".01" step="any" name="requested_quantity" value="1" required></label><label><span>Prioridad</span><select name="priority"><option>Normal</option><option>Urgente</option></select></label></div>
+          <label><span>Proveedor sugerido</span><input name="supplier" required></label><label><span>Justificación · opcional</span><input name="note" placeholder="Consumo previsto o necesidad operativa"></label>
+          <button class="btn btn-primary btn-block">Crear solicitud</button>
+        </form>
+        <div class="vet-supply-list">
+          {% for request in inventory_replenishments %}
+          <article class="vet-supply-request is-{{ request.status|lower }}">
+            <header><strong>#{{ request.id }} · {{ request.item_name }}</strong><span>{{ request.status }}</span></header>
+            <p>{{ request.requested_quantity }} {{ request.unit_measure }} · {{ request.supplier }}{% if request.priority == 'Urgente' %} · <b>Urgente</b>{% endif %}</p>
+            <small>{{ request.site_name }} · {{ request.requested_by_name }} · {{ request.created_at }}</small>
+            {% if request.status == 'Pendiente' and permissions.approve_inventory %}<div class="vet-supply-actions"><form action="/inventory/replenishments/{{ request.id }}/review" method="post"><input type="hidden" name="organization_id" value="{{ scope.organization_id }}"><input type="hidden" name="location_id" value="{{ scope.location_id }}"><input type="hidden" name="decision" value="reject"><button class="btn btn-secondary">Rechazar</button></form><form action="/inventory/replenishments/{{ request.id }}/review" method="post"><input type="hidden" name="organization_id" value="{{ scope.organization_id }}"><input type="hidden" name="location_id" value="{{ scope.location_id }}"><input type="hidden" name="decision" value="approve"><button class="btn btn-primary">Aprobar</button></form></div>{% endif %}
+            {% if request.status == 'Aprobada' %}<em>Vincúlala al recibir el nuevo lote.</em>{% endif %}
+          </article>
+          {% else %}<div class="vet-history-empty"><span>✓</span><strong>Abastecimiento al día</strong><small>Las solicitudes aparecerán aquí.</small></div>{% endfor %}
+        </div>
+      </details>
+      {% endif %}
+      {% if permissions.manage_inventory or permissions.consume_inventory %}
+      <details class="vet-inventory-drawer">
+        <summary><span class="vet-drawer-icon">↕</span><span><strong>{% if permissions.manage_inventory %}Movimiento{% else %}Registrar consumo{% endif %}</strong><small>{% if permissions.manage_inventory %}Entrada, consumo o ajuste{% else %}Uso clínico trazable{% endif %}</small></span><b>›</b></summary>
+        <form action="/inventory/movements" method="post" class="inventory-form vet-drawer-form" data-movement-form>
+          <input type="hidden" name="organization_id" value="{{ scope.organization_id }}"><input type="hidden" name="location_id" value="{{ scope.location_id }}">
+          <label><span>Lote · orden FEFO</span><select name="item_id" data-movement-item required>{% for option in inventory_item_options %}<option value="{{ option.id }}" data-unsafe-clinical="{{ 1 if option.is_quarantined or option.is_expired or option.quantity <= 0 else 0 }}">{{ option.label }}</option>{% endfor %}</select></label>
+          <div class="form-grid"><label><span>Operación</span><select name="movement_type">{% if permissions.manage_inventory %}<option value="in">Entrada</option>{% endif %}<option value="out">Salida</option></select></label><label><span>Motivo</span><select name="reason_type" data-movement-reason>{% if permissions.manage_inventory %}<option>Compra</option><option>Ajuste</option>{% endif %}<option>Consumo clínico</option>{% if permissions.manage_inventory %}<option>Merma</option>{% endif %}</select></label></div>
+          <div class="form-grid vet-clinical-link" data-clinical-link><label><span>Paciente</span><select name="patient_id" data-patient-link><option value="0">Seleccionar paciente</option>{% for patient in patients %}<option value="{{ patient.id }}">{{ patient.display_name }}{% if patient.owner_name %} · {{ patient.owner_name }}{% endif %}</option>{% endfor %}</select></label><label><span>Cita de hoy · opcional</span><select name="appointment_id"><option value="0">Sin cita asociada</option>{% for appointment in appointments %}<option value="{{ appointment.id }}">{{ appointment.appointment_time }} · {{ appointment.patient }}</option>{% endfor %}</select></label></div>
+          <div class="form-grid vet-clinical-link" data-clinical-link><label><span>Prioridad</span><select name="priority"><option>Normal</option><option>Urgente</option></select></label><label><span>Referencia · opcional</span><input name="external_reference" placeholder="Historia, caso o autorización"></label></div>
+          <label><span>Cantidad</span><input type="number" min=".01" step="any" name="quantity" value="1" required></label><label><span>Nota</span><input name="note" placeholder="Procedimiento o uso realizado" required></label><button class="btn btn-primary btn-block">Registrar</button>
+        </form>
+      </details>
+      {% endif %}
+      {% if permissions.manage_inventory and inventory_transfer_locations %}
+      <details class="vet-inventory-drawer">
+        <summary><span class="vet-drawer-icon">⇄</span><span><strong>Trasladar</strong><small>Entre sedes configuradas</small></span><b>›</b></summary>
+        <form action="/inventory/0/transfer" method="post" class="inventory-form vet-drawer-form" data-transfer-form>
+          <input type="hidden" name="organization_id" value="{{ scope.organization_id }}"><input type="hidden" name="location_id" value="{{ scope.location_id }}">
+          <label><span>Lote de origen</span><select name="item_id_proxy" data-transfer-item required>{% for option in inventory_item_options %}<option value="{{ option.id }}"{% if option.is_quarantined or option.is_expired or option.quantity <= 0 %} disabled{% endif %}>{{ option.label }}</option>{% endfor %}</select></label>
+          <div class="form-grid"><label><span>Sede destino</span><select name="destination_location_id" required>{% for location in inventory_transfer_locations %}<option value="{{ location.id }}">{{ location.name }}</option>{% endfor %}</select></label><label><span>Ubicación destino</span><input name="destination_storage" placeholder="Bodega, nevera o gabinete" required></label></div>
+          <label><span>Cantidad</span><input type="number" min=".01" step="any" name="quantity" value="1" required></label><label><span>Referencia</span><input name="note" placeholder="Remisión o responsable del traslado" required></label><button class="btn btn-primary btn-block">Confirmar traslado</button>
+        </form>
+      </details>
+      {% endif %}
+      {% if inventory_network_summary|length > 1 %}
+      <details class="vet-inventory-drawer">
+        <summary><span class="vet-drawer-icon">⌂</span><span><strong>Vista de red</strong><small>{{ inventory_network_summary|length }} sedes configuradas</small></span><b>›</b></summary>
+        <div class="vet-network-stock">
+          {% for site in inventory_network_summary %}<article{% if site.id == scope.location_id|int %} class="is-current"{% endif %}><div><strong>{{ site.name }}</strong><small>{{ site.active_lots }} lotes · {{ site.total_units }} unidades</small></div><span><b>{{ site.critical }}</b> críticos</span><span><b>{{ site.low_stock }}</b> bajos</span></article>{% endfor %}
+        </div>
+      </details>
+      {% endif %}
+      <details class="vet-inventory-drawer">
+        <summary><span class="vet-drawer-icon">↺</span><span><strong>Historial</strong><small>{{ recent_movements|length }} registros</small></span><b>›</b></summary>
+        <div class="vet-history-toolbar"><span>Movimientos de inventario</span><a href="/inventario/historial/export?organization_id={{ scope.organization_id }}&location_id={{ scope.location_id }}">Exportar CSV</a></div>
+        <div class="vet-drawer-history">
+          {% for movement in recent_movements %}
+          <article class="vet-history-entry is-{{ movement.tone }}">
+            <header><span class="vet-history-action">{{ movement.direction }}</span>{% if movement.priority == 'Urgente' %}<span class="vet-history-priority">Urgente</span>{% endif %}<time>{{ movement.created_at }}</time></header>
+            <div class="vet-history-product"><strong>{{ movement.item_name }}</strong><span>Lote {{ movement.lot }}</span></div>
+            {% if movement.note %}<p class="vet-history-note">{{ movement.note }}</p>{% endif %}
+            <footer><div class="vet-history-context">
+              {% if movement.patient_name %}<span><small>Paciente</small><strong>{{ movement.patient_name }}</strong></span>{% endif %}
+              {% if movement.appointment_label %}<span><small>Cita</small><strong>{{ movement.appointment_label }}</strong></span>{% endif %}
+              {% if movement.counterparty_location_name %}<span><small>Sede relacionada</small><strong>{{ movement.counterparty_location_name }}</strong></span>{% endif %}
+              {% if movement.transfer_reference %}<span><small>Traslado</small><strong>{{ movement.transfer_reference }}</strong></span>{% endif %}
+              {% if movement.external_reference and not movement.transfer_reference %}<span><small>Referencia</small><strong>{{ movement.external_reference }}</strong></span>{% endif %}
+              <span><small>Responsable</small><strong>{{ movement.responsible_name }}</strong></span>
+            </div><div class="vet-history-stock"><small>Existencias</small><strong>{{ movement.stock_before }} <i>→</i> {{ movement.stock_after }}</strong></div></footer>
+          </article>
+          {% else %}<div class="vet-history-empty"><span>✓</span><strong>Sin movimientos</strong><small>Las operaciones aparecerán aquí.</small></div>{% endfor %}
+        </div>
+      </details>
+    </aside>
+  </div>
+</section>
+<dialog class="vet-confirm-dialog" data-retire-dialog><form method="post" class="vet-confirm-card" data-retire-form><span class="vet-confirm-icon">△</span><div class="vet-confirm-copy"><p class="eyebrow">Retiro trazable</p><h3>Retirar existencias</h3><p><strong data-retire-name></strong><span data-retire-description></span></p><div class="form-grid"><label><span>Cantidad</span><input type="number" min=".01" step="any" name="quantity" data-retire-quantity required></label><label><span>Motivo</span><select name="reason"><option>Vencimiento</option><option>Daño</option><option>Devolución</option><option>Pérdida</option><option>Cierre de prueba</option></select></label></div><input type="hidden" name="organization_id" value="{{ scope.organization_id }}"><input type="hidden" name="location_id" value="{{ scope.location_id }}"></div><div class="vet-confirm-actions"><button class="btn btn-secondary" type="button" data-close-retire>Cancelar</button><button class="btn vet-confirm-danger">Confirmar</button></div></form></dialog>
+<dialog class="vet-scanner-dialog" data-scanner-dialog><div class="vet-scanner-card"><header><div><p class="eyebrow">Identificación rápida</p><h3>Escanear código</h3></div><button type="button" data-close-scanner aria-label="Cerrar escáner">×</button></header><video playsinline muted data-scanner-video></video><p data-scanner-status>Acerca el código de barras a la cámara.</p><div class="vet-scanner-actions"><button type="button" class="btn btn-secondary" data-reader-mode>Usar lector</button><button type="button" class="btn btn-primary" data-start-camera>Activar cámara</button></div></div></dialog>
+<script>
+(() => {
+  document.querySelectorAll('[data-operation-toast]').forEach((toast) => {
+    window.setTimeout(() => toast.classList.add('is-leaving'), 4500);
+    window.setTimeout(() => toast.remove(), 4900);
+  });
+
+  const movementForm = document.querySelector('[data-movement-form]');
+  if (movementForm) {
+    const reason = movementForm.querySelector('[data-movement-reason]');
+    const links = [...movementForm.querySelectorAll('[data-clinical-link]')];
+    const patient = movementForm.querySelector('[data-patient-link]');
+    const item = movementForm.querySelector('[data-movement-item]');
+    const syncClinicalLink = () => {
+      const clinical = reason.value === 'Consumo clínico';
+      links.forEach((link) => { link.hidden = !clinical; });
+      patient.required = clinical;
+      [...item.options].forEach((option) => {
+        option.disabled = clinical && option.dataset.unsafeClinical === '1';
+      });
+      if (item.selectedOptions[0]?.disabled) item.value = [...item.options].find((option) => !option.disabled)?.value || '';
+    };
+    reason.addEventListener('change', syncClinicalLink);
+    syncClinicalLink();
+  }
+
+  const transferForm = document.querySelector('[data-transfer-form]');
+  if (transferForm) {
+    const transferItem = transferForm.querySelector('[data-transfer-item]');
+    transferForm.addEventListener('submit', () => {
+      transferForm.action = `/inventory/${transferItem.value}/transfer`;
+    });
+  }
+
+  const hashItem = location.hash && document.querySelector(location.hash);
+  if (hashItem) hashItem.open = true;
+
+  const lotForm = document.querySelector('[data-new-lot-form]');
+  if (lotForm) {
+    const typeSelect = lotForm.querySelector('[data-item-type]');
+    const productSelect = lotForm.querySelector('[data-product-select]');
+    const medicationFields = lotForm.querySelector('[data-medication-fields]');
+    const serialField = lotForm.querySelector('[data-serial-field]');
+    const coldToggle = lotForm.querySelector('[data-cold-chain]');
+    const coldFields = lotForm.querySelector('[data-cold-fields]');
+    const coldTemperature = lotForm.querySelector('[data-cold-temperature]');
+    const steps = [...lotForm.querySelectorAll('[data-wizard-step]')];
+    const progress = [...lotForm.querySelectorAll('[data-step-target]')];
+    let currentStep = 1;
+
+    const field = (name) => lotForm.elements.namedItem(name);
+    const syncConditionalFields = () => {
+      const type = typeSelect.value;
+      medicationFields.hidden = !['Medicamento', 'Vacuna'].includes(type);
+      serialField.hidden = type !== 'Instrumental';
+      coldFields.hidden = !coldToggle.checked;
+      coldTemperature.required = coldToggle.checked;
+    };
+    const fillFromProduct = () => {
+      const option = productSelect.selectedOptions[0];
+      const existing = productSelect.value !== '0';
+      const mapping = {name: 'name', brand: 'brand', barcode: 'barcode', regulatoryCode: 'regulatory_code', manufacturer: 'manufacturer', presentation: 'presentation', concentration: 'concentration', storage: 'storage_condition'};
+      Object.entries(mapping).forEach(([key, name]) => {
+        if (existing) field(name).value = option.dataset[key] || '';
+        field(name).readOnly = existing;
+      });
+      if (existing) {
+        typeSelect.value = option.dataset.itemType || 'Medicamento';
+        field('unit_measure').value = option.dataset.unit || 'unidades';
+        coldToggle.checked = option.dataset.cold === '1';
+      }
+      typeSelect.disabled = existing;
+      field('unit_measure').disabled = existing;
+      syncConditionalFields();
+    };
+    const validateStep = () => {
+      const controls = [...steps[currentStep - 1].querySelectorAll('input, select')].filter((control) => !control.disabled && !control.closest('[hidden]'));
+      return controls.every((control) => control.reportValidity());
+    };
+    const buildReview = () => {
+      const review = lotForm.querySelector('[data-reception-review]');
+      const values = [
+        ['Producto', field('name').value],
+        ['Lote', field('lot').value],
+        ['Recepción', field('received_date').value],
+        ['Existencia', `${field('quantity').value} ${field('unit_measure').value}`],
+        ['Documento', field('document_number').value],
+        ['Ubicación', field('location').value],
+      ];
+      review.replaceChildren(...values.map(([label, value]) => {
+        const item = document.createElement('div');
+        const term = document.createElement('small');
+        const detail = document.createElement('strong');
+        term.textContent = label;
+        detail.textContent = value || '—';
+        item.append(term, detail);
+        return item;
+      }));
+    };
+    const showStep = (number) => {
+      currentStep = number;
+      steps.forEach((step, index) => {
+        const active = index + 1 === number;
+        step.hidden = !active;
+        step.classList.toggle('is-active', active);
+      });
+      progress.forEach((button, index) => {
+        button.classList.toggle('is-active', index + 1 === number);
+        button.classList.toggle('is-complete', index + 1 < number);
+      });
+      if (number === 3) buildReview();
+    };
+
+    productSelect.addEventListener('change', fillFromProduct);
+    typeSelect.addEventListener('change', syncConditionalFields);
+    coldToggle.addEventListener('change', syncConditionalFields);
+    lotForm.querySelectorAll('[data-next-step]').forEach((button) => button.addEventListener('click', () => {
+      if (validateStep()) showStep(Math.min(3, currentStep + 1));
+    }));
+    lotForm.querySelectorAll('[data-back-step]').forEach((button) => button.addEventListener('click', () => showStep(Math.max(1, currentStep - 1))));
+    progress.forEach((button) => button.addEventListener('click', () => {
+      const target = Number(button.dataset.stepTarget);
+      if (target < currentStep || (target === currentStep + 1 && validateStep())) showStep(target);
+    }));
+    lotForm.querySelector('[data-save-lot]').addEventListener('click', () => {
+      if (!lotForm.reportValidity()) return;
+      typeSelect.disabled = false;
+      field('unit_measure').disabled = false;
+      lotForm.submit();
+    });
+    lotForm.addEventListener('submit', (event) => {
+      const visibleStep = Number(lotForm.querySelector('.vet-wizard-step.is-active')?.dataset.wizardStep || currentStep);
+      if (visibleStep < 3) {
+        event.preventDefault();
+        currentStep = visibleStep;
+        if (validateStep()) showStep(visibleStep + 1);
+        return;
+      }
+      typeSelect.disabled = false;
+      field('unit_measure').disabled = false;
+    });
+    fillFromProduct();
+    showStep(1);
+  }
+
+  const lotActionPanels = [...document.querySelectorAll('.vet-lot-actions > details')];
+  const lotActionAnchors = new WeakMap();
+  lotActionPanels.forEach((panel) => panel.addEventListener('toggle', () => {
+    if (panel.open) {
+      lotActionPanels.forEach((other) => { if (other !== panel) other.open = false; });
+      if (!panel.classList.contains('vet-lot-drawer')) {
+        const anchor = document.createComment('lot-action');
+        panel.before(anchor);
+        lotActionAnchors.set(panel, anchor);
+        panel.classList.add('vet-lot-drawer');
+        document.body.append(panel);
+      }
+      return;
+    }
+    const anchor = lotActionAnchors.get(panel);
+    if (anchor?.parentNode) {
+      anchor.before(panel);
+      anchor.remove();
+    }
+    panel.classList.remove('vet-lot-drawer');
+  }));
+
+  const dialog = document.querySelector('[data-retire-dialog]');
+  if (!dialog) return;
+  document.querySelectorAll('[data-retire-lot]').forEach((button) => {
+    button.addEventListener('click', () => {
+      dialog.querySelector('form').action = `/inventory/${button.dataset.itemId}/retire`;
+      dialog.querySelector('[data-retire-name]').textContent = button.dataset.itemName;
+      dialog.querySelector('[data-retire-description]').textContent = `Lote ${button.dataset.itemLot} · ${button.dataset.itemQuantity} ${button.dataset.itemUnit}`;
+      const quantity = dialog.querySelector('[data-retire-quantity]');
+      quantity.value = button.dataset.itemQuantity;
+      quantity.max = button.dataset.itemQuantity;
+      if (button.dataset.retireReason) dialog.querySelector('[name="reason"]').value = button.dataset.retireReason;
+      dialog.showModal();
+    });
+  });
+  dialog.querySelector('[data-close-retire]').addEventListener('click', () => dialog.close());
+
+  const scanner = document.querySelector('[data-scanner-dialog]');
+  const search = document.querySelector('[data-inventory-search]');
+  let scannerStream;
+  search.addEventListener('keydown', (event) => {
+    if (event.key !== 'Enter' || !search.value.trim()) return;
+    event.preventDefault();
+    search.form.requestSubmit();
+  });
+  const stopScanner = () => {
+    scannerStream?.getTracks().forEach((track) => track.stop());
+    scannerStream = null;
+  };
+  document.querySelector('[data-open-scanner]')?.addEventListener('click', () => scanner.showModal());
+  scanner.querySelector('[data-close-scanner]').addEventListener('click', () => { stopScanner(); scanner.close(); });
+  scanner.querySelector('[data-reader-mode]').addEventListener('click', () => { stopScanner(); scanner.close(); search.focus(); search.select(); });
+  scanner.querySelector('[data-start-camera]').addEventListener('click', async () => {
+    const status = scanner.querySelector('[data-scanner-status]');
+    if (!('BarcodeDetector' in window) || !navigator.mediaDevices?.getUserMedia) {
+      status.textContent = 'Cámara no compatible. Conecta el lector y escanea en el buscador.';
+      return;
+    }
+    try {
+      scannerStream = await navigator.mediaDevices.getUserMedia({video: {facingMode: 'environment'}});
+      const video = scanner.querySelector('[data-scanner-video]');
+      video.srcObject = scannerStream;
+      await video.play();
+      const detector = new BarcodeDetector({formats: ['ean_13', 'ean_8', 'code_128', 'qr_code']});
+      const detect = async () => {
+        if (!scannerStream) return;
+        const codes = await detector.detect(video);
+        if (codes[0]?.rawValue) {
+          search.value = codes[0].rawValue;
+          stopScanner();
+          scanner.close();
+          search.form.requestSubmit();
+          return;
+        }
+        requestAnimationFrame(detect);
+      };
+      detect();
+    } catch (_) {
+      status.textContent = 'No se pudo abrir la cámara. Usa el lector conectado.';
+    }
+  });
+})();
+</script>

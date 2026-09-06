@@ -3,6 +3,9 @@
 {% block title %}Velmorax | Resumen{% endblock %}
 
 {% block content %}
+{% if is_veterinary_dashboard %}
+{% include "partials/veterinary_dashboard.html" %}
+{% else %}
 {% include "partials/overview_section.html" %}
 <section class="sources-section" id="sources">
     <p class="eyebrow">Referencias usadas para mejorar el flujo</p>
@@ -12,4 +15,5 @@
         {% endfor %}
     </div>
 </section>
+{% endif %}
 {% endblock %}

@@ -234,6 +234,10 @@
                 }
 
                 const activeCard = cards.find((card) => card.dataset.flowId === flowId);
+                if (!activeCard) {
+                    updateLoginState("");
+                    return;
+                }
                 const theme = flowThemes[flowId] || flowThemes.default;
                 if (spotlightCard) spotlightCard.classList.remove("spotlight-card-muted");
                 if (spotlightIndex) spotlightIndex.textContent = activeCard.dataset.flowIndex;

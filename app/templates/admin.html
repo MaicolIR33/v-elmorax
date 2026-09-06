@@ -5,8 +5,8 @@
 {% block content %}
 <section class="module-section">
     <div class="section-heading">
-        <p class="eyebrow">Administracion</p>
-        <h2 class="page-title">Red, sedes, equipo y despliegue</h2>
+        <p class="eyebrow">{% if is_veterinary_flow %}Administracion veterinaria{% else %}Administracion{% endif %}</p>
+        <h2 class="page-title">{% if is_veterinary_flow %}Equipo y configuracion{% else %}Red, sedes, equipo y despliegue{% endif %}</h2>
     </div>
 
     {% if permission_error %}
@@ -30,10 +30,10 @@
     {% if user_updated %}
     <div class="flash-message">Usuario actualizado correctamente.</div>
     {% endif %}
-    {% if catalog_imported %}
+    {% if catalog_imported and not is_veterinary_flow %}
     <div class="flash-message">Catalogo odontologico importado correctamente.</div>
     {% endif %}
-    {% if catalog_synced %}
+    {% if catalog_synced and not is_veterinary_flow %}
     <div class="flash-message">Catalogo odontologico nacional sincronizado desde fuente oficial.</div>
     {% endif %}
     {% if catalog_veterinary_synced %}
@@ -158,6 +158,35 @@
                             {% if item.is_active %}Desactivar{% else %}Activar{% endif %}
                         </button>
                     </form>
+                    <details class="admin-permissions">
+                        <summary>Permisos de {{ item.full_name }}</summary>
+                        <form action="/admin/users/{{ item.id }}/permissions" method="post" class="admin-permission-form">
+                            <input type="hidden" name="organization_id" value="{{ item.organization_id }}">
+                            <input type="hidden" name="location_id" value="{{ item.location_id }}">
+                            <input type="hidden" name="full_name" value="{{ item.full_name }}">
+                            <div class="permission-mode-row">
+                                <label><input type="radio" name="permission_mode" value="role"{% if not item.permission_overrides %} checked{% endif %}> Usar perfil {{ item.role_label }}</label>
+                                <label><input type="radio" name="permission_mode" value="custom"{% if item.permission_overrides %} checked{% endif %}> Personalizar</label>
+                            </div>
+                            <div class="admin-permission-grid">
+                                {% set permission_labels = {
+                                    'view_agenda': 'Ver agenda', 'manage_agenda': 'Gestionar agenda',
+                                    'view_inventory': 'Ver insumos', 'consume_inventory': 'Registrar consumos',
+                                    'manage_inventory': 'Gestionar lotes', 'approve_inventory': 'Aprobar abastecimiento',
+                                    'view_clinical': 'Ver pacientes', 'manage_clinical': 'Gestionar consulta',
+                                    'manage_admin': 'Administrar equipo'
+                                } %}
+                                {% for key, label in permission_labels.items() %}
+                                <label class="permission-check">
+                                    <input type="checkbox" name="allowed_permissions" value="{{ key }}"{% if item.effective_permissions.get(key) %} checked{% endif %}>
+                                    <span>{{ label }}</span>
+                                </label>
+                                {% endfor %}
+                            </div>
+                            <p class="muted-line">El perfil del rol es la opción recomendada. Personaliza solo cuando este empleado necesite una excepción.</p>
+                            <button class="action-button" type="submit">Guardar permisos</button>
+                        </form>
+                    </details>
                 </div>
                 {% endfor %}
             </div>
@@ -165,6 +194,13 @@
 
         <aside class="side-stack">
             <article class="panel-card">
+                {% if is_veterinary_flow %}
+                <div class="section-heading"><p class="eyebrow">Directorio veterinario</p><h3>Actualizar profesionales</h3></div>
+                <p class="muted-line">Sincroniza la fuente publica del ICA.</p>
+                <form action="/admin/catalogs/sync/veterinary" method="post" class="inventory-form">
+                    <button class="btn btn-primary btn-block" type="submit">Sincronizar veterinaria nacional</button>
+                </form>
+                {% else %}
                 <div class="section-heading"><p class="eyebrow">Importacion masiva</p><h3>Cargar catalogo odontologico</h3></div>
                 <p class="muted-line">Usa un CSV con instituciones y sedes para poblar la red nacional sin editar codigo. La plantilla base esta en <a href="/static/templates/odontologia_catalogo_template.csv">odontologia_catalogo_template.csv</a>.</p>
                 <div class="inventory-metrics">
@@ -193,9 +229,10 @@
                     <label><span>Archivo CSV</span><input type="file" name="catalog_file" accept=".csv" required></label>
                     <button class="btn btn-primary btn-block" type="submit">Importar catalogo</button>
                 </form>
+                {% endif %}
             </article>
 
-            <article class="panel-card">
+            <article class="panel-card"{% if is_veterinary_flow %} hidden{% endif %}>
                 <div class="section-heading"><p class="eyebrow">Nueva organizacion</p><h3>Agregar red</h3></div>
                 <form action="/admin/organizations" method="post" class="inventory-form">
                     <label><span>Nombre</span><input type="text" name="name" required></label>
@@ -207,9 +244,10 @@
                 </form>
             </article>
 
-            <article class="panel-card">
-                <div class="section-heading"><p class="eyebrow">Nueva sede</p><h3>Agregar ubicacion</h3></div>
+            <article class="panel-card" id="nueva-sede">
+                <div class="section-heading"><p class="eyebrow">{% if is_veterinary_flow %}Crecimiento opcional{% else %}Nueva sede{% endif %}</p><h3>{% if is_veterinary_flow %}Agregar otra sede{% else %}Agregar ubicacion{% endif %}</h3></div>
                 <form action="/admin/locations" method="post" class="inventory-form">
+                    {% if is_veterinary_flow %}<input type="hidden" name="catalog_kind" value="veterinaria">{% endif %}
                     <label><span>Organizacion</span><select name="organization_id">{% for option in admin_organizations %}<option value="{{ option.id }}">{{ option.name }}</option>{% endfor %}</select></label>
                     <label><span>Nombre sede</span><input type="text" name="name" required></label>
                     <label><span>Ciudad</span><input type="text" name="city" required></label>
@@ -229,7 +267,7 @@
                     <label><span>Clave temporal</span><input type="password" name="password" required></label>
                     <div class="form-grid">
                         <label><span>Rol</span><select name="role"><option value="admin">admin</option><option value="clinical">clinical</option><option value="inventory">inventory</option></select></label>
-                        <label><span>Especialidad</span><input type="text" name="specialty" placeholder="Odontologia, Veterinaria..."></label>
+                        <label><span>Especialidad</span><input type="text" name="specialty"{% if is_veterinary_flow %} value="Veterinaria" readonly{% else %} placeholder="Odontologia, Veterinaria..."{% endif %}></label>
                     </div>
                     <label><span>Organizacion</span><select name="organization_id">{% for option in admin_organizations %}<option value="{{ option.id }}">{{ option.name }}</option>{% endfor %}</select></label>
                     <label><span>Sede</span><select name="location_id">{% for option in admin_locations %}<option value="{{ option.id }}">{{ option.organization_name }} | {{ option.name }}</option>{% endfor %}</select></label>

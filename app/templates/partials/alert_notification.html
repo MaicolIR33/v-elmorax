@@ -1,0 +1,32 @@
+{% set notification = veterinary_dashboard.alerts[0] %}
+<aside class="vet-alert-notification is-{{ notification.priority }}" role="alert" aria-live="assertive" data-alert-notification data-alert-id="{{ notification.id }}">
+    <span class="vet-alert-notification-icon" aria-hidden="true">!</span>
+    <a href="/alertas{% if scope_query %}?{{ scope_query }}{% endif %}">
+        <span><strong>{{ notification.title }}</strong><small>{{ notification.message }}</small></span>
+        {% if veterinary_dashboard.alerts_total > 1 %}<b>+{{ veterinary_dashboard.alerts_total - 1 }}</b>{% endif %}
+    </a>
+    <button type="button" aria-label="Cerrar notificación" title="Cerrar">×</button>
+    <span class="vet-alert-notification-timer" aria-hidden="true"></span>
+</aside>
+<script>
+(() => {
+    const notice = document.querySelector('[data-alert-notification]');
+    if (!notice) return;
+    const key = `velmorax-alert-${notice.dataset.alertId}`;
+    if (sessionStorage.getItem(key)) {
+        notice.remove();
+        return;
+    }
+    requestAnimationFrame(() => notice.classList.add('is-visible'));
+    let timer;
+    const dismiss = () => {
+        sessionStorage.setItem(key, 'dismissed');
+        notice.classList.remove('is-visible');
+        window.setTimeout(() => notice.remove(), 260);
+    };
+    notice.querySelector('button').addEventListener('click', dismiss);
+    timer = window.setTimeout(dismiss, 8000);
+    notice.addEventListener('mouseenter', () => window.clearTimeout(timer));
+    notice.addEventListener('mouseleave', () => { timer = window.setTimeout(dismiss, 3000); });
+})();
+</script>

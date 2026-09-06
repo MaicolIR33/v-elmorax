@@ -5,8 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Velmorax{% endblock %}</title>
     <link rel="stylesheet" href="{{ url_for('static', path='/css/styles.css') }}">
+    {% if is_veterinary_flow %}
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/veterinary-dashboard.css') }}?v=alerts-final-26">
+    {% endif %}
 </head>
-<body>
+<body{% if is_veterinary_flow %} class="veterinary-dashboard-page"{% endif %}>
     <div class="page-shell">
         {% if current_user %}
         {% include "partials/sidebar.html" %}
@@ -18,5 +21,8 @@
             </main>
         </div>
     </div>
+    {% if is_veterinary_flow and active_path != '/alertas' and veterinary_dashboard.alerts %}
+    {% include "partials/alert_notification.html" %}
+    {% endif %}
 </body>
 </html>

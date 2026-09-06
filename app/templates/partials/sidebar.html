@@ -1,3 +1,77 @@
+{% if is_veterinary_flow %}
+<aside class="sidebar vet-sidebar">
+    <div class="vet-sidebar-brand">
+        <strong class="vet-wordmark">Velmorax</strong>
+        <small>Clinica veterinaria</small>
+    </div>
+
+    <nav class="vet-sidebar-nav" aria-label="Navegacion principal">
+        <a href="/{% if scope_query %}?{{ scope_query }}{% endif %}"{% if active_path == '/' %} class="is-active" aria-current="page"{% endif %} title="Tablero">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h6v7H4V4ZM14 4h6v4h-6V4ZM14 12h6v8h-6v-8ZM4 15h6v5H4v-5Z"></path></svg>
+            <span>Tablero</span>
+        </a>
+        {% if permissions.view_agenda %}
+        <a href="/agenda{% if scope_query %}?{{ scope_query }}{% endif %}"{% if active_path == '/agenda' %} class="is-active" aria-current="page"{% endif %} title="Agenda">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3v3M17 3v3M4 9h16M5 5h14a1 1 0 0 1 1 1v14H4V6a1 1 0 0 1 1-1Z"></path></svg>
+            <span>Agenda</span>
+        </a>
+        {% endif %}
+        {% if permissions.view_clinical %}
+        <a href="/clinica{% if scope_query %}?{{ scope_query }}{% endif %}"{% if active_path == '/clinica' %} class="is-active" aria-current="page"{% endif %} title="Pacientes">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="4"></circle><path d="M2.5 21c.5-4.2 2.7-6.5 6.5-6.5s6 2.3 6.5 6.5M18 8v7M14.5 11.5h7"></path></svg>
+            <span>Pacientes</span>
+        </a>
+        {% endif %}
+        {% if permissions.view_inventory %}
+        <a href="/inventario{% if scope_query %}?{{ scope_query }}{% endif %}"{% if active_path == '/inventario' %} class="is-active" aria-current="page"{% endif %} title="Insumos">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 7 8-4 8 4-8 4-8-4Z"></path><path d="M4 7v10l8 4 8-4V7M12 11v10"></path></svg>
+            <span>Insumos</span>
+        </a>
+        {% endif %}
+        <a href="/alertas{% if scope_query %}?{{ scope_query }}{% endif %}"{% if active_path == '/alertas' %} class="is-active" aria-current="page"{% endif %} title="Alertas">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 3 20h18L12 3Z"></path><path d="M12 9v5M12 17.5v.5"></path></svg>
+            <span>Alertas</span>{% if veterinary_dashboard.alerts_total %}<strong class="vet-nav-alert-count">{{ veterinary_dashboard.alerts_total }}</strong>{% endif %}
+        </a>
+        {% if permissions.manage_admin %}
+        <a href="/admin{% if scope_query %}?{{ scope_query }}{% endif %}"{% if active_path == '/admin' %} class="is-active" aria-current="page"{% endif %} title="Administracion">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2.8 2.8-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21h-4v-.1a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1L4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9A1.7 1.7 0 0 0 3.1 14H3v-4h.1a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.9L4.2 7 7 4.2l.1.1a1.7 1.7 0 0 0 1.9.3 1.7 1.7 0 0 0 1-1.5V3h4v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1L19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.5 1h.1v4h-.1a1.7 1.7 0 0 0-1.5 1Z"></path></svg>
+            <span>Admin</span>
+        </a>
+        {% endif %}
+    </nav>
+
+    {% if scope.locations|length > 1 %}
+    <form action="{{ active_path }}" method="get" class="vet-scope-form vet-single-scope-form">
+        <span class="vet-scope-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z"></path><circle cx="12" cy="10" r="2.5"></circle></svg>
+        </span>
+        <input type="hidden" name="organization_id" value="{{ scope.organization_id }}">
+        <label class="visually-hidden" for="vet-location">Sede</label>
+        <select id="vet-location" name="location_id" onchange="this.form.submit()" title="Sede">
+            {% for option in scope.locations %}
+            <option value="{{ option.id }}"{% if scope.location_id == option.id|string %} selected{% endif %}>{{ option.name }}</option>
+            {% endfor %}
+        </select>
+    </form>
+    {% else %}
+    <div class="vet-single-site">
+        <span class="vet-scope-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z"></path><circle cx="12" cy="10" r="2.5"></circle></svg></span>
+        <span><small>Sede activa</small><strong>{{ scope.selected_location.name if scope.selected_location else 'Sede principal' }}</strong></span>
+        {% if permissions.manage_admin %}<a href="/admin{% if scope_query %}?{{ scope_query }}{% endif %}#nueva-sede" title="Agregar otra sede">＋</a>{% endif %}
+    </div>
+    {% endif %}
+
+    <div class="vet-sidebar-user">
+        <span class="vet-user-avatar" aria-hidden="true">{{ current_user.full_name[:1] }}</span>
+        <span><strong>{{ current_user.full_name }}</strong><small>{{ current_user.role_label }}</small></span>
+        <form action="/logout" method="post">
+            <button type="submit" aria-label="Cerrar sesion" title="Cerrar sesion">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 4H4v16h6M14 8l4 4-4 4M8 12h10"></path></svg>
+            </button>
+        </form>
+    </div>
+</aside>
+{% else %}
 <aside class="sidebar">
     <div class="sidebar-top">
         <div class="brand-group brand-group-sidebar">
@@ -27,6 +101,7 @@
         {% if permissions.view_clinical %}
         <a href="/clinica{% if scope_query %}?{{ scope_query }}{% endif %}" class="sidebar-link{% if active_path == '/clinica' %} is-active{% endif %}">Clinica</a>
         {% endif %}
+        <a href="/alertas{% if scope_query %}?{{ scope_query }}{% endif %}" class="sidebar-link{% if active_path == '/alertas' %} is-active{% endif %}">Alertas</a>
         {% if permissions.manage_admin %}
         <a href="/admin{% if scope_query %}?{{ scope_query }}{% endif %}" class="sidebar-link{% if active_path == '/admin' %} is-active{% endif %}">Admin</a>
         {% endif %}
@@ -83,3 +158,4 @@
         <button class="logout-button" type="submit">Salir</button>
     </form>
 </aside>
+{% endif %}
