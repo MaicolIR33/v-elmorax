@@ -11,11 +11,24 @@ multiespecialidad.
 
 ## Ejecutar en local
 
+macOS / Linux:
+
 ```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -e .
+python -m uvicorn app.main:app --reload
+```
+
+Windows PowerShell:
+
+```powershell
 python -m venv .venv
-.venv\Scripts\activate
-pip install -e .
-uvicorn app.main:app --reload
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+python -m pip install -e .
+python -m uvicorn app.main:app --reload
 ```
 
 Abre `http://127.0.0.1:8000/login`.
@@ -99,6 +112,29 @@ La base ya incluye una version operativa de estos frentes:
 - Auditoria exportable y respaldo descargable desde administracion
 - Configuracion central de soporte y despliegue
 - Compatibilidad con SQLite y PostgreSQL
+
+## Flujo veterinario de Insumos
+
+El módulo conserva la trazabilidad por producto y lote sin duplicar operaciones de otros módulos:
+
+- Recepción guiada en tres pasos con producto, proveedor, documento, lote, vencimiento y responsable.
+- Registro automático del movimiento inicial y de la temperatura recibida cuando aplica cadena de frío.
+- Búsqueda por producto, lote, código y filtros de estado, tipo, vencimiento, ubicación o proveedor.
+- Movimientos de entrada, consumo, ajuste y merma con existencia anterior y posterior.
+- Consumo clínico vinculado al paciente o cita, con prioridad urgente y referencia del caso.
+- Cuarentena operativa que bloquea el uso clínico y el traslado de lotes bajo revisión.
+- Traslados balanceados entre sedes con una sola referencia y registro en origen y destino; la opción solo aparece cuando existe otra sede veterinaria configurada.
+- Abastecimiento con solicitud, aprobación independiente y recepción vinculada al nuevo lote.
+- Vista consolidada de existencias, críticos y stock bajo cuando la organización configura varias sedes.
+- Adaptación progresiva: una sede trabaja con el flujo esencial y las capacidades de red aparecen únicamente al crecer.
+- Conteo físico, control de temperatura, edición y retiro trazable en paneles laterales compactos.
+- Separación entre lotes activos y retirados, historial responsable y exportación CSV.
+- Bloqueo de duplicados, existencias negativas, consumo de lotes vencidos o en cuarentena y operaciones sin permisos.
+- Actualizaciones atómicas de existencias para evitar sobreconsumo cuando varios usuarios trabajan al mismo tiempo.
+- Aislamiento de consultas y operaciones por organización y sede autorizada.
+- Índices operativos para lotes, movimientos, traslados y solicitudes de abastecimiento.
+- Respaldo SQLite consistente incluso con escritura simultánea y comprobación de base en `/health`.
+- Esquema y consultas del módulo compatibles con PostgreSQL para despliegues de mayor escala.
 
 ## Seguridad y acceso
 
