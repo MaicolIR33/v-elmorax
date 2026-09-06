@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import hmac
+import json
 import os
 from datetime import UTC, datetime, timedelta
 from secrets import token_urlsafe
@@ -60,6 +61,9 @@ def authenticate_user(email: str, password: str) -> dict | None:
                 users.organization_id,
                 users.location_id,
                 users.specialty,
+                users.permission_overrides,
+                users.working_days, users.work_start, users.work_end,
+                users.break_start, users.break_end, users.unavailable_dates,
                 users.failed_login_attempts,
                 users.locked_until,
                 users.must_change_password,
@@ -96,6 +100,7 @@ def get_user_by_id(user_id: int | None) -> dict | None:
                 users.organization_id,
                 users.location_id,
                 users.specialty,
+                users.permission_overrides,
                 users.failed_login_attempts,
                 users.locked_until,
                 users.must_change_password,
@@ -129,6 +134,7 @@ def get_user_by_email(email: str) -> dict | None:
                 users.organization_id,
                 users.location_id,
                 users.specialty,
+                users.permission_overrides,
                 users.failed_login_attempts,
                 users.locked_until,
                 users.must_change_password,
@@ -161,6 +167,9 @@ def list_users() -> list[dict]:
                 users.organization_id,
                 users.location_id,
                 users.specialty,
+                users.permission_overrides,
+                users.working_days, users.work_start, users.work_end,
+                users.break_start, users.break_end, users.unavailable_dates,
                 users.failed_login_attempts,
                 users.locked_until,
                 users.must_change_password,
@@ -175,6 +184,20 @@ def list_users() -> list[dict]:
         ).fetchall()
 
     return [serialize_user_row(row) for row in rows]
+
+
+def update_user_schedule(user_id: int, payload: dict) -> None:
+    with get_connection() as connection:
+        connection.execute(
+            """
+            UPDATE users SET working_days = ?, work_start = ?, work_end = ?,
+                break_start = ?, break_end = ?, unavailable_dates = ?
+            WHERE id = ?
+            """,
+            (payload["working_days"], payload["work_start"], payload["work_end"],
+             payload["break_start"], payload["break_end"], payload["unavailable_dates"], user_id),
+        )
+        connection.commit()
 
 
 def create_user(payload: dict) -> None:
@@ -233,6 +256,20 @@ def update_user(user_id: int, payload: dict) -> None:
                 """,
                 (hash_password(payload["password"]), user_id),
             )
+        connection.commit()
+
+
+def update_user_permissions(user_id: int, overrides: dict[str, bool]) -> None:
+    clean = {
+        key: bool(value)
+        for key, value in overrides.items()
+        if key in role_permissions("owner")
+    }
+    with get_connection() as connection:
+        connection.execute(
+            "UPDATE users SET permission_overrides = ? WHERE id = ?",
+            (json.dumps(clean, sort_keys=True) if clean else "", user_id),
+        )
         connection.commit()
 
 
@@ -392,6 +429,13 @@ def serialize_user_row(row: dict) -> dict:
         "organization_id": row["organization_id"],
         "location_id": row["location_id"],
         "specialty": row["specialty"],
+        "permission_overrides": _permission_overrides_from_row(row),
+        "working_days": row["working_days"] if "working_days" in row.keys() else "0,1,2,3,4,5",
+        "work_start": row["work_start"] if "work_start" in row.keys() else "08:00",
+        "work_end": row["work_end"] if "work_end" in row.keys() else "18:00",
+        "break_start": row["break_start"] if "break_start" in row.keys() else "12:00",
+        "break_end": row["break_end"] if "break_end" in row.keys() else "13:00",
+        "unavailable_dates": row["unavailable_dates"] if "unavailable_dates" in row.keys() else "",
         "organization_name": organization_name,
         "location_name": location_name,
         "failed_login_attempts": int(row["failed_login_attempts"] or 0) if "failed_login_attempts" in row.keys() else 0,
@@ -417,6 +461,8 @@ def role_permissions(role: str) -> dict:
         "owner": {
             "view_inventory": True,
             "manage_inventory": True,
+            "consume_inventory": True,
+            "approve_inventory": True,
             "view_agenda": True,
             "manage_agenda": True,
             "view_clinical": True,
@@ -426,6 +472,8 @@ def role_permissions(role: str) -> dict:
         "admin": {
             "view_inventory": True,
             "manage_inventory": True,
+            "consume_inventory": True,
+            "approve_inventory": True,
             "view_agenda": True,
             "manage_agenda": True,
             "view_clinical": True,
@@ -435,6 +483,8 @@ def role_permissions(role: str) -> dict:
         "clinical": {
             "view_inventory": True,
             "manage_inventory": False,
+            "consume_inventory": True,
+            "approve_inventory": False,
             "view_agenda": True,
             "manage_agenda": True,
             "view_clinical": True,
@@ -444,6 +494,8 @@ def role_permissions(role: str) -> dict:
         "inventory": {
             "view_inventory": True,
             "manage_inventory": True,
+            "consume_inventory": True,
+            "approve_inventory": False,
             "view_agenda": False,
             "manage_agenda": False,
             "view_clinical": False,
@@ -456,6 +508,8 @@ def role_permissions(role: str) -> dict:
         {
             "view_inventory": False,
             "manage_inventory": False,
+            "consume_inventory": False,
+            "approve_inventory": False,
             "view_agenda": False,
             "manage_agenda": False,
             "view_clinical": False,
@@ -463,6 +517,30 @@ def role_permissions(role: str) -> dict:
             "manage_admin": False,
         },
     )
+
+
+def effective_permissions(user: dict) -> dict:
+    permissions = role_permissions(str(user.get("role", ""))).copy()
+    overrides = user.get("permission_overrides") or {}
+    if isinstance(overrides, str):
+        try:
+            overrides = json.loads(overrides)
+        except (TypeError, ValueError):
+            overrides = {}
+    for key, value in overrides.items():
+        if key in permissions and isinstance(value, bool):
+            permissions[key] = value
+    return permissions
+
+
+def _permission_overrides_from_row(row: dict) -> dict:
+    if "permission_overrides" not in row.keys() or not row["permission_overrides"]:
+        return {}
+    try:
+        value = json.loads(row["permission_overrides"])
+    except (TypeError, ValueError):
+        return {}
+    return value if isinstance(value, dict) else {}
 
 
 def is_locked_until_active(value: str) -> bool:

@@ -174,8 +174,8 @@ def create_location(payload: dict) -> None:
         )
         connection.execute(
             """
-            INSERT INTO locations (organization_id, name, city, address, sector, phone, opening_hours, search_text)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO locations (organization_id, name, city, address, sector, phone, opening_hours, search_text, catalog_kind)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 payload["organization_id"],
@@ -186,6 +186,7 @@ def create_location(payload: dict) -> None:
                 payload.get("phone", ""),
                 payload.get("opening_hours", ""),
                 search_text,
+                payload.get("catalog_kind", "consulta-general"),
             ),
         )
         connection.commit()

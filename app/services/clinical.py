@@ -363,12 +363,22 @@ def veterinary_snapshot(
     records: list[dict],
 ) -> dict:
     vet_patients = [item for item in patients if item["specialty"] == "Veterinaria"]
+    vet_records = [item for item in records if item["specialty"] == "Veterinaria"]
     latest_vet_record = next(
-        (item for item in records if item["specialty"] == "Veterinaria"),
+        iter(vet_records),
         None,
+    )
+    vaccines_pending = sum(
+        1
+        for item in vet_patients
+        if (item.get("vaccine_status") or "").strip().lower()
+        not in {"al dia", "al día", "vigente", "completo", "completa"}
     )
     return {
         "patients": vet_patients[:4],
+        "patients_total": len(vet_patients),
+        "vaccines_pending": vaccines_pending,
+        "follow_ups": sum(1 for item in vet_records if item["status"] == "Seguimiento"),
         "latest_record": latest_vet_record,
     }
 

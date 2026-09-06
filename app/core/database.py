@@ -31,6 +31,10 @@ class CursorAdapter:
     def fetchall(self):
         return self.cursor.fetchall()
 
+    @property
+    def rowcount(self) -> int:
+        return self.cursor.rowcount
+
 
 class DatabaseConnection:
     def __init__(self, raw_connection, dialect: str):
@@ -105,6 +109,9 @@ def get_connection() -> DatabaseConnection:
         db_path.parent.mkdir(parents=True, exist_ok=True)
         connection = sqlite3.connect(db_path)
         connection.row_factory = sqlite3.Row
+        connection.execute("PRAGMA foreign_keys = ON")
+        connection.execute("PRAGMA busy_timeout = 5000")
+        connection.execute("PRAGMA journal_mode = WAL")
         return DatabaseConnection(connection, dialect="sqlite")
 
     if psycopg is None:
@@ -125,10 +132,18 @@ def init_db() -> None:
         ensure_column(connection, "users", "organization_id", "INTEGER NOT NULL DEFAULT 1")
         ensure_column(connection, "users", "location_id", "INTEGER NOT NULL DEFAULT 1")
         ensure_column(connection, "users", "specialty", "TEXT NOT NULL DEFAULT ''")
+        ensure_column(connection, "users", "working_days", "TEXT NOT NULL DEFAULT '0,1,2,3,4,5'")
+        ensure_column(connection, "users", "work_start", "TEXT NOT NULL DEFAULT '08:00'")
+        ensure_column(connection, "users", "work_end", "TEXT NOT NULL DEFAULT '18:00'")
+        ensure_column(connection, "users", "break_start", "TEXT NOT NULL DEFAULT '12:00'")
+        ensure_column(connection, "users", "break_end", "TEXT NOT NULL DEFAULT '13:00'")
+        ensure_column(connection, "users", "unavailable_dates", "TEXT NOT NULL DEFAULT ''")
         ensure_column(connection, "users", "failed_login_attempts", "INTEGER NOT NULL DEFAULT 0")
         ensure_column(connection, "users", "locked_until", "TEXT NOT NULL DEFAULT ''")
         ensure_column(connection, "users", "must_change_password", "INTEGER NOT NULL DEFAULT 0")
         ensure_column(connection, "users", "password_changed_at", "TEXT NOT NULL DEFAULT ''")
+        ensure_column(connection, "users", "permission_overrides", "TEXT NOT NULL DEFAULT ''")
+        ensure_column(connection, "alerts", "escalation_minutes", "INTEGER NOT NULL DEFAULT 0")
         ensure_column(connection, "inventory_items", "organization_id", "INTEGER NOT NULL DEFAULT 1")
         ensure_column(connection, "inventory_items", "location_id", "INTEGER NOT NULL DEFAULT 1")
         ensure_column(connection, "inventory_items", "barcode", "TEXT NOT NULL DEFAULT ''")
@@ -138,11 +153,53 @@ def init_db() -> None:
         ensure_column(connection, "inventory_items", "storage_condition", "TEXT NOT NULL DEFAULT ''")
         ensure_column(connection, "inventory_items", "requires_cold_chain", "INTEGER NOT NULL DEFAULT 0")
         ensure_column(connection, "inventory_items", "last_counted_at", "TEXT NOT NULL DEFAULT ''")
+        ensure_column(connection, "inventory_items", "product_id", "INTEGER")
+        ensure_column(connection, "inventory_items", "item_type", "TEXT NOT NULL DEFAULT 'Medicamento'")
+        ensure_column(connection, "inventory_items", "unit_measure", "TEXT NOT NULL DEFAULT 'unidades'")
+        ensure_column(connection, "inventory_items", "lot_status", "TEXT NOT NULL DEFAULT 'active'")
+        ensure_column(connection, "inventory_items", "retired_at", "TEXT NOT NULL DEFAULT ''")
+        ensure_column(connection, "inventory_items", "retirement_reason", "TEXT NOT NULL DEFAULT ''")
+        ensure_column(connection, "inventory_items", "cold_chain_incident", "INTEGER NOT NULL DEFAULT 0")
+        ensure_column(connection, "inventory_items", "manufacturer", "TEXT NOT NULL DEFAULT ''")
+        ensure_column(connection, "inventory_items", "received_date", "TEXT NOT NULL DEFAULT ''")
+        ensure_column(connection, "inventory_items", "document_number", "TEXT NOT NULL DEFAULT ''")
+        ensure_column(connection, "inventory_items", "presentation", "TEXT NOT NULL DEFAULT ''")
+        ensure_column(connection, "inventory_items", "concentration", "TEXT NOT NULL DEFAULT ''")
+        ensure_column(connection, "inventory_items", "serial_number", "TEXT NOT NULL DEFAULT ''")
+        ensure_column(connection, "inventory_items", "reception_temperature_c", "REAL")
+        ensure_column(connection, "inventory_items", "reception_note", "TEXT NOT NULL DEFAULT ''")
+        ensure_column(connection, "inventory_items", "received_by_user_id", "INTEGER")
+        ensure_column(connection, "inventory_items", "is_test", "INTEGER NOT NULL DEFAULT 0")
+        ensure_column(connection, "inventory_items", "is_quarantined", "INTEGER NOT NULL DEFAULT 0")
+        ensure_column(connection, "inventory_items", "quarantine_reason", "TEXT NOT NULL DEFAULT ''")
+        ensure_column(connection, "inventory_items", "replenishment_request_id", "INTEGER")
+        ensure_column(connection, "inventory_products", "manufacturer", "TEXT NOT NULL DEFAULT ''")
+        ensure_column(connection, "inventory_products", "presentation", "TEXT NOT NULL DEFAULT ''")
+        ensure_column(connection, "inventory_products", "concentration", "TEXT NOT NULL DEFAULT ''")
         ensure_column(connection, "inventory_movements", "organization_id", "INTEGER NOT NULL DEFAULT 1")
         ensure_column(connection, "inventory_movements", "location_id", "INTEGER NOT NULL DEFAULT 1")
         ensure_column(connection, "inventory_movements", "user_id", "INTEGER")
+        ensure_column(connection, "inventory_movements", "reason_type", "TEXT NOT NULL DEFAULT 'Movimiento'")
+        ensure_column(connection, "inventory_movements", "stock_before", "REAL NOT NULL DEFAULT 0")
+        ensure_column(connection, "inventory_movements", "stock_after", "REAL NOT NULL DEFAULT 0")
+        ensure_column(connection, "inventory_movements", "temperature_c", "REAL")
+        ensure_column(connection, "inventory_movements", "patient_id", "INTEGER")
+        ensure_column(connection, "inventory_movements", "appointment_id", "INTEGER")
+        ensure_column(connection, "inventory_movements", "priority", "TEXT NOT NULL DEFAULT 'Normal'")
+        ensure_column(connection, "inventory_movements", "external_reference", "TEXT NOT NULL DEFAULT ''")
+        ensure_column(connection, "inventory_movements", "counterparty_location_id", "INTEGER")
+        ensure_column(connection, "inventory_movements", "transfer_reference", "TEXT NOT NULL DEFAULT ''")
         ensure_column(connection, "appointments", "organization_id", "INTEGER NOT NULL DEFAULT 1")
         ensure_column(connection, "appointments", "location_id", "INTEGER NOT NULL DEFAULT 1")
+        ensure_column(connection, "appointments", "duration_minutes", "INTEGER NOT NULL DEFAULT 30")
+        ensure_column(connection, "appointments", "veterinarian", "TEXT NOT NULL DEFAULT ''")
+        ensure_column(connection, "appointments", "patient_id", "INTEGER")
+        ensure_column(connection, "appointments", "veterinarian_user_id", "INTEGER")
+        ensure_column(connection, "appointments", "cancellation_reason", "TEXT NOT NULL DEFAULT ''")
+        ensure_column(connection, "appointments", "priority", "TEXT NOT NULL DEFAULT 'Normal'")
+        ensure_column(connection, "appointments", "triage_level", "TEXT NOT NULL DEFAULT ''")
+        ensure_column(connection, "appointments", "triage_note", "TEXT NOT NULL DEFAULT ''")
+        ensure_column(connection, "appointments", "arrival_at", "TEXT NOT NULL DEFAULT ''")
         ensure_column(connection, "patients", "organization_id", "INTEGER NOT NULL DEFAULT 1")
         ensure_column(connection, "patients", "location_id", "INTEGER NOT NULL DEFAULT 1")
         ensure_column(connection, "patients", "document_number", "TEXT NOT NULL DEFAULT ''")
@@ -191,12 +248,19 @@ def ensure_indexes(connection: DatabaseConnection) -> None:
         CREATE INDEX IF NOT EXISTS idx_locations_name ON locations(name);
         CREATE INDEX IF NOT EXISTS idx_locations_city ON locations(city);
         CREATE INDEX IF NOT EXISTS idx_locations_active ON locations(is_active);
+        CREATE INDEX IF NOT EXISTS idx_alert_ack_scope ON alert_acknowledgements(organization_id, location_id, alert_key);
         CREATE INDEX IF NOT EXISTS idx_locations_catalog_kind ON locations(catalog_kind);
         CREATE INDEX IF NOT EXISTS idx_locations_external_code ON locations(external_code);
         CREATE INDEX IF NOT EXISTS idx_locations_search_text ON locations(search_text);
         CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
         CREATE INDEX IF NOT EXISTS idx_users_locked_until ON users(locked_until);
         CREATE INDEX IF NOT EXISTS idx_password_reset_token_hash ON password_reset_tokens(token_hash);
+        CREATE INDEX IF NOT EXISTS idx_alerts_scope_due ON alerts(organization_id, location_id, status, due_at);
+        CREATE INDEX IF NOT EXISTS idx_inventory_items_scope_status ON inventory_items(organization_id, location_id, lot_status);
+        CREATE INDEX IF NOT EXISTS idx_inventory_items_product_lot ON inventory_items(organization_id, product_id, lot);
+        CREATE INDEX IF NOT EXISTS idx_inventory_movements_scope_created ON inventory_movements(organization_id, location_id, created_at);
+        CREATE INDEX IF NOT EXISTS idx_inventory_movements_transfer ON inventory_movements(transfer_reference);
+        CREATE INDEX IF NOT EXISTS idx_inventory_replenishments_scope_status ON inventory_replenishments(organization_id, location_id, status);
         """
     )
 
@@ -317,6 +381,7 @@ def build_schema_sql(dialect: str) -> str:
             organization_id INTEGER NOT NULL DEFAULT 1,
             location_id INTEGER NOT NULL DEFAULT 1,
             specialty TEXT NOT NULL DEFAULT '',
+            permission_overrides TEXT NOT NULL DEFAULT '',
             failed_login_attempts INTEGER NOT NULL DEFAULT 0,
             locked_until TEXT NOT NULL DEFAULT '',
             must_change_password INTEGER NOT NULL DEFAULT 0,
@@ -338,8 +403,8 @@ def build_schema_sql(dialect: str) -> str:
             regulatory_code TEXT NOT NULL,
             supplier TEXT NOT NULL DEFAULT '',
             lot TEXT NOT NULL,
-            quantity INTEGER NOT NULL CHECK (quantity >= 0),
-            min_stock INTEGER NOT NULL CHECK (min_stock >= 0),
+            quantity REAL NOT NULL CHECK (quantity >= 0),
+            min_stock REAL NOT NULL CHECK (min_stock >= 0),
             unit_cost REAL NOT NULL DEFAULT 0,
             sale_price REAL NOT NULL DEFAULT 0,
             storage_condition TEXT NOT NULL DEFAULT '',
@@ -347,9 +412,31 @@ def build_schema_sql(dialect: str) -> str:
             location TEXT NOT NULL,
             last_counted_at TEXT NOT NULL DEFAULT '',
             expiry_date TEXT NOT NULL,
+            is_quarantined INTEGER NOT NULL DEFAULT 0,
+            quarantine_reason TEXT NOT NULL DEFAULT '',
+            replenishment_request_id INTEGER,
             created_at {created_at_type} NOT NULL DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (organization_id) REFERENCES organizations (id),
             FOREIGN KEY (location_id) REFERENCES locations (id)
+        );
+
+        CREATE TABLE IF NOT EXISTS inventory_products (
+            id {id_column}, organization_id INTEGER NOT NULL, name TEXT NOT NULL,
+            brand TEXT NOT NULL DEFAULT '', barcode TEXT NOT NULL DEFAULT '',
+            regulatory_agency TEXT NOT NULL DEFAULT '', regulatory_code TEXT NOT NULL DEFAULT '',
+            item_type TEXT NOT NULL DEFAULT 'Medicamento', unit_measure TEXT NOT NULL DEFAULT 'unidades',
+            storage_condition TEXT NOT NULL DEFAULT '', requires_cold_chain INTEGER NOT NULL DEFAULT 0,
+            manufacturer TEXT NOT NULL DEFAULT '', presentation TEXT NOT NULL DEFAULT '', concentration TEXT NOT NULL DEFAULT '',
+            created_at {created_at_type} NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (organization_id) REFERENCES organizations (id)
+        );
+
+        CREATE TABLE IF NOT EXISTS cold_chain_logs (
+            id {id_column}, item_id INTEGER NOT NULL, organization_id INTEGER NOT NULL,
+            location_id INTEGER NOT NULL, user_id INTEGER, temperature_c REAL NOT NULL,
+            has_incident INTEGER NOT NULL DEFAULT 0, note TEXT NOT NULL DEFAULT '',
+            created_at {created_at_type} NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (item_id) REFERENCES inventory_items (id), FOREIGN KEY (user_id) REFERENCES users (id)
         );
 
         CREATE TABLE IF NOT EXISTS inventory_movements (
@@ -359,13 +446,42 @@ def build_schema_sql(dialect: str) -> str:
             location_id INTEGER NOT NULL DEFAULT 1,
             user_id INTEGER,
             movement_type TEXT NOT NULL CHECK (movement_type IN ('in', 'out')),
-            quantity INTEGER NOT NULL CHECK (quantity > 0),
+            quantity REAL NOT NULL CHECK (quantity > 0),
             note TEXT NOT NULL,
+            patient_id INTEGER,
+            appointment_id INTEGER,
+            priority TEXT NOT NULL DEFAULT 'Normal',
+            external_reference TEXT NOT NULL DEFAULT '',
+            counterparty_location_id INTEGER,
+            transfer_reference TEXT NOT NULL DEFAULT '',
             created_at {created_at_type} NOT NULL DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (item_id) REFERENCES inventory_items (id),
             FOREIGN KEY (organization_id) REFERENCES organizations (id),
             FOREIGN KEY (location_id) REFERENCES locations (id),
             FOREIGN KEY (user_id) REFERENCES users (id)
+        );
+
+        CREATE TABLE IF NOT EXISTS inventory_replenishments (
+            id {id_column},
+            organization_id INTEGER NOT NULL,
+            location_id INTEGER NOT NULL,
+            item_id INTEGER NOT NULL,
+            requested_by_user_id INTEGER,
+            reviewed_by_user_id INTEGER,
+            requested_quantity REAL NOT NULL CHECK (requested_quantity > 0),
+            supplier TEXT NOT NULL DEFAULT '',
+            priority TEXT NOT NULL DEFAULT 'Normal',
+            note TEXT NOT NULL DEFAULT '',
+            status TEXT NOT NULL DEFAULT 'Pendiente',
+            reviewed_at TEXT NOT NULL DEFAULT '',
+            received_inventory_item_id INTEGER,
+            created_at {created_at_type} NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (organization_id) REFERENCES organizations (id),
+            FOREIGN KEY (location_id) REFERENCES locations (id),
+            FOREIGN KEY (item_id) REFERENCES inventory_items (id),
+            FOREIGN KEY (requested_by_user_id) REFERENCES users (id),
+            FOREIGN KEY (reviewed_by_user_id) REFERENCES users (id),
+            FOREIGN KEY (received_inventory_item_id) REFERENCES inventory_items (id)
         );
 
         CREATE TABLE IF NOT EXISTS appointments (
@@ -380,6 +496,10 @@ def build_schema_sql(dialect: str) -> str:
             status TEXT NOT NULL,
             specialty TEXT NOT NULL,
             note TEXT NOT NULL,
+            priority TEXT NOT NULL DEFAULT 'Normal',
+            triage_level TEXT NOT NULL DEFAULT '',
+            triage_note TEXT NOT NULL DEFAULT '',
+            arrival_at TEXT NOT NULL DEFAULT '',
             created_at {created_at_type} NOT NULL DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (organization_id) REFERENCES organizations (id),
             FOREIGN KEY (location_id) REFERENCES locations (id)
@@ -467,6 +587,57 @@ def build_schema_sql(dialect: str) -> str:
             FOREIGN KEY (user_id) REFERENCES users (id),
             FOREIGN KEY (organization_id) REFERENCES organizations (id),
             FOREIGN KEY (location_id) REFERENCES locations (id)
+        );
+
+        CREATE TABLE IF NOT EXISTS alerts (
+            id {id_column},
+            organization_id INTEGER NOT NULL,
+            location_id INTEGER NOT NULL,
+            created_by INTEGER,
+            assigned_user_id INTEGER,
+            title TEXT NOT NULL,
+            message TEXT NOT NULL DEFAULT '',
+            priority TEXT NOT NULL DEFAULT 'normal',
+            status TEXT NOT NULL DEFAULT 'active',
+            due_at TEXT NOT NULL,
+            recurrence TEXT NOT NULL DEFAULT 'once',
+            escalation_minutes INTEGER NOT NULL DEFAULT 0,
+            entity_type TEXT NOT NULL DEFAULT '',
+            entity_id INTEGER,
+            source TEXT NOT NULL DEFAULT 'manual',
+            resolved_at TEXT NOT NULL DEFAULT '',
+            created_at {created_at_type} NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (organization_id) REFERENCES organizations (id),
+            FOREIGN KEY (location_id) REFERENCES locations (id),
+            FOREIGN KEY (created_by) REFERENCES users (id),
+            FOREIGN KEY (assigned_user_id) REFERENCES users (id)
+        );
+
+        CREATE TABLE IF NOT EXISTS alert_acknowledgements (
+            id {id_column},
+            alert_key TEXT NOT NULL,
+            organization_id INTEGER NOT NULL,
+            location_id INTEGER NOT NULL,
+            user_id INTEGER NOT NULL,
+            acknowledged_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE (alert_key, organization_id, location_id),
+            FOREIGN KEY (organization_id) REFERENCES organizations (id),
+            FOREIGN KEY (location_id) REFERENCES locations (id),
+            FOREIGN KEY (user_id) REFERENCES users (id)
+        );
+
+        CREATE TABLE IF NOT EXISTS shift_handoffs (
+            id {id_column},
+            organization_id INTEGER NOT NULL,
+            location_id INTEGER NOT NULL,
+            created_by INTEGER NOT NULL,
+            summary TEXT NOT NULL,
+            pending_actions TEXT NOT NULL DEFAULT '',
+            shift_label TEXT NOT NULL DEFAULT '',
+            created_at {created_at_type} NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (organization_id) REFERENCES organizations (id),
+            FOREIGN KEY (location_id) REFERENCES locations (id),
+            FOREIGN KEY (created_by) REFERENCES users (id)
         );
     """
 

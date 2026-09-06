@@ -1,5 +1,7 @@
 import csv
 import json
+import sqlite3
+import tempfile
 from io import StringIO
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -10,11 +12,17 @@ from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Resp
 from fastapi.templating import Jinja2Templates
 
 from app.core.config import get_settings
-from app.core.database import get_database_dialect, get_database_url, sqlite_db_path
+from app.core.database import get_connection, get_database_dialect, get_database_url, sqlite_db_path
 from app.services.appointments import (
+    appointment_belongs_to_scope,
     create_appointment,
     delete_appointment,
+    update_appointment as update_appointment_record,
     update_appointment_status,
+)
+from app.services.alerts import (
+    acknowledge_alert, alert_belongs_to_scope, create_alert, delete_alert, list_alerts,
+    list_resolved_alerts, resolve_alert, snooze_alert, update_alert,
 )
 from app.services.auth import (
     authenticate_user,
@@ -30,8 +38,11 @@ from app.services.auth import (
     reset_failed_login,
     role_label,
     role_permissions,
+    effective_permissions,
     set_user_active,
     update_user,
+    update_user_permissions,
+    update_user_schedule,
 )
 from app.services.clinical import (
     create_clinical_record,
@@ -39,14 +50,25 @@ from app.services.clinical import (
     delete_clinical_record,
     delete_patient,
     list_clinical_records,
+    list_patients,
     update_clinical_record_status,
 )
-from app.services.dashboard import get_dashboard_context
+from app.services.dashboard import create_shift_handoff, get_dashboard_context
 from app.services.inventory import (
+    count_inventory_item,
+    create_inventory_replenishment,
     create_inventory_item,
     create_inventory_movement,
     delete_inventory_item,
+    inventory_item_belongs_to_scope,
     list_inventory_items,
+    list_recent_movements,
+    record_cold_chain,
+    review_inventory_replenishment,
+    retire_inventory_lot,
+    set_inventory_quarantine,
+    transfer_inventory_item,
+    update_inventory_item,
 )
 from app.services.mailer import (
     send_password_reset_email,
@@ -158,7 +180,20 @@ def user_with_permissions(request: Request) -> dict | None:
     user = current_user_from_request(request)
     if user is None:
         return None
-    return {**user, "permissions": role_permissions(user["role"])}
+    return {**user, "permissions": effective_permissions(user)}
+
+
+def inventory_scope_allowed(user: dict, organization_id: int, location_id: int) -> bool:
+    if int(user.get("organization_id") or 0) != int(organization_id or 0):
+        return False
+    location = get_location_by_id(str(location_id)) if location_id else None
+    return bool(location and int(location["organization_id"]) == int(organization_id))
+
+
+def inventory_item_scope_allowed(user: dict, item_id: int, organization_id: int, location_id: int) -> bool:
+    return inventory_scope_allowed(user, organization_id, location_id) and inventory_item_belongs_to_scope(
+        item_id, organization_id, location_id
+    )
 
 
 def build_scope_query(organization_id: str = "", location_id: str = "", day: str = "") -> str:
@@ -170,6 +205,42 @@ def build_scope_query(organization_id: str = "", location_id: str = "", day: str
     if day:
         parts.append(f"day={day}")
     return "&".join(parts)
+
+
+def align_scope_to_entry_intent(
+    intent: str,
+    organization_id: str,
+    location_id: str,
+) -> tuple[str, str]:
+    expected_catalog = {
+        "odontologia": "odontologia",
+        "veterinaria": "veterinaria",
+        "consulta-general": "consulta-general",
+    }.get(intent)
+    if not expected_catalog:
+        return organization_id, location_id
+
+    selected_location = get_location_by_id(location_id) if location_id else None
+    if selected_location and selected_location.get("catalog_kind") == expected_catalog:
+        return str(selected_location["organization_id"]), str(selected_location["id"])
+
+    candidates = list_locations(organization_id) if organization_id else list_locations()
+    matching_location = next(
+        (item for item in candidates if item.get("catalog_kind") == expected_catalog),
+        None,
+    )
+    if matching_location is None and organization_id:
+        matching_location = next(
+            (
+                item
+                for item in list_locations()
+                if item.get("catalog_kind") == expected_catalog
+            ),
+            None,
+        )
+    if matching_location:
+        return str(matching_location["organization_id"]), str(matching_location["id"])
+    return organization_id, ""
 
 
 def encoded_message(value: str) -> str:
@@ -185,6 +256,10 @@ def context_for_authenticated_user(
     day: str = "",
     organization_id: str = "",
     location_id: str = "",
+    item_type: str = "",
+    storage_area: str = "",
+    supplier: str = "",
+    expiry: str = "",
     active_path: str = "/",
 ) -> tuple[dict, dict] | tuple[None, None]:
     user = user_with_permissions(request)
@@ -195,6 +270,12 @@ def context_for_authenticated_user(
     session_location_id = request.session.get("preferred_location_id", "")
     effective_organization_id = organization_id or session_organization_id
     effective_location_id = location_id or session_location_id
+    entry_intent = request.session.get("entry_intent", "")
+    effective_organization_id, effective_location_id = align_scope_to_entry_intent(
+        entry_intent,
+        effective_organization_id,
+        effective_location_id,
+    )
 
     context = get_dashboard_context(
         search=search,
@@ -203,6 +284,10 @@ def context_for_authenticated_user(
         day=day,
         organization_id=effective_organization_id,
         location_id=effective_location_id,
+        item_type=item_type,
+        storage_area=storage_area,
+        supplier=supplier,
+        expiry=expiry,
     )
     request.session["preferred_organization_id"] = context["scope"]["organization_id"]
     request.session["preferred_location_id"] = context["scope"]["location_id"]
@@ -210,6 +295,67 @@ def context_for_authenticated_user(
     context["current_user"] = {**user, "role_label": role_label(user["role"])}
     context["permissions"] = user["permissions"]
     context["active_path"] = active_path
+    context["entry_intent"] = entry_intent
+    context["is_veterinary_flow"] = entry_intent == "veterinaria"
+    context["is_veterinary_dashboard"] = (
+        active_path == "/" and context["is_veterinary_flow"]
+    )
+    if context["is_veterinary_flow"]:
+        veterinary_locations = [
+            item for item in list_locations() if item.get("catalog_kind") == "veterinaria"
+        ]
+        veterinary_organization_ids = {
+            item["organization_id"] for item in veterinary_locations
+        }
+        context["scope"]["organizations"] = [
+            item
+            for item in context["scope"]["organizations"]
+            if item["id"] in veterinary_organization_ids
+        ]
+        context["scope"]["locations"] = [
+            item
+            for item in context["scope"]["locations"]
+            if item.get("catalog_kind") == "veterinaria"
+        ]
+        context["inventory_transfer_locations"] = [
+            item for item in context["scope"]["locations"]
+            if str(item["organization_id"]) == str(context["scope"]["organization_id"])
+            and str(item["id"]) != str(context["scope"]["location_id"])
+        ]
+        context["appointments"] = [
+            item for item in context["appointments"] if item["specialty"] == "Veterinaria"
+        ]
+        context["patient_queue"] = [
+            {
+                "name": item["patient"],
+                "channel": item["channel"],
+                "reason": item["service"],
+                "priority": "Alta" if item["status"] == "En espera" else "Media",
+                "site_name": item["site_name"],
+            }
+            for item in context["appointments"] if item["status"] == "En consulta"
+        ]
+        context["specialty_tabs"] = [
+            item for item in context["specialty_tabs"] if item["id"] == "vet"
+        ]
+        context["daily_financial_summary"]["specialties"] = [
+            item
+            for item in context["daily_financial_summary"]["specialties"]
+            if item["key"] == "Veterinaria"
+        ]
+        context["appointment_form_defaults"]["specialty"] = "Veterinaria"
+        context["appointment_form_defaults"]["status"] = "Pendiente"
+        context["patient_form_defaults"].update(
+            patient_type="Animal",
+            specialty="Veterinaria",
+            vaccine_status="Pendiente",
+        )
+        context["clinical_form_defaults"]["specialty"] = "Veterinaria"
+        context["inventory_form_defaults"].update(
+            regulatory_agency="ICA",
+            category="Veterinaria",
+            location="Nevera A",
+        )
     context["scope_query"] = build_scope_query(
         context["scope"]["organization_id"],
         context["scope"]["location_id"],
@@ -224,20 +370,26 @@ def render_authenticated_page(
     saved: int = 0,
     moved: int = 0,
     appointment_saved: int = 0,
+    appointment_updated: int = 0,
     patient_saved: int = 0,
     record_saved: int = 0,
     movement_error: str = "",
     permission_error: str = "",
+    agenda_error: str = "",
     search: str = "",
     category: str = "",
     status: str = "",
     day: str = "",
     organization_id: str = "",
     location_id: str = "",
+    item_type: str = "",
+    storage_area: str = "",
+    supplier: str = "",
+    expiry: str = "",
     active_path: str = "/",
     extra_context: dict | None = None,
 ):
-    context, _user = context_for_authenticated_user(
+    context, user = context_for_authenticated_user(
         request,
         search=search,
         category=category,
@@ -245,6 +397,10 @@ def render_authenticated_page(
         day=day,
         organization_id=organization_id,
         location_id=location_id,
+        item_type=item_type,
+        storage_area=storage_area,
+        supplier=supplier,
+        expiry=expiry,
         active_path=active_path,
     )
     if context is None:
@@ -253,10 +409,12 @@ def render_authenticated_page(
     context["saved"] = saved
     context["moved"] = moved
     context["appointment_saved"] = appointment_saved
+    context["appointment_updated"] = appointment_updated
     context["patient_saved"] = patient_saved
     context["record_saved"] = record_saved
     context["movement_error"] = movement_error
     context["permission_error"] = permission_error
+    context["agenda_error"] = agenda_error
     if extra_context:
         context.update(extra_context)
     return templates.TemplateResponse(
@@ -364,6 +522,9 @@ def build_inventory_csv(items: list[dict]) -> str:
             "Area",
             "Vencimiento",
             "Sede",
+            "Estado del lote",
+            "Cuarentena",
+            "Solicitud de abastecimiento",
         ]
     )
     for item in items:
@@ -384,8 +545,31 @@ def build_inventory_csv(items: list[dict]) -> str:
                 item["location"],
                 item["expiry_date"],
                 item["site_name"],
+                item["lot_status"],
+                item["quarantine_reason"] if item["is_quarantined"] else "No",
+                item["replenishment_request_id"] or "",
             ]
         )
+    return output.getvalue()
+
+
+def build_inventory_movements_csv(movements: list[dict]) -> str:
+    """Exportable audit trail for clinical and stock operations."""
+    output = StringIO()
+    writer = csv.writer(output)
+    writer.writerow([
+        "Fecha", "Producto", "Lote", "Operación", "Motivo", "Cantidad", "Antes", "Después",
+        "Paciente", "Cita", "Prioridad", "Referencia externa", "Sede relacionada",
+        "Referencia traslado", "Responsable", "Nota",
+    ])
+    for movement in movements:
+        writer.writerow([
+            movement["created_at"], movement["item_name"], movement["lot"], movement["direction"],
+            movement["reason_type"], movement["quantity"], movement["stock_before"], movement["stock_after"],
+            movement["patient_name"] or "", movement["appointment_label"] or "", movement["priority"],
+            movement["external_reference"] or "", movement["counterparty_location_name"] or "",
+            movement["transfer_reference"] or "", movement["responsible_name"], movement["note"],
+        ])
     return output.getvalue()
 
 
@@ -703,6 +887,11 @@ async def login_action(
         or user.get("location_id", "")
         or ""
     )
+    effective_organization_id, effective_location_id = align_scope_to_entry_intent(
+        selected_intent,
+        effective_organization_id,
+        effective_location_id,
+    )
     remember_me_value = remember_me in {"1", "true", "on", "yes"}
 
     if requires_push_approval(user["role"]):
@@ -831,7 +1020,10 @@ async def home(
 async def agenda_page(
     request: Request,
     appointment_saved: int = 0,
+    appointment_updated: int = 0,
     permission_error: str = "",
+    agenda_error: str = "",
+    new_appointment: int = Query(default=0, alias="new"),
     day: str = Query(default=""),
     organization_id: str = Query(default=""),
     location_id: str = Query(default=""),
@@ -840,7 +1032,10 @@ async def agenda_page(
         request,
         "agenda.html",
         appointment_saved=appointment_saved,
+        appointment_updated=appointment_updated,
         permission_error=permission_error,
+        agenda_error=agenda_error,
+        extra_context={"open_new_appointment": bool(new_appointment)},
         day=day,
         organization_id=organization_id,
         location_id=location_id,
@@ -858,9 +1053,14 @@ async def inventory_page(
     moved: int = 0,
     movement_error: str = "",
     permission_error: str = "",
+    notice: str = Query(default=""),
     search: str = Query(default=""),
     category: str = Query(default=""),
     status: str = Query(default=""),
+    item_type: str = Query(default=""),
+    storage_area: str = Query(default=""),
+    supplier: str = Query(default=""),
+    expiry: str = Query(default=""),
     organization_id: str = Query(default=""),
     location_id: str = Query(default=""),
 ):
@@ -874,13 +1074,98 @@ async def inventory_page(
         search=search,
         category=category,
         status=status,
+        item_type=item_type,
+        storage_area=storage_area,
+        supplier=supplier,
+        expiry=expiry,
         organization_id=organization_id,
         location_id=location_id,
         active_path="/inventario",
+        extra_context={"inventory_notice": notice},
     )
     if response is None:
         return redirect_to_login("inventario")
     return response
+
+
+@router.get("/alertas", response_class=HTMLResponse)
+async def alerts_page(
+    request: Request,
+    saved: int = 0,
+    updated: int = 0,
+    notice: str = Query(default=""),
+    organization_id: str = Query(default=""),
+    location_id: str = Query(default=""),
+):
+    context, user = context_for_authenticated_user(
+        request,
+        organization_id=organization_id,
+        location_id=location_id,
+        active_path="/alertas",
+    )
+    if context is None:
+        return redirect_to_login(request.session.get("entry_intent", ""))
+    if not user["permissions"]["view_inventory"]:
+        return redirect_to_module_with_error("/", "Tu rol no puede consultar alertas de insumos.")
+    context["alert_saved"] = saved
+    context["alert_updated"] = updated
+    context["alert_notice"] = notice
+    context["alerts"] = list_alerts(
+        context["scope"]["organization_id"],
+        context["scope"]["location_id"],
+    )
+    context["resolved_alerts"] = list_resolved_alerts(
+        context["scope"]["organization_id"], context["scope"]["location_id"]
+    )
+    context["due_alerts_total"] = sum(1 for item in context["alerts"] if item["is_due"])
+    context["scheduled_alerts_total"] = sum(1 for item in context["alerts"] if not item["is_due"])
+    context["urgent_alerts_total"] = sum(1 for item in context["alerts"] if item["is_due"] and item["priority"] == "urgent")
+    context["automatic_alerts_total"] = sum(1 for item in context["alerts"] if item["source"] == "automatic")
+    context["manual_alerts_total"] = sum(1 for item in context["alerts"] if item["source"] == "manual")
+    context["alert_assignees"] = [
+        item for item in list_users()
+        if item["is_active"] and (
+            not context["scope"]["organization_id"]
+            or str(item["organization_id"]) == context["scope"]["organization_id"]
+        ) and (item["role"] in {"owner", "admin"} or str(item["location_id"]) == context["scope"]["location_id"])
+    ]
+    context["alert_default_due"] = (
+        datetime.now() + timedelta(hours=1)
+    ).strftime("%Y-%m-%dT%H:%M")
+    return templates.TemplateResponse(request=request, name="alerts.html", context=context)
+
+
+@router.post("/dashboard/handoff")
+async def save_shift_handoff(
+    request: Request,
+    organization_id: int = Form(...),
+    location_id: int = Form(...),
+    shift_label: str = Form(""),
+    summary: str = Form(...),
+    pending_actions: str = Form(""),
+) -> RedirectResponse:
+    user = user_with_permissions(request)
+    if user is None:
+        return redirect_to_login()
+    if not user["permissions"]["view_agenda"] or not inventory_scope_allowed(user, organization_id, location_id):
+        return redirect_to_module_with_error("/", "No puedes registrar entregas para esta sede.")
+    if not summary.strip():
+        return redirect_to_module_with_error("/", "Escribe un resumen del turno.")
+    create_shift_handoff({
+        "organization_id": organization_id,
+        "location_id": location_id,
+        "created_by": user["id"],
+        "shift_label": shift_label,
+        "summary": summary,
+        "pending_actions": pending_actions,
+    })
+    log_audit_event(
+        user_id=user["id"], organization_id=organization_id, location_id=location_id,
+        action="Entrega de turno", entity_type="Operacion", entity_label=shift_label or "Turno",
+        detail=summary.strip(),
+    )
+    suffix = build_scope_query(str(organization_id), str(location_id))
+    return RedirectResponse(url=f"/?notice={encoded_message('Entrega de turno guardada.')}&{suffix}", status_code=303)
 
 
 @router.get("/clinica", response_class=HTMLResponse)
@@ -892,6 +1177,7 @@ async def clinical_page(
     day: str = Query(default=""),
     organization_id: str = Query(default=""),
     location_id: str = Query(default=""),
+    patient_id: int = Query(default=0),
 ):
     response = render_authenticated_page(
         request,
@@ -903,6 +1189,7 @@ async def clinical_page(
         organization_id=organization_id,
         location_id=location_id,
         active_path="/clinica",
+        extra_context={"selected_patient_id": patient_id},
     )
     if response is None:
         return redirect_to_login(request.session.get("entry_intent", "odontologia"))
@@ -997,6 +1284,28 @@ async def admin_page(
     if not user["permissions"]["manage_admin"]:
         return redirect_to_module_with_error("/", "Tu rol no puede administrar la red.")
 
+    admin_locations = list_locations(include_inactive=True)
+    admin_organizations = list_organizations()
+    admin_users = list_users()
+    for item in admin_users:
+        item["effective_permissions"] = effective_permissions(item)
+    if context["is_veterinary_flow"]:
+        admin_locations = [
+            item for item in admin_locations if item.get("catalog_kind") == "veterinaria"
+        ]
+        veterinary_organization_ids = {
+            item["organization_id"] for item in admin_locations
+        }
+        veterinary_location_ids = {item["id"] for item in admin_locations}
+        admin_organizations = [
+            item for item in admin_organizations if item["id"] in veterinary_organization_ids
+        ]
+        admin_users = [
+            item
+            for item in admin_users
+            if item.get("location_id") in veterinary_location_ids or item["id"] == user["id"]
+        ]
+
     context.update(
         {
             "permission_error": permission_error,
@@ -1011,9 +1320,9 @@ async def admin_page(
             "catalog_veterinary_synced": catalog_veterinary_synced,
             "settings_saved": settings_saved,
             "catalog_error": catalog_error,
-            "admin_users": list_users(),
-            "admin_organizations": list_organizations(),
-            "admin_locations": list_locations(include_inactive=True),
+            "admin_users": admin_users,
+            "admin_organizations": admin_organizations,
+            "admin_locations": admin_locations,
             "app_settings": get_app_settings(),
             "audit_events": list_recent_activity(limit=24),
             "database_mode": get_database_dialect(),
@@ -1089,8 +1398,12 @@ async def export_backup_snapshot(request: Request):
     if get_database_dialect() == "sqlite":
         db_path = sqlite_db_path()
         if db_path.exists():
+            with tempfile.NamedTemporaryFile(suffix=".db") as snapshot:
+                with sqlite3.connect(db_path) as source, sqlite3.connect(snapshot.name) as destination:
+                    source.backup(destination)
+                snapshot_bytes = Path(snapshot.name).read_bytes()
             return Response(
-                content=db_path.read_bytes(),
+                content=snapshot_bytes,
                 media_type="application/octet-stream",
                 headers={"Content-Disposition": f'attachment; filename="{db_path.name}"'},
             )
@@ -1329,6 +1642,7 @@ async def create_new_location(
     sector: str = Form(""),
     phone: str = Form(""),
     opening_hours: str = Form(""),
+    catalog_kind: str = Form("consulta-general"),
 ) -> RedirectResponse:
     user = user_with_permissions(request)
     if user is None:
@@ -1345,6 +1659,7 @@ async def create_new_location(
             "sector": sector.strip(),
             "phone": phone.strip(),
             "opening_hours": opening_hours.strip(),
+            "catalog_kind": catalog_kind if catalog_kind in {"veterinaria", "odontologia", "consulta-general"} else "consulta-general",
         }
     )
     log_audit_event(
@@ -1540,6 +1855,207 @@ async def toggle_user(
     return RedirectResponse(url="/admin?user_updated=1", status_code=303)
 
 
+@router.post("/admin/users/{user_id}/permissions")
+async def update_existing_user_permissions(
+    request: Request,
+    user_id: int,
+    permission_mode: str = Form("role"),
+    allowed_permissions: list[str] = Form(default=[]),
+    organization_id: int = Form(...),
+    location_id: int = Form(...),
+    full_name: str = Form(""),
+) -> RedirectResponse:
+    user = user_with_permissions(request)
+    if user is None:
+        return redirect_to_login()
+    if not user["permissions"]["manage_admin"]:
+        return redirect_to_module_with_error("/", "Tu rol no puede configurar permisos.")
+    target_user = get_user_by_id(user_id)
+    if (
+        target_user is None
+        or int(target_user.get("organization_id") or 0) != int(user.get("organization_id") or 0)
+        or int(target_user.get("organization_id") or 0) != organization_id
+    ):
+        return redirect_to_module_with_error("/admin", "Ese usuario no pertenece a tu organizacion.")
+
+    known_permissions = set(role_permissions("owner"))
+    overrides = {} if permission_mode == "role" else {
+        key: key in allowed_permissions for key in known_permissions
+    }
+    if user_id == user["id"] and overrides and not overrides.get("manage_admin"):
+        return redirect_to_module_with_error("/admin", "No puedes retirar tu propio acceso administrativo.")
+    update_user_permissions(user_id, overrides)
+    log_audit_event(
+        user_id=user["id"],
+        organization_id=organization_id,
+        location_id=location_id,
+        action="Actualizacion",
+        entity_type="Permisos de usuario",
+        entity_label=full_name or f"Usuario #{user_id}",
+        detail="Perfil del rol" if not overrides else "Permisos personalizados",
+    )
+    return RedirectResponse(url="/admin?user_updated=1", status_code=303)
+
+
+@router.post("/alerts")
+async def create_manual_alert(
+    request: Request,
+    organization_id: int = Form(...),
+    location_id: int = Form(...),
+    title: str = Form(...),
+    message: str = Form(""),
+    due_at: str = Form(...),
+    priority: str = Form("normal"),
+    recurrence: str = Form("once"),
+    escalation_minutes: int = Form(0),
+    assigned_user_id: int = Form(0),
+) -> RedirectResponse:
+    user = user_with_permissions(request)
+    if user is None:
+        return redirect_to_login()
+    if not user["permissions"]["view_inventory"] or not inventory_scope_allowed(user, organization_id, location_id):
+        return RedirectResponse(url=f"/alertas?notice={encoded_message('No puedes programar alertas para esta sede.')}", status_code=303)
+    safe_priority = priority if priority in {"normal", "important", "urgent"} else "normal"
+    safe_recurrence = recurrence if recurrence in {"once", "daily", "weekly", "monthly"} else "once"
+    valid_assignees = {
+        item["id"] for item in list_users()
+        if item["is_active"] and int(item["organization_id"] or 0) == organization_id
+        and (item["role"] in {"owner", "admin"} or int(item["location_id"] or 0) == location_id)
+    }
+    safe_assigned_user_id = assigned_user_id if assigned_user_id in valid_assignees else 0
+    create_alert({
+        "organization_id": organization_id,
+        "location_id": location_id,
+        "created_by": user["id"],
+        "assigned_user_id": safe_assigned_user_id,
+        "title": title.strip(),
+        "message": message.strip(),
+        "due_at": due_at,
+        "priority": safe_priority,
+        "recurrence": safe_recurrence,
+        "escalation_minutes": escalation_minutes if escalation_minutes in {0, 15, 30, 60, 120, 240} else 0,
+    })
+    log_audit_event(user_id=user["id"], organization_id=organization_id, location_id=location_id,
+                    action="Creacion", entity_type="Alerta", entity_label=title.strip(),
+                    detail=f"Prioridad {safe_priority} | repeticion {safe_recurrence} | escalamiento {escalation_minutes} min")
+    suffix = build_scope_query(str(organization_id), str(location_id))
+    return RedirectResponse(url=f"/alertas?saved=1&{suffix}", status_code=303)
+
+
+@router.post("/alerts/{alert_id}/edit")
+async def edit_manual_alert(
+    request: Request,
+    alert_id: int,
+    organization_id: int = Form(...),
+    location_id: int = Form(...),
+    title: str = Form(...),
+    message: str = Form(""),
+    due_at: str = Form(...),
+    priority: str = Form("normal"),
+    recurrence: str = Form("once"),
+    escalation_minutes: int = Form(0),
+    assigned_user_id: int = Form(0),
+) -> RedirectResponse:
+    user = user_with_permissions(request)
+    if user is None:
+        return redirect_to_login()
+    if not user["permissions"]["view_inventory"] or not alert_belongs_to_scope(alert_id, organization_id, location_id):
+        return RedirectResponse(url=f"/alertas?notice={encoded_message('La alerta no pertenece a la sede activa.')}", status_code=303)
+    safe_priority = priority if priority in {"normal", "important", "urgent"} else "normal"
+    safe_recurrence = recurrence if recurrence in {"once", "daily", "weekly", "monthly"} else "once"
+    valid_assignees = {
+        item["id"] for item in list_users()
+        if item["is_active"] and int(item["organization_id"] or 0) == organization_id
+        and (item["role"] in {"owner", "admin"} or int(item["location_id"] or 0) == location_id)
+    }
+    updated = update_alert(alert_id, organization_id, location_id, {
+        "title": title, "message": message, "due_at": due_at, "priority": safe_priority,
+        "recurrence": safe_recurrence,
+        "escalation_minutes": escalation_minutes if escalation_minutes in {0, 15, 30, 60, 120, 240} else 0,
+        "assigned_user_id": assigned_user_id if assigned_user_id in valid_assignees else 0,
+    })
+    message_out = "Alerta actualizada; la confirmación de lectura se reinició."
+    if updated:
+        log_audit_event(user_id=user["id"], organization_id=organization_id, location_id=location_id,
+                        action="Edicion", entity_type="Alerta", entity_label=title.strip(), detail=message_out)
+    suffix = build_scope_query(str(organization_id), str(location_id))
+    return RedirectResponse(url=f"/alertas?updated=1&notice={encoded_message(message_out)}&{suffix}", status_code=303)
+
+
+@router.post("/alerts/{alert_id}/resolve")
+async def resolve_manual_alert(request: Request, alert_id: int, organization_id: int = Form(0), location_id: int = Form(0)) -> RedirectResponse:
+    user = user_with_permissions(request)
+    if user is None:
+        return redirect_to_login()
+    if not user["permissions"]["view_inventory"] or not alert_belongs_to_scope(alert_id, organization_id, location_id):
+        return RedirectResponse(url=f"/alertas?notice={encoded_message('La alerta no pertenece a la sede activa.')}", status_code=303)
+    result = resolve_alert(alert_id, organization_id, location_id)
+    suffix = build_scope_query(str(organization_id or ""), str(location_id or ""))
+    message = "Alerta resuelta y retirada de pendientes."
+    if result and result["recurring"]:
+        message = f"Alerta resuelta. Próximo aviso: {result['next_due']}."
+    log_audit_event(user_id=user["id"], organization_id=organization_id, location_id=location_id,
+                    action="Resolucion", entity_type="Alerta", entity_label=f"Alerta #{alert_id}", detail=message)
+    separator = f"&{suffix}" if suffix else ""
+    return RedirectResponse(url=f"/alertas?notice={encoded_message(message)}{separator}", status_code=303)
+
+
+@router.post("/alerts/acknowledge")
+async def acknowledge_operational_alert(
+    request: Request,
+    alert_key: str = Form(...),
+    organization_id: int = Form(...),
+    location_id: int = Form(...),
+) -> RedirectResponse:
+    user = user_with_permissions(request)
+    if user is None:
+        return redirect_to_login()
+    if not user["permissions"]["view_inventory"] or not inventory_scope_allowed(user, organization_id, location_id):
+        return RedirectResponse(url=f"/alertas?notice={encoded_message('No puedes confirmar alertas de esta sede.')}", status_code=303)
+    confirmed = acknowledge_alert(alert_key.strip(), organization_id, location_id, user["id"])
+    message = "Lectura confirmada. La alerta seguirá pendiente hasta corregir su causa."
+    if not confirmed:
+        message = "La alerta ya no está disponible en esta sede."
+    else:
+        log_audit_event(user_id=user["id"], organization_id=organization_id, location_id=location_id,
+                        action="Confirmacion de lectura", entity_type="Alerta", entity_label=alert_key.strip(), detail=message)
+    suffix = build_scope_query(str(organization_id), str(location_id))
+    return RedirectResponse(url=f"/alertas?notice={encoded_message(message)}&{suffix}", status_code=303)
+
+
+@router.post("/alerts/{alert_id}/snooze")
+async def snooze_manual_alert(request: Request, alert_id: int, organization_id: int = Form(0), location_id: int = Form(0), hours: int = Form(24)) -> RedirectResponse:
+    user = user_with_permissions(request)
+    if user is None:
+        return redirect_to_login()
+    if not user["permissions"]["view_inventory"] or not alert_belongs_to_scope(alert_id, organization_id, location_id):
+        return RedirectResponse(url=f"/alertas?notice={encoded_message('La alerta no pertenece a la sede activa.')}", status_code=303)
+    safe_hours = hours if hours in {1, 4, 8, 24, 72, 168} else 24
+    next_due = snooze_alert(alert_id, organization_id, location_id, safe_hours)
+    suffix = build_scope_query(str(organization_id or ""), str(location_id or ""))
+    duration_label = "1 hora" if safe_hours == 1 else f"{safe_hours} horas"
+    message = f"Alerta pospuesta {duration_label}. Volverá el {next_due}."
+    log_audit_event(user_id=user["id"], organization_id=organization_id, location_id=location_id,
+                    action="Posposicion", entity_type="Alerta", entity_label=f"Alerta #{alert_id}", detail=message)
+    separator = f"&{suffix}" if suffix else ""
+    return RedirectResponse(url=f"/alertas?notice={encoded_message(message)}{separator}", status_code=303)
+
+
+@router.post("/alerts/{alert_id}/delete")
+async def delete_manual_alert(request: Request, alert_id: int, organization_id: int = Form(0), location_id: int = Form(0)) -> RedirectResponse:
+    user = user_with_permissions(request)
+    if user is None:
+        return redirect_to_login()
+    if not user["permissions"]["manage_inventory"] or not alert_belongs_to_scope(alert_id, organization_id, location_id):
+        return RedirectResponse(url=f"/alertas?notice={encoded_message('Tu rol no puede eliminar esta alerta.')}", status_code=303)
+    delete_alert(alert_id, organization_id, location_id)
+    log_audit_event(user_id=user["id"], organization_id=organization_id, location_id=location_id,
+                    action="Eliminacion", entity_type="Alerta", entity_label=f"Alerta #{alert_id}", detail="Eliminada permanentemente")
+    suffix = build_scope_query(str(organization_id or ""), str(location_id or ""))
+    separator = f"&{suffix}" if suffix else ""
+    return RedirectResponse(url=f"/alertas?notice={encoded_message('Alerta eliminada permanentemente.')}{separator}", status_code=303)
+
+
 @router.post("/inventory")
 async def create_inventory(
     request: Request,
@@ -1553,8 +2069,8 @@ async def create_inventory(
     regulatory_code: str = Form(...),
     supplier: str = Form(""),
     lot: str = Form(...),
-    quantity: int = Form(...),
-    min_stock: int = Form(...),
+    quantity: float = Form(...),
+    min_stock: float = Form(...),
     unit_cost: float = Form(0),
     sale_price: float = Form(0),
     storage_condition: str = Form(""),
@@ -1562,15 +2078,30 @@ async def create_inventory(
     location: str = Form(...),
     last_counted_at: str = Form(""),
     expiry_date: str = Form(...),
+    product_id: int = Form(0),
+    item_type: str = Form("Medicamento"),
+    unit_measure: str = Form("unidades"),
+    manufacturer: str = Form(""),
+    received_date: str = Form(...),
+    document_number: str = Form(...),
+    presentation: str = Form(""),
+    concentration: str = Form(""),
+    serial_number: str = Form(""),
+    reception_temperature_c: float | None = Form(None),
+    reception_note: str = Form(""),
+    is_test: int = Form(0),
+    replenishment_request_id: int = Form(0),
 ) -> RedirectResponse:
     user = user_with_permissions(request)
     if user is None:
         return redirect_to_login()
     if not user["permissions"]["manage_inventory"]:
         return redirect_to_module_with_error("/inventario", "Tu rol no puede registrar productos.")
+    if not inventory_scope_allowed(user, organization_id, location_id):
+        return redirect_to_module_with_error("/inventario", "La sede no pertenece a tu organización.")
 
-    create_inventory_item(
-        {
+    try:
+        create_inventory_item({
             "organization_id": organization_id,
             "location_id": location_id,
             "name": name.strip(),
@@ -1590,8 +2121,23 @@ async def create_inventory(
             "location": location.strip(),
             "last_counted_at": last_counted_at,
             "expiry_date": expiry_date,
-        }
-    )
+            "product_id": product_id or None,
+            "item_type": item_type.strip(),
+            "unit_measure": unit_measure.strip(),
+            "manufacturer": manufacturer.strip(),
+            "received_date": received_date,
+            "document_number": document_number.strip(),
+            "presentation": presentation.strip(),
+            "concentration": concentration.strip(),
+            "serial_number": serial_number.strip(),
+            "reception_temperature_c": reception_temperature_c,
+            "reception_note": reception_note.strip(),
+            "received_by_user_id": user["id"],
+            "is_test": is_test,
+            "replenishment_request_id": replenishment_request_id or None,
+        })
+    except ValueError as exc:
+        return redirect_to_module_with_error("/inventario", str(exc))
     log_audit_event(
         user_id=user["id"],
         organization_id=organization_id,
@@ -1611,6 +2157,8 @@ async def export_inventory(
     search: str = Query(default=""),
     category: str = Query(default=""),
     status: str = Query(default=""),
+    item_type: str = Query(default=""),
+    expiry: str = Query(default=""),
     organization_id: str = Query(default=""),
     location_id: str = Query(default=""),
 ):
@@ -1619,17 +2167,50 @@ async def export_inventory(
         return redirect_to_login()
     if not user["permissions"]["view_inventory"]:
         return redirect_to_module_with_error("/inventario", "Tu rol no puede exportar inventario.")
+    effective_org = organization_id or request.session.get("preferred_organization_id", "")
+    effective_location = location_id or request.session.get("preferred_location_id", "")
+    if not effective_org or not effective_location or not inventory_scope_allowed(user, int(effective_org), int(effective_location)):
+        return redirect_to_module_with_error("/inventario", "No puedes exportar información de otra organización.")
     items = list_inventory_items(
         search=search,
         category=category,
         status=status,
-        organization_id=organization_id or request.session.get("preferred_organization_id", ""),
-        location_id=location_id or request.session.get("preferred_location_id", ""),
+        item_type=item_type,
+        expiry=expiry,
+        organization_id=effective_org,
+        location_id=effective_location,
     )
     return Response(
         content=build_inventory_csv(items),
         media_type="text/csv; charset=utf-8",
         headers={"Content-Disposition": 'attachment; filename="velmorax-inventario.csv"'},
+    )
+
+
+@router.get("/inventario/historial/export")
+async def export_inventory_history(
+    request: Request,
+    organization_id: str = Query(default=""),
+    location_id: str = Query(default=""),
+):
+    user = user_with_permissions(request)
+    if user is None:
+        return redirect_to_login()
+    if not user["permissions"]["view_inventory"]:
+        return redirect_to_module_with_error("/inventario", "Tu rol no puede exportar el historial.")
+    effective_org = organization_id or request.session.get("preferred_organization_id", "")
+    effective_location = location_id or request.session.get("preferred_location_id", "")
+    if not effective_org or not effective_location or not inventory_scope_allowed(user, int(effective_org), int(effective_location)):
+        return redirect_to_module_with_error("/inventario", "No puedes exportar información de otra organización.")
+    movements = list_recent_movements(
+        limit=1000,
+        organization_id=effective_org,
+        location_id=effective_location,
+    )
+    return Response(
+        content=build_inventory_movements_csv(movements),
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": 'attachment; filename="velmorax-trazabilidad-insumos.csv"'},
     )
 
 
@@ -1643,10 +2224,15 @@ async def delete_inventory(
     user = user_with_permissions(request)
     if user is None:
         return redirect_to_login()
-    if not user["permissions"]["manage_inventory"]:
-        return redirect_to_module_with_error("/inventario", "Tu rol no puede eliminar productos.")
+    if not user["permissions"]["manage_admin"]:
+        return redirect_to_module_with_error("/inventario", "Solo administración puede borrar un registro creado por error.")
+    if not inventory_item_scope_allowed(user, item_id, organization_id, location_id):
+        return redirect_to_module_with_error("/inventario", "El lote no pertenece a la sede seleccionada.")
 
-    delete_inventory_item(item_id)
+    try:
+        delete_inventory_item(item_id)
+    except ValueError as exc:
+        return redirect_to_module_with_error("/inventario", str(exc))
     log_audit_event(
         user_id=user["id"],
         organization_id=organization_id or None,
@@ -1660,21 +2246,123 @@ async def delete_inventory(
     return RedirectResponse(url=f"/inventario?{suffix}" if suffix else "/inventario", status_code=303)
 
 
-@router.post("/inventory/movements")
-async def create_movement(
+@router.post("/inventory/{item_id}/edit")
+async def edit_inventory(
     request: Request,
-    item_id: int = Form(...),
-    movement_type: str = Form(...),
-    quantity: int = Form(...),
-    note: str = Form(...),
-    organization_id: int = Form(0),
-    location_id: int = Form(0),
+    item_id: int,
+    organization_id: int = Form(...), location_id: int = Form(...),
+    name: str = Form(...), brand: str = Form(...), supplier: str = Form(""),
+    barcode: str = Form(""), regulatory_code: str = Form(...), lot: str = Form(...),
+    expiry_date: str = Form(...), min_stock: float = Form(...), unit_cost: float = Form(0),
+    sale_price: float = Form(0), location: str = Form(...), storage_condition: str = Form(""),
+    requires_cold_chain: int = Form(0), item_type: str = Form("Medicamento"),
+    unit_measure: str = Form("unidades"),
 ) -> RedirectResponse:
     user = user_with_permissions(request)
     if user is None:
         return redirect_to_login()
     if not user["permissions"]["manage_inventory"]:
+        return redirect_to_module_with_error("/inventario", "Tu rol no puede editar lotes.")
+    if not inventory_item_scope_allowed(user, item_id, organization_id, location_id):
+        return redirect_to_module_with_error("/inventario", "El lote no pertenece a la sede seleccionada.")
+    try:
+        update_inventory_item(item_id, locals())
+    except ValueError as exc:
+        return redirect_to_module_with_error("/inventario", str(exc))
+    log_audit_event(user_id=user["id"], organization_id=organization_id, location_id=location_id,
+                    action="Edicion", entity_type="Inventario", entity_label=name.strip(), detail=f"Lote {lot.strip()} actualizado")
+    suffix = build_scope_query(str(organization_id), str(location_id))
+    return RedirectResponse(url=f"/inventario?saved=1&{suffix}#inventory-item-{item_id}", status_code=303)
+
+
+@router.post("/inventory/{item_id}/retire")
+async def retire_inventory(
+    request: Request, item_id: int, quantity: float = Form(...), reason: str = Form(...),
+    organization_id: int = Form(0), location_id: int = Form(0),
+) -> RedirectResponse:
+    user = user_with_permissions(request)
+    if user is None:
+        return redirect_to_login()
+    if not user["permissions"]["manage_inventory"]:
+        return redirect_to_module_with_error("/inventario", "Tu rol no puede retirar existencias.")
+    if not inventory_item_scope_allowed(user, item_id, organization_id, location_id):
+        return redirect_to_module_with_error("/inventario", "El lote no pertenece a la sede seleccionada.")
+    ok, message = retire_inventory_lot(item_id, quantity, reason, user["id"])
+    suffix = build_scope_query(str(organization_id or ""), str(location_id or ""))
+    if not ok:
+        return RedirectResponse(url=f"/inventario?movement_error={encoded_message(message)}&{suffix}", status_code=303)
+    log_audit_event(user_id=user["id"], organization_id=organization_id or None, location_id=location_id or None,
+                    action="Retiro", entity_type="Inventario", entity_label=f"Lote #{item_id}", detail=f"{quantity:g} | {reason.strip()}")
+    return RedirectResponse(
+        url=f"/inventario?moved=1&notice={encoded_message(message)}&{suffix}",
+        status_code=303,
+    )
+
+
+@router.post("/inventory/{item_id}/count")
+async def count_inventory(
+    request: Request, item_id: int, counted_quantity: float = Form(...), note: str = Form("Conteo físico"),
+    organization_id: int = Form(0), location_id: int = Form(0),
+) -> RedirectResponse:
+    user = user_with_permissions(request)
+    if user is None:
+        return redirect_to_login()
+    if not user["permissions"]["manage_inventory"]:
+        return redirect_to_module_with_error("/inventario", "Tu rol no puede realizar conteos.")
+    if not inventory_item_scope_allowed(user, item_id, organization_id, location_id):
+        return redirect_to_module_with_error("/inventario", "El lote no pertenece a la sede seleccionada.")
+    ok, message = count_inventory_item(item_id, counted_quantity, note, user["id"])
+    suffix = build_scope_query(str(organization_id or ""), str(location_id or ""))
+    key = f"moved=1&notice={encoded_message(message)}" if ok else f"movement_error={encoded_message(message)}"
+    return RedirectResponse(url=f"/inventario?{key}&{suffix}#inventory-item-{item_id}", status_code=303)
+
+
+@router.post("/inventory/{item_id}/cold-chain")
+async def cold_chain_inventory(
+    request: Request, item_id: int, temperature_c: float = Form(...), note: str = Form(""),
+    organization_id: int = Form(0), location_id: int = Form(0),
+) -> RedirectResponse:
+    user = user_with_permissions(request)
+    if user is None:
+        return redirect_to_login()
+    if not user["permissions"]["manage_inventory"]:
+        return redirect_to_module_with_error("/inventario", "Tu rol no puede registrar temperaturas.")
+    if not inventory_item_scope_allowed(user, item_id, organization_id, location_id):
+        return redirect_to_module_with_error("/inventario", "El lote no pertenece a la sede seleccionada.")
+    ok, message = record_cold_chain(item_id, temperature_c, note, user["id"])
+    suffix = build_scope_query(str(organization_id or ""), str(location_id or ""))
+    key = f"moved=1&notice={encoded_message(message)}" if ok else f"movement_error={encoded_message(message)}"
+    return RedirectResponse(url=f"/inventario?{key}&{suffix}#inventory-item-{item_id}", status_code=303)
+
+
+@router.post("/inventory/movements")
+async def create_movement(
+    request: Request,
+    item_id: int = Form(...),
+    movement_type: str = Form(...),
+    quantity: float = Form(...),
+    note: str = Form(...),
+    reason_type: str = Form("Movimiento"),
+    organization_id: int = Form(0),
+    location_id: int = Form(0),
+    patient_id: int = Form(0),
+    appointment_id: int = Form(0),
+    priority: str = Form("Normal"),
+    external_reference: str = Form(""),
+) -> RedirectResponse:
+    user = user_with_permissions(request)
+    if user is None:
+        return redirect_to_login()
+    if not user["permissions"]["manage_inventory"] and not (
+        user["permissions"].get("consume_inventory") and movement_type == "out" and reason_type == "Consumo clínico"
+    ):
         return redirect_to_module_with_error("/inventario", "Tu rol no puede registrar movimientos.")
+    if reason_type.strip().startswith("Traslado"):
+        return redirect_to_module_with_error(
+            "/inventario", "Usa la opción Trasladar para conservar el registro en ambas sedes."
+        )
+    if not inventory_item_scope_allowed(user, item_id, organization_id, location_id):
+        return redirect_to_module_with_error("/inventario", "El lote no pertenece a la sede seleccionada.")
 
     ok, message = create_inventory_movement(
         item_id=item_id,
@@ -1682,6 +2370,11 @@ async def create_movement(
         quantity=quantity,
         note=note,
         user_id=user["id"],
+        reason_type=reason_type,
+        patient_id=patient_id or None,
+        appointment_id=appointment_id or None,
+        priority=priority if priority in {"Normal", "Urgente"} else "Normal",
+        external_reference=external_reference,
     )
     suffix = build_scope_query(str(organization_id or ""), str(location_id or ""))
     if ok:
@@ -1692,10 +2385,13 @@ async def create_movement(
             action="Movimiento",
             entity_type="Inventario",
             entity_label=f"Item #{item_id}",
-            detail=f"{movement_type.strip()} x{quantity} | {note.strip()}",
+            detail=f"{reason_type.strip()} | {movement_type.strip()} x{quantity} | {note.strip()}",
         )
+        patient = next((item for item in list_patients(organization_id=str(organization_id), location_id=str(location_id)) if item["id"] == patient_id), None)
+        linked_label = f" para {patient['display_name']}" if patient else ""
+        notice = encoded_message(f"{reason_type.strip()} registrado{linked_label}. Existencias actualizadas.")
         return RedirectResponse(
-            url=f"/inventario?moved=1&{suffix}" if suffix else "/inventario?moved=1",
+            url=f"/inventario?moved=1&notice={notice}&{suffix}" if suffix else f"/inventario?moved=1&notice={notice}",
             status_code=303,
         )
 
@@ -1705,6 +2401,130 @@ async def create_movement(
     )
 
 
+@router.post("/inventory/{item_id}/quarantine")
+async def quarantine_inventory_lot(
+    request: Request,
+    item_id: int,
+    enabled: int = Form(1),
+    reason: str = Form(""),
+    organization_id: int = Form(0),
+    location_id: int = Form(0),
+) -> RedirectResponse:
+    user = user_with_permissions(request)
+    if user is None:
+        return redirect_to_login()
+    if not user["permissions"]["manage_inventory"]:
+        return redirect_to_module_with_error("/inventario", "Tu rol no puede administrar cuarentenas.")
+    if not inventory_item_scope_allowed(user, item_id, organization_id, location_id):
+        return redirect_to_module_with_error("/inventario", "El lote no pertenece a la sede seleccionada.")
+    ok, message = set_inventory_quarantine(item_id, bool(enabled), reason)
+    suffix = build_scope_query(str(organization_id or ""), str(location_id or ""))
+    if ok:
+        log_audit_event(
+            user_id=user["id"], organization_id=organization_id or None, location_id=location_id or None,
+            action="Cuarentena" if enabled else "Liberación", entity_type="Inventario",
+            entity_label=f"Item #{item_id}", detail=reason.strip() or "Lote liberado",
+        )
+    key = f"saved=1&notice={encoded_message(message)}" if ok else f"movement_error={encoded_message(message)}"
+    return RedirectResponse(url=f"/inventario?{key}&{suffix}#inventory-item-{item_id}", status_code=303)
+
+
+@router.post("/inventory/{item_id}/transfer")
+async def transfer_inventory_lot(
+    request: Request,
+    item_id: int,
+    quantity: float = Form(...),
+    destination_location_id: int = Form(...),
+    destination_storage: str = Form(...),
+    note: str = Form(...),
+    organization_id: int = Form(0),
+    location_id: int = Form(0),
+) -> RedirectResponse:
+    user = user_with_permissions(request)
+    if user is None:
+        return redirect_to_login()
+    if not user["permissions"]["manage_inventory"]:
+        return redirect_to_module_with_error("/inventario", "Tu rol no puede trasladar inventario.")
+    if not inventory_item_scope_allowed(user, item_id, organization_id, location_id):
+        return redirect_to_module_with_error("/inventario", "El lote no pertenece a la sede seleccionada.")
+    destination = get_location_by_id(str(destination_location_id))
+    if not destination or int(destination["organization_id"]) != organization_id:
+        return redirect_to_module_with_error("/inventario", "La sede de destino no pertenece a tu organización.")
+    ok, message, reference = transfer_inventory_item(
+        item_id, quantity, destination_location_id, destination_storage, note, user["id"]
+    )
+    suffix = build_scope_query(str(organization_id or ""), str(location_id or ""))
+    if ok:
+        log_audit_event(
+            user_id=user["id"], organization_id=organization_id or None, location_id=location_id or None,
+            action="Traslado", entity_type="Inventario", entity_label=f"Item #{item_id}",
+            detail=f"{reference} | {quantity} | destino {destination_location_id} | {note.strip()}",
+        )
+    key = f"moved=1&notice={encoded_message(message + (' Referencia ' + reference if reference else ''))}" if ok else f"movement_error={encoded_message(message)}"
+    return RedirectResponse(url=f"/inventario?{key}&{suffix}", status_code=303)
+
+
+@router.post("/inventory/replenishments")
+async def request_inventory_replenishment(
+    request: Request,
+    item_id: int = Form(...),
+    requested_quantity: float = Form(...),
+    supplier: str = Form(...),
+    priority: str = Form("Normal"),
+    note: str = Form(""),
+    organization_id: int = Form(...),
+    location_id: int = Form(...),
+) -> RedirectResponse:
+    user = user_with_permissions(request)
+    if user is None:
+        return redirect_to_login()
+    if not user["permissions"]["manage_inventory"]:
+        return redirect_to_module_with_error("/inventario", "Tu rol no puede solicitar abastecimiento.")
+    if not inventory_item_scope_allowed(user, item_id, organization_id, location_id):
+        return redirect_to_module_with_error("/inventario", "El lote no pertenece a la sede seleccionada.")
+    ok, message = create_inventory_replenishment(
+        item_id, requested_quantity, supplier, priority, note, user["id"]
+    )
+    if ok:
+        log_audit_event(
+            user_id=user["id"], organization_id=organization_id, location_id=location_id,
+            action="Solicitud de abastecimiento", entity_type="Inventario",
+            entity_label=f"Item #{item_id}", detail=f"{requested_quantity} | {priority} | {supplier.strip()}",
+        )
+    suffix = build_scope_query(str(organization_id), str(location_id))
+    key = f"saved=1&notice={encoded_message(message)}" if ok else f"movement_error={encoded_message(message)}"
+    return RedirectResponse(url=f"/inventario?{key}&{suffix}", status_code=303)
+
+
+@router.post("/inventory/replenishments/{replenishment_id}/review")
+async def review_replenishment(
+    request: Request,
+    replenishment_id: int,
+    decision: str = Form(...),
+    organization_id: int = Form(...),
+    location_id: int = Form(...),
+) -> RedirectResponse:
+    user = user_with_permissions(request)
+    if user is None:
+        return redirect_to_login()
+    if not user["permissions"].get("approve_inventory"):
+        return redirect_to_module_with_error("/inventario", "Tu rol no puede aprobar abastecimiento.")
+    if not inventory_scope_allowed(user, organization_id, location_id):
+        return redirect_to_module_with_error("/inventario", "La sede no pertenece a tu organización.")
+    ok, message = review_inventory_replenishment(
+        replenishment_id, decision, user["id"], organization_id, location_id
+    )
+    if ok:
+        log_audit_event(
+            user_id=user["id"], organization_id=organization_id, location_id=location_id,
+            action="Revisión de abastecimiento", entity_type="Inventario",
+            entity_label=f"Solicitud #{replenishment_id}", detail=message,
+        )
+    suffix = build_scope_query(str(organization_id), str(location_id))
+    key = f"saved=1&notice={encoded_message(message)}" if ok else f"movement_error={encoded_message(message)}"
+    return RedirectResponse(url=f"/inventario?{key}&{suffix}", status_code=303)
+
+
 @router.post("/appointments")
 async def create_new_appointment(
     request: Request,
@@ -1712,12 +2532,17 @@ async def create_new_appointment(
     location_id: int = Form(...),
     appointment_date: str = Form(...),
     appointment_time: str = Form(...),
-    patient_name: str = Form(...),
+    patient_id: int = Form(...),
     service: str = Form(...),
     channel: str = Form(...),
     status: str = Form(...),
     specialty: str = Form(...),
     note: str = Form(...),
+    duration_minutes: int = Form(30),
+    veterinarian_user_id: int = Form(...),
+    priority: str = Form("Normal"),
+    triage_level: str = Form(""),
+    triage_note: str = Form(""),
 ) -> RedirectResponse:
     user = user_with_permissions(request)
     if user is None:
@@ -1725,8 +2550,16 @@ async def create_new_appointment(
     if not user["permissions"]["manage_agenda"]:
         return redirect_to_module_with_error("/agenda", "Tu rol no puede registrar citas.")
 
-    create_appointment(
-        {
+    patients = list_patients(organization_id=str(organization_id), location_id=str(location_id))
+    patient = next((item for item in patients if item["id"] == patient_id), None)
+    provider = get_user_by_id(veterinarian_user_id)
+    if patient is None or provider is None or (
+        provider["location_id"] != location_id and provider["role"] not in {"admin", "owner"}
+    ):
+        return redirect_to_module_with_error("/agenda", "Selecciona un paciente y veterinario válidos.")
+    patient_name = patient["display_name"]
+    try:
+        create_appointment({
             "organization_id": organization_id,
             "location_id": location_id,
             "appointment_date": appointment_date,
@@ -1737,8 +2570,19 @@ async def create_new_appointment(
             "status": status.strip(),
             "specialty": specialty.strip(),
             "note": note.strip(),
-        }
-    )
+            "duration_minutes": duration_minutes,
+            "veterinarian": provider["full_name"],
+            "patient_id": patient_id,
+            "veterinarian_user_id": veterinarian_user_id,
+            "cancellation_reason": "",
+            "priority": "Urgente" if priority == "Urgente" else "Normal",
+            "triage_level": triage_level,
+            "triage_note": triage_note,
+            "arrival_at": f"{appointment_date}T{appointment_time}" if priority == "Urgente" else "",
+        })
+    except ValueError as exc:
+        suffix = build_scope_query(str(organization_id), str(location_id), appointment_date)
+        return RedirectResponse(url=f"/agenda?agenda_error={quote(str(exc))}&{suffix}", status_code=303)
     log_audit_event(
         user_id=user["id"],
         organization_id=organization_id,
@@ -1752,6 +2596,103 @@ async def create_new_appointment(
     return RedirectResponse(url=f"/agenda?appointment_saved=1&{suffix}", status_code=303)
 
 
+@router.post("/agenda/professionals/{professional_id}/schedule")
+async def save_professional_schedule(
+    request: Request,
+    professional_id: int,
+    working_days: list[str] = Form(default=[]),
+    work_start: str = Form(...),
+    work_end: str = Form(...),
+    break_start: str = Form(""),
+    break_end: str = Form(""),
+    unavailable_dates: str = Form(""),
+    day: str = Form(""),
+    organization_id: int = Form(0),
+    location_id: int = Form(0),
+) -> RedirectResponse:
+    user = user_with_permissions(request)
+    if user is None:
+        return redirect_to_login()
+    if not user["permissions"]["manage_admin"]:
+        return redirect_to_module_with_error("/agenda", "Solo un administrador puede cambiar la disponibilidad.")
+    if not working_days or work_start >= work_end:
+        return redirect_to_module_with_error("/agenda", "Revisa los días y el horario laboral.")
+    update_user_schedule(professional_id, {
+        "working_days": ",".join(sorted(working_days)),
+        "work_start": work_start, "work_end": work_end,
+        "break_start": break_start, "break_end": break_end,
+        "unavailable_dates": ",".join(value.strip() for value in unavailable_dates.split(",") if value.strip()),
+    })
+    suffix = build_scope_query(str(organization_id or ""), str(location_id or ""), day)
+    return RedirectResponse(url=f"/agenda?appointment_updated=1&{suffix}", status_code=303)
+
+
+@router.post("/appointments/{appointment_id}")
+async def update_full_appointment(
+    request: Request,
+    appointment_id: int,
+    appointment_date: str = Form(...),
+    appointment_time: str = Form(...),
+    patient_id: int = Form(...),
+    service: str = Form(...),
+    channel: str = Form(...),
+    status: str = Form(...),
+    specialty: str = Form("Veterinaria"),
+    note: str = Form(""),
+    duration_minutes: int = Form(30),
+    veterinarian_user_id: int = Form(...),
+    priority: str = Form("Normal"),
+    triage_level: str = Form(""),
+    triage_note: str = Form(""),
+    organization_id: int = Form(0),
+    location_id: int = Form(0),
+) -> RedirectResponse:
+    user = user_with_permissions(request)
+    if user is None:
+        return redirect_to_login()
+    if not user["permissions"]["manage_agenda"]:
+        return redirect_to_module_with_error("/agenda", "Tu rol no puede editar citas.")
+    if not appointment_belongs_to_scope(appointment_id, organization_id, location_id):
+        return redirect_to_module_with_error("/agenda", "La cita no pertenece a la sede seleccionada.")
+    patients = list_patients(organization_id=str(organization_id), location_id=str(location_id))
+    patient = next((item for item in patients if item["id"] == patient_id), None)
+    provider = get_user_by_id(veterinarian_user_id)
+    if patient is None or provider is None or (
+        provider["location_id"] != location_id and provider["role"] not in {"admin", "owner"}
+    ):
+        return redirect_to_module_with_error("/agenda", "Selecciona un paciente y veterinario válidos.")
+    patient_name = patient["display_name"]
+    try:
+        update_appointment_record(appointment_id, {
+        "appointment_date": appointment_date,
+        "appointment_time": appointment_time,
+        "patient_name": patient_name.strip(),
+        "service": service.strip(),
+        "channel": channel.strip(),
+        "status": status.strip(),
+        "specialty": specialty.strip(),
+        "note": note.strip(),
+        "duration_minutes": duration_minutes,
+        "veterinarian": provider["full_name"],
+        "patient_id": patient_id,
+        "veterinarian_user_id": veterinarian_user_id,
+        "location_id": location_id,
+        "priority": "Urgente" if priority == "Urgente" else "Normal",
+        "triage_level": triage_level,
+        "triage_note": triage_note,
+        "arrival_at": f"{appointment_date}T{appointment_time}" if priority == "Urgente" else "",
+    })
+    except ValueError as exc:
+        suffix = build_scope_query(str(organization_id or ""), str(location_id or ""), appointment_date)
+        return RedirectResponse(url=f"/agenda?agenda_error={quote(str(exc))}&{suffix}", status_code=303)
+    log_audit_event(user_id=user["id"], organization_id=organization_id or None,
+                    location_id=location_id or None, action="Actualizacion",
+                    entity_type="Agenda", entity_label=patient_name.strip(),
+                    detail=f"Cita #{appointment_id} actualizada para {appointment_date} {appointment_time}")
+    suffix = build_scope_query(str(organization_id or ""), str(location_id or ""), appointment_date)
+    return RedirectResponse(url=f"/agenda?appointment_updated=1&{suffix}", status_code=303)
+
+
 @router.post("/appointments/{appointment_id}/status")
 async def update_appointment(
     request: Request,
@@ -1760,14 +2701,19 @@ async def update_appointment(
     day: str = Form(""),
     organization_id: int = Form(0),
     location_id: int = Form(0),
+    cancellation_reason: str = Form(""),
 ) -> RedirectResponse:
     user = user_with_permissions(request)
     if user is None:
         return redirect_to_login()
     if not user["permissions"]["manage_agenda"]:
         return redirect_to_module_with_error("/agenda", "Tu rol no puede actualizar citas.")
+    if not appointment_belongs_to_scope(appointment_id, organization_id, location_id):
+        return redirect_to_module_with_error("/agenda", "La cita no pertenece a la sede seleccionada.")
 
-    update_appointment_status(appointment_id, status)
+    if status == "Cancelada" and not cancellation_reason.strip():
+        return redirect_to_module_with_error("/agenda", "Indica el motivo de la cancelación.")
+    update_appointment_status(appointment_id, status, cancellation_reason)
     log_audit_event(
         user_id=user["id"],
         organization_id=organization_id or None,
@@ -1792,8 +2738,10 @@ async def remove_appointment(
     user = user_with_permissions(request)
     if user is None:
         return redirect_to_login()
-    if not user["permissions"]["manage_agenda"]:
+    if not user["permissions"]["manage_admin"]:
         return redirect_to_module_with_error("/agenda", "Tu rol no puede eliminar citas.")
+    if not appointment_belongs_to_scope(appointment_id, organization_id, location_id):
+        return redirect_to_module_with_error("/agenda", "La cita no pertenece a la sede seleccionada.")
 
     delete_appointment(appointment_id)
     log_audit_event(
@@ -2076,10 +3024,17 @@ async def remove_record(
 
 @router.get("/health")
 async def healthcheck() -> dict:
+    database_status = "ok"
+    try:
+        with get_connection() as connection:
+            connection.execute("SELECT 1").fetchone()
+    except Exception:
+        database_status = "unavailable"
     return {
-        "status": "ok",
+        "status": "ok" if database_status == "ok" else "degraded",
         "service": "velmorax-web",
         "database": get_database_dialect(),
+        "database_status": database_status,
         "version": settings.app_version,
         "session_idle_timeout_minutes": settings.session_idle_timeout_minutes,
     }
