@@ -153,6 +153,11 @@ Para una instalacion definitiva:
 4. Configura respaldos periodicos de la base.
 5. Mantén el endpoint `/health` para monitoreo.
 
+La instalación comercial reproducible, con PostgreSQL aislado, HTTPS automático
+y dominio propio, está documentada en [`deploy/README.md`](deploy/README.md). Usa
+`docker-compose.production.yml`; el archivo `docker-compose.yml` se conserva para
+desarrollo local.
+
 ## Archivos no versionados
 
 Por seguridad y limpieza, el repositorio excluye:

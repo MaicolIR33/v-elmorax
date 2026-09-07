@@ -1,0 +1,92 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-velmorax}
+      POSTGRES_USER: ${POSTGRES_USER:-velmorax}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Define POSTGRES_PASSWORD en .env.production}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-velmorax} -d ${POSTGRES_DB:-velmorax}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    networks:
+      - backend
+    security_opt:
+      - no-new-privileges:true
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      APP_ENV: production
+      DATABASE_URL: postgresql://${POSTGRES_USER:-velmorax}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-velmorax}
+      SESSION_SECRET: ${SESSION_SECRET:?Define SESSION_SECRET en .env.production}
+      SESSION_HTTPS_ONLY: "1"
+      SHOW_DEMO_ACCESS: "0"
+      SEED_DEMO_DATA: "0"
+      INITIALIZE_DATABASE: "0"
+      PUBLIC_BASE_URL: https://${VELMORAX_DOMAIN:?Define VELMORAX_DOMAIN en .env.production}
+      ALLOWED_HOSTS: ${VELMORAX_DOMAIN},app,localhost,127.0.0.1
+      WEB_CONCURRENCY: ${WEB_CONCURRENCY:-2}
+      SESSION_IDLE_TIMEOUT_MINUTES: ${SESSION_IDLE_TIMEOUT_MINUTES:-90}
+      SESSION_REMEMBER_IDLE_DAYS: ${SESSION_REMEMBER_IDLE_DAYS:-14}
+      DEFAULT_ENTRY_FLOW: ${DEFAULT_ENTRY_FLOW:-veterinaria}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USERNAME: ${SMTP_USERNAME:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_USE_TLS: ${SMTP_USE_TLS:-1}
+      SMTP_FROM_EMAIL: ${SMTP_FROM_EMAIL:-}
+      SMTP_FROM_NAME: ${SMTP_FROM_NAME:-Velmorax}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3)"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - backend
+      - edge
+    security_opt:
+      - no-new-privileges:true
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    environment:
+      VELMORAX_DOMAIN: ${VELMORAX_DOMAIN:?Define VELMORAX_DOMAIN en .env.production}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      app:
+        condition: service_healthy
+    networks:
+      - edge
+    security_opt:
+      - no-new-privileges:true
+
+volumes:
+  postgres_data:
+  caddy_data:
+  caddy_config:
+
+networks:
+  backend:
+    internal: true
+  edge:

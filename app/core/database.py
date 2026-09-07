@@ -232,11 +232,12 @@ def init_db() -> None:
         ensure_column(connection, "locations", "phone", "TEXT NOT NULL DEFAULT ''")
         ensure_column(connection, "locations", "opening_hours", "TEXT NOT NULL DEFAULT ''")
         ensure_indexes(connection)
-        seed_network_catalog(connection)
-        seed_app_settings(connection)
-        backfill_location_catalog_kinds(connection)
-        backfill_location_search_text(connection)
-        assign_scope_defaults(connection)
+        if get_settings().seed_demo_data:
+            seed_network_catalog(connection)
+            seed_app_settings(connection)
+            backfill_location_catalog_kinds(connection)
+            backfill_location_search_text(connection)
+            assign_scope_defaults(connection)
         connection.commit()
 
 

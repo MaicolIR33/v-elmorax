@@ -31,6 +31,32 @@ class Settings(BaseModel):
     sms_api_key: str = ""
     sms_sender_id: str = "Velmorax"
     public_base_url: str = "http://127.0.0.1:8000"
+    allowed_hosts: list[str] = ["localhost", "127.0.0.1", "testserver"]
+    seed_demo_data: bool = True
+    initialize_database: bool = True
+
+    @property
+    def is_production(self) -> bool:
+        return self.app_env.strip().lower() == "production"
+
+    def validate_production(self) -> None:
+        if not self.is_production:
+            return
+        errors = []
+        if len(self.session_secret) < 32 or self.session_secret == "velmorax-dev-secret":
+            errors.append("SESSION_SECRET debe ser único y tener al menos 32 caracteres")
+        if not self.database_url.startswith(("postgres://", "postgresql://")):
+            errors.append("DATABASE_URL debe apuntar a PostgreSQL")
+        if not self.public_base_url.startswith("https://"):
+            errors.append("PUBLIC_BASE_URL debe comenzar con https://")
+        if not self.session_https_only:
+            errors.append("SESSION_HTTPS_ONLY debe estar activado")
+        if self.show_demo_access or self.seed_demo_data:
+            errors.append("los accesos y datos de demostración deben estar desactivados")
+        if not self.allowed_hosts or "*" in self.allowed_hosts:
+            errors.append("ALLOWED_HOSTS debe contener dominios explícitos")
+        if errors:
+            raise RuntimeError("Configuración de producción inválida: " + "; ".join(errors))
 
 
 @lru_cache
@@ -38,6 +64,12 @@ def get_settings() -> Settings:
     app_env = os.getenv("APP_ENV", "development")
     show_demo_default = "0" if app_env.lower() == "production" else "1"
     https_default = "1" if app_env.lower() == "production" else "0"
+    seed_demo_default = "0" if app_env.lower() == "production" else "1"
+    allowed_hosts = [
+        host.strip()
+        for host in os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1,testserver").split(",")
+        if host.strip()
+    ]
     return Settings(
         app_env=app_env,
         session_secret=os.getenv("SESSION_SECRET", "velmorax-dev-secret"),
@@ -59,4 +91,7 @@ def get_settings() -> Settings:
         sms_api_key=os.getenv("SMS_API_KEY", "").strip(),
         sms_sender_id=os.getenv("SMS_SENDER_ID", "Velmorax").strip() or "Velmorax",
         public_base_url=os.getenv("PUBLIC_BASE_URL", "http://127.0.0.1:8000").rstrip("/"),
+        allowed_hosts=allowed_hosts,
+        seed_demo_data=os.getenv("SEED_DEMO_DATA", seed_demo_default) in {"1", "true", "True"},
+        initialize_database=os.getenv("INITIALIZE_DATABASE", "1") in {"1", "true", "True"},
     )

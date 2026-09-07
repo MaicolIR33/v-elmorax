@@ -1,0 +1,14 @@
+.git
+.venv
+__pycache__
+*.pyc
+*.db
+*.sqlite*
+.env*
+data
+output
+outputs
+tmp
+node_modules
+tools
+tests
