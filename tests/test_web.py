@@ -142,6 +142,18 @@ class VelmoraxWebTests(unittest.TestCase):
             connection.execute("DELETE FROM integration_outbox WHERE event_key=?", (key,))
             connection.commit()
 
+    def test_authenticated_help_center_is_role_aware(self):
+        self.client.post("/logout")
+        anonymous = self.client.get("/ayuda", follow_redirects=False)
+        self.assertEqual(anonymous.status_code, 303)
+        self.client.post("/login", data={"intent": "veterinaria", "email": "admin@velmorax.local", "password": "velmorax123"})
+        self.client.post("/login/push-approval", data={"approve": "1"})
+        help_page = self.client.get("/ayuda")
+        self.assertEqual(help_page.status_code, 200)
+        self.assertIn("Centro de ayuda", help_page.text)
+        self.assertIn("Administración", help_page.text)
+        self.assertIn("Servicio caído", help_page.text)
+
     def test_demo_user_can_login_and_open_clinical_module(self):
         response = self.client.post(
             "/login",

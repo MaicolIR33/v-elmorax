@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Velmorax | Ayuda{% endblock %}
+{% block content %}
+<section class="module-section help-center">
+    <div class="section-heading"><p class="eyebrow">Centro de ayuda</p><h2 class="page-title">Operar Velmorax con confianza</h2><p class="lead">Guías breves para el trabajo diario de una clínica veterinaria, incluida la atención de urgencias.</p></div>
+    <div class="help-grid">
+        <article class="panel-card"><p class="eyebrow">Inicio rápido</p><h3>Tu recorrido recomendado</h3><ol class="help-steps"><li>Confirma la sede activa antes de registrar información.</li><li>Agenda o recibe la atención y registra la llegada.</li><li>Abre la consulta y documenta solo información necesaria.</li><li>Asocia cada consumo al paciente o atención.</li><li>Resuelve alertas únicamente cuando la causa esté corregida.</li></ol></article>
+        <article class="panel-card"><p class="eyebrow">Según tu rol</p><h3>{% if help_role == 'admin' %}Administración{% elif help_role == 'inventory' %}Insumos{% else %}Equipo clínico{% endif %}</h3>
+            {% if help_role == 'admin' %}<p class="muted-line">Gestiona equipo, permisos, capacidad, sedes, copias y auditoría. Revisa semanalmente accesos y alertas críticas.</p>
+            {% elif help_role == 'inventory' %}<p class="muted-line">Registra recepciones, lotes, conteos, consumos, cadena de frío y retiros. Nunca ajustes stock sin motivo trazable.</p>
+            {% else %}<p class="muted-line">Gestiona agenda, triage, consulta y consumo clínico. En urgencias prima la atención; completa la trazabilidad tan pronto sea seguro.</p>{% endif %}
+        </article>
+        <article class="panel-card"><p class="eyebrow">Soporte</p><h3>Cuando algo falla</h3><p class="muted-line">Anota hora, sede, módulo, acción y mensaje visible. No envíes contraseñas ni historias clínicas por canales no autorizados.</p><div class="help-contact"><strong>{{ support.get('support_email', 'Soporte no configurado') or 'Soporte no configurado' }}</strong><span>{{ support.get('support_phone', '') }}</span></div></article>
+        <article class="panel-card"><p class="eyebrow">Prioridades</p><h3>Respuesta esperada</h3><dl class="help-priorities"><div><dt>Crítica</dt><dd>Servicio caído, pérdida o exposición de datos: atención inmediata.</dd></div><div><dt>Alta</dt><dd>Flujo clínico bloqueado: respuesta prioritaria.</dd></div><div><dt>Normal</dt><dd>Duda o mejora sin bloqueo: horario hábil.</dd></div></dl></article>
+    </div>
+</section>
+{% endblock %}

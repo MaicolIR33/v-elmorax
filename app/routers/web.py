@@ -688,6 +688,15 @@ async def plans_page(request: Request) -> HTMLResponse:
     )
 
 
+@router.get("/ayuda", response_class=HTMLResponse)
+async def help_page(request: Request) -> HTMLResponse:
+    context, user = context_for_authenticated_user(request, active_path="/ayuda")
+    if context is None:
+        return redirect_to_login("veterinaria")
+    context.update({"support": get_app_settings(), "help_role": user["role"]})
+    return templates.TemplateResponse(request=request, name="help.html", context=context)
+
+
 @router.get("/tratamiento-de-datos", response_class=HTMLResponse)
 async def data_policy_page(request: Request) -> HTMLResponse:
     return templates.TemplateResponse(
