@@ -176,6 +176,8 @@ def init_db() -> None:
         ensure_column(connection, "inventory_items", "is_quarantined", "INTEGER NOT NULL DEFAULT 0")
         ensure_column(connection, "inventory_items", "quarantine_reason", "TEXT NOT NULL DEFAULT ''")
         ensure_column(connection, "inventory_items", "replenishment_request_id", "INTEGER")
+        ensure_column(connection, "inventory_items", "source_system", "TEXT NOT NULL DEFAULT ''")
+        ensure_column(connection, "inventory_items", "external_id", "TEXT NOT NULL DEFAULT ''")
         ensure_column(connection, "inventory_products", "manufacturer", "TEXT NOT NULL DEFAULT ''")
         ensure_column(connection, "inventory_products", "presentation", "TEXT NOT NULL DEFAULT ''")
         ensure_column(connection, "inventory_products", "concentration", "TEXT NOT NULL DEFAULT ''")
@@ -203,6 +205,8 @@ def init_db() -> None:
         ensure_column(connection, "appointments", "triage_level", "TEXT NOT NULL DEFAULT ''")
         ensure_column(connection, "appointments", "triage_note", "TEXT NOT NULL DEFAULT ''")
         ensure_column(connection, "appointments", "arrival_at", "TEXT NOT NULL DEFAULT ''")
+        ensure_column(connection, "appointments", "source_system", "TEXT NOT NULL DEFAULT ''")
+        ensure_column(connection, "appointments", "external_id", "TEXT NOT NULL DEFAULT ''")
         ensure_column(connection, "patients", "organization_id", "INTEGER NOT NULL DEFAULT 1")
         ensure_column(connection, "patients", "location_id", "INTEGER NOT NULL DEFAULT 1")
         ensure_column(connection, "patients", "document_number", "TEXT NOT NULL DEFAULT ''")
@@ -215,6 +219,8 @@ def init_db() -> None:
         ensure_column(connection, "patients", "breed", "TEXT NOT NULL DEFAULT ''")
         ensure_column(connection, "patients", "weight_kg", "REAL NOT NULL DEFAULT 0")
         ensure_column(connection, "patients", "vaccine_status", "TEXT NOT NULL DEFAULT ''")
+        ensure_column(connection, "patients", "source_system", "TEXT NOT NULL DEFAULT ''")
+        ensure_column(connection, "patients", "external_id", "TEXT NOT NULL DEFAULT ''")
         ensure_column(connection, "clinical_records", "follow_up_date", "TEXT NOT NULL DEFAULT ''")
         ensure_column(connection, "clinical_records", "dental_chart", "TEXT NOT NULL DEFAULT ''")
         ensure_column(connection, "clinical_records", "current_weight_kg", "REAL NOT NULL DEFAULT 0")
@@ -265,6 +271,9 @@ def ensure_indexes(connection: DatabaseConnection) -> None:
         CREATE INDEX IF NOT EXISTS idx_inventory_movements_scope_created ON inventory_movements(organization_id, location_id, created_at);
         CREATE INDEX IF NOT EXISTS idx_inventory_movements_transfer ON inventory_movements(transfer_reference);
         CREATE INDEX IF NOT EXISTS idx_inventory_replenishments_scope_status ON inventory_replenishments(organization_id, location_id, status);
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_patients_external ON patients(organization_id, source_system, external_id) WHERE external_id <> '';
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_appointments_external ON appointments(organization_id, source_system, external_id) WHERE external_id <> '';
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_inventory_external ON inventory_items(organization_id, source_system, external_id) WHERE external_id <> '';
         """
     )
 
@@ -422,6 +431,8 @@ def build_schema_sql(dialect: str) -> str:
             is_quarantined INTEGER NOT NULL DEFAULT 0,
             quarantine_reason TEXT NOT NULL DEFAULT '',
             replenishment_request_id INTEGER,
+            source_system TEXT NOT NULL DEFAULT '',
+            external_id TEXT NOT NULL DEFAULT '',
             created_at {created_at_type} NOT NULL DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (organization_id) REFERENCES organizations (id),
             FOREIGN KEY (location_id) REFERENCES locations (id)
@@ -507,6 +518,8 @@ def build_schema_sql(dialect: str) -> str:
             triage_level TEXT NOT NULL DEFAULT '',
             triage_note TEXT NOT NULL DEFAULT '',
             arrival_at TEXT NOT NULL DEFAULT '',
+            source_system TEXT NOT NULL DEFAULT '',
+            external_id TEXT NOT NULL DEFAULT '',
             created_at {created_at_type} NOT NULL DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (organization_id) REFERENCES organizations (id),
             FOREIGN KEY (location_id) REFERENCES locations (id)
@@ -530,6 +543,8 @@ def build_schema_sql(dialect: str) -> str:
             breed TEXT NOT NULL DEFAULT '',
             weight_kg REAL NOT NULL DEFAULT 0,
             vaccine_status TEXT NOT NULL DEFAULT '',
+            source_system TEXT NOT NULL DEFAULT '',
+            external_id TEXT NOT NULL DEFAULT '',
             created_at {created_at_type} NOT NULL DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (organization_id) REFERENCES organizations (id),
             FOREIGN KEY (location_id) REFERENCES locations (id)

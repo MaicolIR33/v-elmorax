@@ -1,4 +1,5 @@
 import os
+import json
 import re
 import sqlite3
 import tempfile
@@ -21,6 +22,7 @@ from app.services.alerts import acknowledge_alert, list_alerts
 from app.services.auth import effective_permissions, get_user_by_id, list_users
 from app.services.inventory import create_inventory_movement
 from app.services.commercial import assert_capacity, organization_subscription
+from app.services.client_migration import migrate_client_bundle
 
 
 class VelmoraxWebTests(unittest.TestCase):
@@ -103,6 +105,27 @@ class VelmoraxWebTests(unittest.TestCase):
                 connection.execute("DELETE FROM users WHERE email LIKE 'capacidad-%@qa.local'")
                 connection.execute("UPDATE organizations SET plan_code = ? WHERE id = 1", (original,))
                 connection.commit()
+
+    def test_client_migration_validates_imports_and_is_idempotent(self):
+        source = "qa-migration"
+        with tempfile.TemporaryDirectory() as directory:
+            bundle = Path(directory)
+            (bundle / "manifest.json").write_text(json.dumps({"organization_id": 1, "location_id": 2, "source_system": source}))
+            (bundle / "patients.csv").write_text("external_id,name,owner_name,species,weight_kg\nP-1,Nala,Tutor QA,Felino,4.2\n")
+            (bundle / "inventory.csv").write_text("external_id,name,lot,quantity,expiry_date\nI-1,Vacuna QA,L-QA,5,2027-01-01\n")
+            (bundle / "appointments.csv").write_text("external_id,date,time,patient_name,service\nA-1,2026-10-01,10:30,Nala,Control QA\n")
+            preview = migrate_client_bundle(bundle)
+            self.assertTrue(preview["valid"])
+            self.assertEqual(preview["imported"], {})
+            applied = migrate_client_bundle(bundle, apply=True)
+            self.assertEqual(applied["imported"], {"patients": 1, "inventory": 1, "appointments": 1})
+            repeated = migrate_client_bundle(bundle, apply=True)
+            self.assertEqual(repeated["imported"], {"patients": 0, "inventory": 0, "appointments": 0})
+        with get_connection() as connection:
+            connection.execute("DELETE FROM appointments WHERE source_system = ?", (source,))
+            connection.execute("DELETE FROM inventory_items WHERE source_system = ?", (source,))
+            connection.execute("DELETE FROM patients WHERE source_system = ?", (source,))
+            connection.commit()
 
     def test_demo_user_can_login_and_open_clinical_module(self):
         response = self.client.post(

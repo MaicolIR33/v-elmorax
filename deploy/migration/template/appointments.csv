@@ -1,0 +1,2 @@
+external_id,date,time,patient_name,service,channel,status,note,priority
+CIT-001,2026-09-10,09:00,Luna,Control general,Presencial,Confirmada,Migrada desde sistema anterior,Normal

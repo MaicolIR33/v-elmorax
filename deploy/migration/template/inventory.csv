@@ -1,0 +1,2 @@
+external_id,name,category,brand,regulatory_agency,regulatory_code,supplier,lot,quantity,min_stock,storage_location,expiry_date
+LOT-001,Vacuna ejemplo,Vacuna,Marca ejemplo,ICA,ICA-EJEMPLO,Proveedor ejemplo,L-001,10,3,Nevera A,2027-12-31
