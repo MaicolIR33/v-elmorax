@@ -1,0 +1,13 @@
+{
+  "pilot_id": "PILOT-CLIENTE-001",
+  "clinic_profile": "small|medium|large|emergency",
+  "start_date": "AAAA-MM-DD",
+  "end_date": "AAAA-MM-DD",
+  "task_success_percent": 0,
+  "critical_errors": 0,
+  "availability_percent": 0,
+  "user_satisfaction_5": 0,
+  "training_completion_percent": 0,
+  "evidence_links": [],
+  "client_signoff": false
+}

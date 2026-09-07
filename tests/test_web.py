@@ -24,6 +24,7 @@ from app.services.inventory import create_inventory_movement
 from app.services.commercial import assert_capacity, organization_subscription
 from app.services.client_migration import migrate_client_bundle
 from app.services.integrations import enqueue_integration_event, integration_outbox_summary, integration_readiness
+from app.services.pilot import evaluate_pilot
 
 
 class VelmoraxWebTests(unittest.TestCase):
@@ -153,6 +154,14 @@ class VelmoraxWebTests(unittest.TestCase):
         self.assertIn("Centro de ayuda", help_page.text)
         self.assertIn("Administración", help_page.text)
         self.assertIn("Servicio caído", help_page.text)
+
+    def test_pilot_gate_requires_professional_thresholds(self):
+        approved = evaluate_pilot({"task_success_percent": 98, "critical_errors": 0, "availability_percent": 99.9, "user_satisfaction_5": 4.6, "training_completion_percent": 100})
+        rejected = evaluate_pilot({"task_success_percent": 92, "critical_errors": 1, "availability_percent": 99.0, "user_satisfaction_5": 3.8, "training_completion_percent": 80})
+        self.assertTrue(approved["approved"])
+        self.assertEqual(approved["score"], 100)
+        self.assertFalse(rejected["approved"])
+        self.assertEqual(len(rejected["failures"]), 5)
 
     def test_demo_user_can_login_and_open_clinical_module(self):
         response = self.client.post(
