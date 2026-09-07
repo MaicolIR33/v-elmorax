@@ -35,6 +35,10 @@ class Settings(BaseModel):
     seed_demo_data: bool = True
     initialize_database: bool = True
     log_level: str = "INFO"
+    legal_company_name: str = "Velmorax"
+    legal_tax_id: str = ""
+    legal_contact_email: str = ""
+    legal_contact_address: str = ""
 
     @property
     def is_production(self) -> bool:
@@ -56,6 +60,12 @@ class Settings(BaseModel):
             errors.append("los accesos y datos de demostración deben estar desactivados")
         if not self.allowed_hosts or "*" in self.allowed_hosts:
             errors.append("ALLOWED_HOSTS debe contener dominios explícitos")
+        if not self.legal_company_name.strip() or not self.legal_tax_id.strip():
+            errors.append("LEGAL_COMPANY_NAME y LEGAL_TAX_ID deben identificar al proveedor")
+        if "@" not in self.legal_contact_email:
+            errors.append("LEGAL_CONTACT_EMAIL debe ser un correo válido para solicitudes de datos")
+        if not self.legal_contact_address.strip():
+            errors.append("LEGAL_CONTACT_ADDRESS debe informar el domicilio del proveedor")
         if errors:
             raise RuntimeError("Configuración de producción inválida: " + "; ".join(errors))
 
@@ -96,4 +106,8 @@ def get_settings() -> Settings:
         seed_demo_data=os.getenv("SEED_DEMO_DATA", seed_demo_default) in {"1", "true", "True"},
         initialize_database=os.getenv("INITIALIZE_DATABASE", "1") in {"1", "true", "True"},
         log_level=os.getenv("LOG_LEVEL", "INFO").strip().upper() or "INFO",
+        legal_company_name=os.getenv("LEGAL_COMPANY_NAME", "Velmorax").strip(),
+        legal_tax_id=os.getenv("LEGAL_TAX_ID", "").strip(),
+        legal_contact_email=os.getenv("LEGAL_CONTACT_EMAIL", "").strip(),
+        legal_contact_address=os.getenv("LEGAL_CONTACT_ADDRESS", "").strip(),
     )

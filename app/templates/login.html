@@ -112,10 +112,15 @@
                         </label>
                         <a class="muted-line login-inline-link login-inline-link-quiet" href="/password-reset">Recuperar clave</a>
                     </div>
+                    <label class="legal-consent">
+                        <input type="checkbox" name="legal_acceptance" value="1" required>
+                        <span>Acepto los <a href="/terminos" target="_blank" rel="noopener">términos</a> y conozco la <a href="/tratamiento-de-datos" target="_blank" rel="noopener">política de tratamiento de datos</a>.</span>
+                    </label>
                     <button class="btn btn-primary btn-block login-submit{% if not selected_intent %} is-disabled{% endif %}" data-submit-button data-submit-default="{% if selected_intent %}Entrar a {{ selected_intent|replace('-', ' ')|title }}{% else %}Selecciona un flujo para continuar{% endif %}" type="submit"{% if not selected_intent %} disabled aria-disabled="true"{% endif %}>
                         {% if selected_intent %}Entrar a {{ selected_intent|replace('-', ' ')|title }}{% else %}Selecciona un flujo para continuar{% endif %}
                     </button>
                 </form>
+                <nav class="login-legal-links" aria-label="Información legal"><a href="/privacidad">Privacidad</a><a href="/tratamiento-de-datos">Datos personales</a><a href="/terminos">Términos</a></nav>
 
                 {% if show_demo_access %}
                 <details class="demo-inline-panel">

@@ -14,6 +14,10 @@ class ProductionSettingsTests(unittest.TestCase):
             database_url="postgresql://velmorax:secret@postgres/velmorax",
             public_base_url="https://app.clinica.example",
             allowed_hosts=["app.clinica.example", "localhost"],
+            legal_company_name="Velmorax Tecnología S.A.S.",
+            legal_tax_id="900000000-1",
+            legal_contact_email="privacidad@clinica.example",
+            legal_contact_address="Bogotá D.C., Colombia",
         )
         settings.validate_production()
 

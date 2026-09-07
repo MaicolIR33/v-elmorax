@@ -44,6 +44,34 @@ class VelmoraxWebTests(unittest.TestCase):
         self.assertIn("Clave", response.text)
         self.assertNotIn("Sede / ubicacion", response.text)
 
+    def test_legal_documents_and_versioned_acceptance_are_available(self):
+        for path, heading in (
+            ("/privacidad", "Aviso de privacidad"),
+            ("/tratamiento-de-datos", "Política de tratamiento de datos"),
+            ("/terminos", "Términos de uso"),
+        ):
+            response = self.client.get(path)
+            self.assertEqual(response.status_code, 200)
+            self.assertIn(heading, response.text)
+
+        self.client.post("/logout")
+        self.client.post(
+            "/login",
+            data={
+                "intent": "veterinaria",
+                "email": "admin@velmorax.local",
+                "password": "velmorax123",
+                "legal_acceptance": "1",
+            },
+        )
+        self.client.post("/login/push-approval", data={"approve": "1"})
+        with get_connection() as connection:
+            acceptance = connection.execute(
+                "SELECT privacy_version, terms_version, evidence_hash FROM legal_acceptances ORDER BY id DESC"
+            ).fetchone()
+        self.assertIsNotNone(acceptance)
+        self.assertEqual(len(acceptance["evidence_hash"]), 64)
+
     def test_demo_user_can_login_and_open_clinical_module(self):
         response = self.client.post(
             "/login",

@@ -176,3 +176,18 @@ Alertas incorporadas:
 Las alertas quedan visibles en Prometheus y Grafana. La entrega por correo,
 WhatsApp o mesa de ayuda se conectará dentro del punto de integraciones, evitando
 guardar credenciales de terceros en este repositorio.
+
+## Privacidad, tratamiento de datos y términos
+
+Antes de iniciar producción completa `LEGAL_COMPANY_NAME`, `LEGAL_TAX_ID`,
+`LEGAL_CONTACT_EMAIL` y `LEGAL_CONTACT_ADDRESS`. La aplicación publica el aviso
+de privacidad, la política de tratamiento y los términos, exige aceptación
+explícita en producción y conserva evidencia por versión, usuario y organización
+mediante una huella criptográfica, sin guardar IP o dispositivo en
+texto abierto.
+
+Las plantillas y el control de salida se encuentran en `deploy/legal/`. Deben
+ajustarse al contrato, proveedores, conservación e identidad reales y recibir
+revisión jurídica antes de vender. Velmorax actúa como encargado para la
+información que cada clínica decide incorporar; la clínica conserva su función
+de responsable y sus deberes frente a los titulares.

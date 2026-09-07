@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Velmorax | Información legal</title>
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/styles.css') }}?v=legal-1">
+</head>
+<body class="legal-page">
+    <main class="legal-shell">
+        <header class="legal-header">
+            <a href="/login" class="legal-brand">Velmorax</a>
+            <nav aria-label="Documentos legales">
+                <a href="/privacidad"{% if document == 'privacy' %} aria-current="page"{% endif %}>Privacidad</a>
+                <a href="/tratamiento-de-datos"{% if document == 'data' %} aria-current="page"{% endif %}>Tratamiento de datos</a>
+                <a href="/terminos"{% if document == 'terms' %} aria-current="page"{% endif %}>Términos</a>
+            </nav>
+        </header>
+
+        <article class="legal-document">
+            {% if document == 'privacy' %}
+            <p class="eyebrow">Versión {{ legal.privacy_version }}</p>
+            <h1>Aviso de privacidad</h1>
+            <p class="legal-lead">Información clara sobre cómo Velmorax protege los datos que permiten operar una clínica veterinaria.</p>
+            <h2>Quién trata la información</h2>
+            <p><strong>{{ legal.company_name }}</strong>, identificado con {{ legal.tax_id }}, con domicilio en {{ legal.contact_address }}, suministra la plataforma Velmorax. Cada clínica decide qué información incorpora y para qué fines clínicos y administrativos; por ello actúa como responsable. Velmorax la procesa siguiendo sus instrucciones y actúa como encargado, salvo respecto de sus propios datos contractuales y de soporte.</p>
+            <h2>Qué información se utiliza</h2>
+            <p>Datos de identificación y contacto de tutores y usuarios; información de pacientes animales, citas, inventario, atenciones, accesos, seguridad, auditoría y soporte. Solo se solicita lo necesario para prestar, proteger y mejorar el servicio contratado.</p>
+            <h2>Para qué se utiliza</h2>
+            <p>Gestionar la operación veterinaria, autenticar usuarios, conservar trazabilidad, prevenir incidentes, prestar soporte, generar respaldos y cumplir obligaciones legales o contractuales. No vendemos datos personales ni los utilizamos para publicidad ajena a la relación contratada.</p>
+            <h2>Derechos y contacto</h2>
+            <p>El titular puede conocer, actualizar, rectificar y, cuando proceda, solicitar supresión o revocar su autorización. Las solicitudes se reciben en <strong>{{ legal.contact_email }}</strong>. La clínica seguirá siendo el primer canal para la información que administra sobre sus clientes, empleados y pacientes.</p>
+            {% elif document == 'data' %}
+            <p class="eyebrow">Versión {{ legal.privacy_version }}</p>
+            <h1>Política de tratamiento de datos</h1>
+            <p class="legal-lead">Reglas aplicables a la recolección, almacenamiento, uso, circulación y supresión de información personal en Velmorax.</p>
+            <h2>Responsable y encargado</h2>
+            <p>La clínica contratante es responsable de las bases de datos que crea en la plataforma. {{ legal.company_name }}, {{ legal.tax_id }}, actúa como encargado conforme a las instrucciones documentadas de la clínica. Para facturación, contratación, seguridad y soporte propios, {{ legal.company_name }} actúa como responsable.</p>
+            <h2>Principios y finalidades</h2>
+            <p>El tratamiento se rige por legalidad, finalidad, libertad, veracidad, transparencia, acceso restringido, seguridad y confidencialidad. Se limita a operación clínica veterinaria, agenda, pacientes animales, inventario, alertas, administración, soporte, continuidad, auditoría y obligaciones legales.</p>
+            <h2>Datos sensibles, menores y urgencias</h2>
+            <p>Velmorax no requiere datos de salud humana para la atención animal. Si una clínica incorpora información sensible de una persona, deberá justificar su necesidad y obtener autorización previa, expresa e informada, salvo excepción legal. La información de menores exige controles reforzados y solo debe recopilarse cuando resulte necesaria y legítima. Una urgencia veterinaria no elimina automáticamente la obligación de proteger los datos personales del tutor.</p>
+            <h2>Autorización y prueba</h2>
+            <p>Las casillas de autorización no se presentan marcadas previamente. La clínica debe conservar evidencia consultable de cada autorización aplicable. Velmorax registra la aceptación de sus usuarios mediante versión, fecha, usuario y evidencia técnica protegida.</p>
+            <h2>Seguridad, destinatarios y conservación</h2>
+            <p>Se aplican controles de acceso por rol, cifrado en tránsito, respaldos, registros de auditoría y monitoreo. Solo acceden usuarios autorizados y proveedores necesarios sujetos a obligaciones de confidencialidad. La información se conserva durante la relación contractual y los plazos legales o clínicos definidos por la clínica; después se elimina o anonimiza conforme al contrato y a una solicitud procedente.</p>
+            <h2>Consultas y reclamos</h2>
+            <p>Escribe a <strong>{{ legal.contact_email }}</strong> indicando identidad, relación con la clínica, solicitud concreta y medios de respuesta. Se verificará la legitimación antes de revelar o modificar información y se responderá dentro de los términos legales aplicables. Si la respuesta no es satisfactoria, el titular puede acudir a la Superintendencia de Industria y Comercio una vez agotado el trámite correspondiente.</p>
+            <h2>Cambios</h2>
+            <p>Las modificaciones materiales se publicarán con una nueva versión y, cuando corresponda, requerirán una nueva aceptación.</p>
+            {% else %}
+            <p class="eyebrow">Versión {{ legal.terms_version }}</p>
+            <h1>Términos de uso</h1>
+            <p class="legal-lead">Condiciones para utilizar Velmorax de forma segura y profesional dentro de una organización veterinaria.</p>
+            <h2>Servicio y alcance</h2>
+            <p>Velmorax apoya agenda, pacientes animales, inventario, alertas y administración. No reemplaza el juicio profesional veterinario, los protocolos de urgencias, la custodia documental de la clínica ni las obligaciones de las autoridades competentes.</p>
+            <h2>Cuentas y usos permitidos</h2>
+            <p>Cada cuenta es personal. El cliente administra roles, sedes y permisos, mantiene sus datos actualizados y reporta accesos sospechosos. Está prohibido vulnerar controles, compartir credenciales, ingresar información ilícita o utilizar el servicio contra derechos de terceros.</p>
+            <h2>Datos, continuidad y exportación</h2>
+            <p>La clínica conserva la titularidad y control de sus datos. Velmorax los procesa para prestar el servicio, mantiene respaldos y monitoreo según el plan contratado y facilita su exportación. Los niveles de servicio, recuperación, soporte, precios, límites y salida de datos se establecen en la propuesta u orden de servicio.</p>
+            <h2>Propiedad intelectual y cambios</h2>
+            <p>El software, diseño y documentación pertenecen a {{ legal.company_name }} o sus licenciantes. El cliente recibe un derecho de uso limitado durante la vigencia contractual. Los cambios materiales de estos términos se identificarán con una nueva versión.</p>
+            <h2>Responsabilidad y terminación</h2>
+            <p>Cada parte responde por sus obligaciones legales y contractuales. Las limitaciones, garantías, suspensión, terminación, ley aplicable y solución de controversias se precisarán en el contrato comercial suscrito con cada cliente, sin restringir derechos irrenunciables.</p>
+            <h2>Contacto</h2>
+            <p>{{ legal.company_name }} · {{ legal.tax_id }} · {{ legal.contact_address }} · <strong>{{ legal.contact_email }}</strong></p>
+            {% endif %}
+        </article>
+        <footer class="legal-note">Documento base para operación en Colombia. Debe ser revisado por asesoría jurídica antes del lanzamiento comercial y ajustado al contrato, proveedores y procesos reales de cada cliente.</footer>
+    </main>
+</body>
+</html>

@@ -16,6 +16,27 @@
     --safe: #54d6c6;
     --safe-soft: rgba(84, 214, 198, 0.14);
 }
+
+.legal-consent { display: grid; grid-template-columns: 18px 1fr; gap: 10px; align-items: start; color: var(--muted); font-size: .8rem; line-height: 1.45; }
+.legal-consent input { width: 18px; height: 18px; margin-top: 1px; accent-color: var(--primary); }
+.legal-consent a, .login-legal-links a, .app-legal-footer a { color: var(--accent); text-decoration: none; }
+.login-legal-links, .app-legal-footer { display: flex; flex-wrap: wrap; gap: 14px; justify-content: center; font-size: .76rem; color: var(--muted); }
+.login-legal-links { margin-top: 16px; }
+.app-legal-footer { padding: 18px 24px 24px; }
+.legal-page { min-height: 100vh; margin: 0; color: #e9ffff; background: radial-gradient(circle at 80% 0%, #0c555b 0, transparent 35%), #032f34; }
+.legal-shell { width: min(1040px, calc(100% - 32px)); margin: 0 auto; padding: 28px 0 50px; }
+.legal-header { position: sticky; top: 12px; z-index: 2; display: flex; justify-content: space-between; gap: 24px; align-items: center; padding: 15px 18px; border: 1px solid rgba(91, 222, 213, .24); border-radius: 20px; background: rgba(3, 43, 48, .88); backdrop-filter: blur(16px); }
+.legal-brand { color: #fff; font-size: 1.35rem; font-weight: 800; text-decoration: none; }
+.legal-header nav { display: flex; flex-wrap: wrap; gap: 8px; }
+.legal-header nav a { padding: 9px 12px; border-radius: 999px; color: #a9d6d7; text-decoration: none; }
+.legal-header nav a[aria-current="page"] { color: #63ddd3; background: rgba(37, 180, 184, .15); }
+.legal-document { margin-top: 24px; padding: clamp(26px, 5vw, 58px); border: 1px solid rgba(91, 222, 213, .22); border-radius: 30px; background: rgba(4, 43, 48, .78); box-shadow: 0 28px 70px rgba(0, 20, 23, .28); }
+.legal-document h1 { margin: 8px 0 14px; font-size: clamp(2.2rem, 6vw, 4.4rem); line-height: .98; }
+.legal-document h2 { margin: 34px 0 10px; color: #66ddd4; font-size: 1.15rem; }
+.legal-document p { max-width: 78ch; color: #b9d8d9; line-height: 1.75; }
+.legal-lead { font-size: 1.12rem; }
+.legal-note { padding: 20px; color: #8eb7b9; font-size: .83rem; line-height: 1.55; text-align: center; }
+@media (max-width: 700px) { .legal-header { position: static; align-items: flex-start; flex-direction: column; } .legal-document { padding: 24px 20px; border-radius: 24px; } }
 * {
     box-sizing: border-box;
 }

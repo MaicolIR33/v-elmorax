@@ -590,6 +590,18 @@ def build_schema_sql(dialect: str) -> str:
             FOREIGN KEY (location_id) REFERENCES locations (id)
         );
 
+        CREATE TABLE IF NOT EXISTS legal_acceptances (
+            id {id_column},
+            user_id INTEGER NOT NULL,
+            organization_id INTEGER NOT NULL,
+            privacy_version TEXT NOT NULL,
+            terms_version TEXT NOT NULL,
+            evidence_hash TEXT NOT NULL,
+            accepted_at {created_at_type} NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users (id),
+            FOREIGN KEY (organization_id) REFERENCES organizations (id)
+        );
+
         CREATE TABLE IF NOT EXISTS alerts (
             id {id_column},
             organization_id INTEGER NOT NULL,

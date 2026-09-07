@@ -70,6 +70,7 @@ from app.services.inventory import (
     transfer_inventory_item,
     update_inventory_item,
 )
+from app.services.legal import legal_context, record_legal_acceptance
 from app.services.mailer import (
     send_password_reset_email,
     send_password_reset_sms,
@@ -144,6 +145,7 @@ def complete_login_session(
     effective_organization_id: str,
     effective_location_id: str,
     remember_me: bool,
+    accepted_legal: bool = False,
 ) -> RedirectResponse:
     request.session["user_id"] = user["id"]
     request.session["entry_intent"] = selected_intent
@@ -151,6 +153,14 @@ def complete_login_session(
     request.session["preferred_location_id"] = effective_location_id
     request.session["last_seen_at"] = datetime.now(UTC).isoformat()
     request.session["remember_me"] = remember_me
+
+    if accepted_legal:
+        record_legal_acceptance(
+            user_id=user["id"],
+            organization_id=user["organization_id"],
+            remote_address=request.client.host if request.client else "unknown",
+            user_agent=request.headers.get("user-agent", "unknown"),
+        )
 
     if user.get("must_change_password"):
         token = create_password_reset_token(user["email"])
@@ -653,8 +663,36 @@ async def login_page(
                 {"email": "clinica@velmorax.local", "role": "Equipo clinico"},
                 {"email": "inventario@velmorax.local", "role": "Inventario"},
             ],
+            "legal": legal_context(),
         },
-)
+    )
+
+
+@router.get("/privacidad", response_class=HTMLResponse)
+async def privacy_page(request: Request) -> HTMLResponse:
+    return templates.TemplateResponse(
+        request=request,
+        name="legal.html",
+        context={"request": request, "document": "privacy", "legal": legal_context()},
+    )
+
+
+@router.get("/tratamiento-de-datos", response_class=HTMLResponse)
+async def data_policy_page(request: Request) -> HTMLResponse:
+    return templates.TemplateResponse(
+        request=request,
+        name="legal.html",
+        context={"request": request, "document": "data", "legal": legal_context()},
+    )
+
+
+@router.get("/terminos", response_class=HTMLResponse)
+async def terms_page(request: Request) -> HTMLResponse:
+    return templates.TemplateResponse(
+        request=request,
+        name="legal.html",
+        context={"request": request, "document": "terms", "legal": legal_context()},
+    )
 
 
 @router.get("/password-reset", response_class=HTMLResponse)
@@ -854,11 +892,18 @@ async def login_action(
     intent: str = Form(""),
     organization_id: str = Form(""),
     location_id: str = Form(""),
+    legal_acceptance: str = Form("0"),
 ) -> RedirectResponse:
     selected_intent = intent or request.session.get("entry_intent", "")
     if not selected_intent:
         return RedirectResponse(
             url="/login?error=Debes%20seleccionar%20un%20flujo%20clinico%20antes%20de%20iniciar%20sesion",
+            status_code=303,
+        )
+    accepted_legal = legal_acceptance in {"1", "true", "on", "yes"}
+    if settings.is_production and not accepted_legal:
+        return RedirectResponse(
+            url=f"/login?intent={selected_intent}&error={encoded_message('Debes aceptar los términos y la política de tratamiento para continuar.')}",
             status_code=303,
         )
 
@@ -901,6 +946,7 @@ async def login_action(
             "organization_id": effective_organization_id,
             "location_id": effective_location_id,
             "remember_me": remember_me_value,
+            "accepted_legal": accepted_legal,
             "requested_at": datetime.now(UTC).isoformat(),
         }
         request.session.pop("user_id", None)
@@ -913,6 +959,7 @@ async def login_action(
         effective_organization_id=effective_organization_id,
         effective_location_id=effective_location_id,
         remember_me=remember_me_value,
+        accepted_legal=accepted_legal,
     )
 
 
@@ -965,6 +1012,7 @@ async def login_push_approval_action(request: Request, approve: str = Form("0"))
         effective_organization_id=str(pending_login.get("organization_id", "")),
         effective_location_id=str(pending_login.get("location_id", "")),
         remember_me=bool(pending_login.get("remember_me")),
+        accepted_legal=bool(pending_login.get("accepted_legal")),
     )
 
 
