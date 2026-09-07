@@ -49,6 +49,13 @@ class VelmoraxWebTests(unittest.TestCase):
         self.assertIn("Clave", response.text)
         self.assertNotIn("Sede / ubicacion", response.text)
 
+    def test_security_headers_and_cross_site_posts_are_protected(self):
+        response = self.client.get("/login")
+        for header in ("content-security-policy", "x-content-type-options", "x-frame-options", "referrer-policy", "permissions-policy"):
+            self.assertIn(header, response.headers)
+        forged = self.client.post("/logout", headers={"Origin": "https://malicious.invalid", "Sec-Fetch-Site": "cross-site"})
+        self.assertEqual(forged.status_code, 403)
+
     def test_legal_documents_and_versioned_acceptance_are_available(self):
         for path, heading in (
             ("/privacidad", "Aviso de privacidad"),

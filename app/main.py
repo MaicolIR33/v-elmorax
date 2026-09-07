@@ -7,6 +7,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from app.core.config import get_settings
 from app.core.database import init_db, seed_db
 from app.core.observability import RequestObservabilityMiddleware, configure_logging, logger
+from app.core.security import SecurityHeadersMiddleware
 from app.routers.web import router as web_router
 
 
@@ -28,6 +29,7 @@ app.add_middleware(
     https_only=settings.session_https_only,
 )
 app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.allowed_hosts)
+app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(RequestObservabilityMiddleware)
 
 
