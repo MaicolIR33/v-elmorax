@@ -53,6 +53,7 @@ from app.services.clinical import (
     list_patients,
     update_clinical_record_status,
 )
+from app.services.commercial import assert_capacity, list_commercial_plans, organization_subscription
 from app.services.dashboard import create_shift_handoff, get_dashboard_context
 from app.services.inventory import (
     count_inventory_item,
@@ -674,6 +675,15 @@ async def privacy_page(request: Request) -> HTMLResponse:
         request=request,
         name="legal.html",
         context={"request": request, "document": "privacy", "legal": legal_context()},
+    )
+
+
+@router.get("/planes", response_class=HTMLResponse)
+async def plans_page(request: Request) -> HTMLResponse:
+    return templates.TemplateResponse(
+        request=request,
+        name="plans.html",
+        context={"request": request, "plans": list_commercial_plans(), "legal": legal_context()},
     )
 
 
@@ -1381,6 +1391,7 @@ async def admin_page(
                 "RBAC por rol y sede disminuye errores de acceso y privilegios excesivos.",
                 "La app soporta SQLite y PostgreSQL por DATABASE_URL, con auditoria y exportaciones operativas.",
             ],
+            "subscription": organization_subscription(int(user["organization_id"])),
         }
     )
     return templates.TemplateResponse(request=request, name="admin.html", context=context)
@@ -1698,6 +1709,11 @@ async def create_new_location(
     if not user["permissions"]["manage_admin"]:
         return redirect_to_module_with_error("/", "Tu rol no puede crear sedes.")
 
+    try:
+        assert_capacity(organization_id, "locations")
+    except ValueError as exc:
+        return RedirectResponse(url=f"/admin?permission_error={encoded_message(str(exc))}", status_code=303)
+
     create_location(
         {
             "organization_id": organization_id,
@@ -1808,6 +1824,11 @@ async def create_new_user(
         return redirect_to_login()
     if not user["permissions"]["manage_admin"]:
         return redirect_to_module_with_error("/", "Tu rol no puede crear usuarios.")
+
+    try:
+        assert_capacity(organization_id, "users")
+    except ValueError as exc:
+        return RedirectResponse(url=f"/admin?permission_error={encoded_message(str(exc))}", status_code=303)
 
     create_user(
         {

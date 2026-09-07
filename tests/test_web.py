@@ -20,6 +20,7 @@ from app.services.appointments import available_slots, create_appointment, list_
 from app.services.alerts import acknowledge_alert, list_alerts
 from app.services.auth import effective_permissions, get_user_by_id, list_users
 from app.services.inventory import create_inventory_movement
+from app.services.commercial import assert_capacity, organization_subscription
 
 
 class VelmoraxWebTests(unittest.TestCase):
@@ -71,6 +72,37 @@ class VelmoraxWebTests(unittest.TestCase):
             ).fetchone()
         self.assertIsNotNone(acceptance)
         self.assertEqual(len(acceptance["evidence_hash"]), 64)
+
+    def test_commercial_plans_are_public_and_capacity_is_visible_and_enforced(self):
+        public = self.client.get("/planes")
+        self.assertEqual(public.status_code, 200)
+        self.assertIn(">Esencial</h2>", public.text)
+        self.assertIn("Hospital y red", public.text)
+        self.assertIn("nunca bloquean una urgencia", public.text)
+
+        subscription = organization_subscription(1)
+        self.assertEqual(subscription["code"], "essential")
+        self.assertIn("users", subscription["usage"])
+
+        with get_connection() as connection:
+            original = connection.execute("SELECT plan_code FROM organizations WHERE id = 1").fetchone()["plan_code"]
+            connection.execute("UPDATE organizations SET plan_code = 'essential' WHERE id = 1")
+            for index in range(10):
+                connection.execute(
+                    """INSERT OR IGNORE INTO users
+                       (full_name,email,password_hash,role,is_active,organization_id,location_id,specialty)
+                       VALUES (?,?,?,?,1,1,2,'Veterinaria')""",
+                    (f"Capacidad QA {index}", f"capacidad-{index}@qa.local", "x", "clinical"),
+                )
+            connection.commit()
+        try:
+            with self.assertRaisesRegex(ValueError, "capacidad de usuarios activos"):
+                assert_capacity(1, "users")
+        finally:
+            with get_connection() as connection:
+                connection.execute("DELETE FROM users WHERE email LIKE 'capacidad-%@qa.local'")
+                connection.execute("UPDATE organizations SET plan_code = ? WHERE id = 1", (original,))
+                connection.commit()
 
     def test_demo_user_can_login_and_open_clinical_module(self):
         response = self.client.post(

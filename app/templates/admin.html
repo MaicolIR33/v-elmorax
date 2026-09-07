@@ -53,6 +53,23 @@
         <div class="metric-chip">Usuarios: {{ admin_users|length }}</div>
     </div>
 
+    <article class="panel-card commercial-summary">
+        <div class="commercial-summary-head">
+            <div><p class="eyebrow">Suscripción</p><h3>Plan {{ subscription.plan.name }}</h3><p class="muted-line">{{ subscription.plan.audience }} · {{ subscription.clinical_continuity }}</p></div>
+            <div class="metric-chip metric-chip-green">{{ subscription.status|capitalize }}</div>
+        </div>
+        <div class="commercial-usage-grid">
+            {% for key, label in [('locations', 'Sedes activas'), ('users', 'Usuarios activos')] %}
+            {% set usage = subscription.usage[key] %}
+            <div class="commercial-usage-card{% if usage.near_limit %} near-limit{% endif %}">
+                <div><strong>{{ label }}</strong><span>{{ usage.used }} / {{ usage.limit if usage.limit is not none else 'Sin límite contractual' }}</span></div>
+                {% if usage.limit is not none %}<div class="commercial-meter" aria-label="{{ label }}: {{ usage.percent }}%"><span style="width: {{ usage.percent }}%"></span></div>{% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        <a class="action-button" href="/planes">Comparar planes</a>
+    </article>
+
     <div class="module-grid">
         <article class="panel-card">
             <div class="section-heading">

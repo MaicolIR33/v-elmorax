@@ -129,6 +129,9 @@ def init_db() -> None:
         connection.executescript(build_schema_sql(connection.dialect))
         ensure_column(connection, "organizations", "contact_email", "TEXT NOT NULL DEFAULT ''")
         ensure_column(connection, "organizations", "contact_phone", "TEXT NOT NULL DEFAULT ''")
+        ensure_column(connection, "organizations", "plan_code", "TEXT NOT NULL DEFAULT 'essential'")
+        ensure_column(connection, "organizations", "plan_status", "TEXT NOT NULL DEFAULT 'active'")
+        ensure_column(connection, "organizations", "billing_cycle", "TEXT NOT NULL DEFAULT 'monthly'")
         ensure_column(connection, "users", "organization_id", "INTEGER NOT NULL DEFAULT 1")
         ensure_column(connection, "users", "location_id", "INTEGER NOT NULL DEFAULT 1")
         ensure_column(connection, "users", "specialty", "TEXT NOT NULL DEFAULT ''")
@@ -355,6 +358,9 @@ def build_schema_sql(dialect: str) -> str:
             timezone TEXT NOT NULL DEFAULT 'America/Bogota',
             contact_email TEXT NOT NULL DEFAULT '',
             contact_phone TEXT NOT NULL DEFAULT '',
+            plan_code TEXT NOT NULL DEFAULT 'essential',
+            plan_status TEXT NOT NULL DEFAULT 'active',
+            billing_cycle TEXT NOT NULL DEFAULT 'monthly',
             created_at {created_at_type} NOT NULL DEFAULT CURRENT_TIMESTAMP
         );
 

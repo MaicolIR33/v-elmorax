@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Velmorax | Planes</title>
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/styles.css') }}?v=plans-1">
+</head>
+<body class="legal-page">
+<main class="legal-shell plans-shell">
+    <header class="legal-header"><a href="/login" class="legal-brand">Velmorax</a><nav><a href="/login">Ingresar</a></nav></header>
+    <section class="plans-heading"><p class="eyebrow">Planes transparentes</p><h1>Capacidad para cada etapa de tu veterinaria</h1><p>Todos los planes conservan la operación clínica esencial. Los límites administrativos nunca bloquean una urgencia.</p></section>
+    <div class="plans-grid">
+        {% for plan in plans %}
+        <article class="plan-card{% if plan.code == 'clinic' %} featured{% endif %}">
+            {% if plan.code == 'clinic' %}<span class="plan-recommended">Recomendado</span>{% endif %}
+            <p class="eyebrow">{{ plan.audience }}</p><h2>{{ plan.name }}</h2>
+            <div class="plan-price">{% if plan.monthly_price_cop %}<strong>${{ '{:,.0f}'.format(plan.monthly_price_cop).replace(',', '.') }}</strong><span>COP / mes</span>{% else %}<strong>A medida</strong>{% endif %}</div>
+            <dl><div><dt>Sedes</dt><dd>{{ plan.locations if plan.locations is not none else 'Según contrato' }}</dd></div><div><dt>Usuarios</dt><dd>{{ plan.users if plan.users is not none else 'Según contrato' }}</dd></div></dl>
+            <ul>{% for feature in plan.features %}<li>{{ feature }}</li>{% endfor %}<li>{{ plan.support }}</li></ul>
+            <a class="btn {% if plan.code == 'clinic' %}btn-primary{% else %}btn-secondary{% endif %}" href="mailto:{{ legal.contact_email }}?subject=Información%20comercial%20Velmorax">Solicitar propuesta</a>
+        </article>
+        {% endfor %}
+    </div>
+    <p class="plans-note">Precios base antes de impuestos. El alcance final, almacenamiento, migración, integraciones, disponibilidad y soporte se detallan en la propuesta y el contrato.</p>
+</main>
+</body>
+</html>

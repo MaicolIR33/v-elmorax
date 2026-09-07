@@ -52,7 +52,8 @@ def list_organizations() -> list[dict]:
     with get_connection() as connection:
         rows = connection.execute(
             """
-            SELECT id, name, country, timezone, contact_email, contact_phone
+            SELECT id, name, country, timezone, contact_email, contact_phone,
+                   plan_code, plan_status, billing_cycle
             FROM organizations
             ORDER BY name ASC
             """
@@ -66,6 +67,9 @@ def list_organizations() -> list[dict]:
             "timezone": row["timezone"],
             "contact_email": row["contact_email"],
             "contact_phone": row["contact_phone"],
+            "plan_code": row["plan_code"],
+            "plan_status": row["plan_status"],
+            "billing_cycle": row["billing_cycle"],
         }
         for row in rows
     ]
