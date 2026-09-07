@@ -1,0 +1,56 @@
+{
+  "annotations": {"list": []},
+  "editable": false,
+  "graphTooltip": 1,
+  "panels": [
+    {
+      "type": "stat",
+      "title": "Disponibilidad pública",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{"expr": "probe_success{job=\"velmorax-public\"}", "refId": "A"}],
+      "fieldConfig": {"defaults": {"mappings": [{"options": {"0": {"text": "Sin servicio", "color": "red"}, "1": {"text": "Disponible", "color": "green"}}, "type": "value"}], "thresholds": {"mode": "absolute", "steps": [{"color": "red", "value": null}, {"color": "green", "value": 1}]}}, "overrides": []},
+      "gridPos": {"h": 5, "w": 6, "x": 0, "y": 0}
+    },
+    {
+      "type": "stat",
+      "title": "Aplicación y PostgreSQL",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{"expr": "probe_success{job=\"velmorax-internal\"}", "refId": "A"}],
+      "fieldConfig": {"defaults": {"mappings": [{"options": {"0": {"text": "Requiere atención", "color": "red"}, "1": {"text": "Operativos", "color": "green"}}, "type": "value"}]}, "overrides": []},
+      "gridPos": {"h": 5, "w": 6, "x": 6, "y": 0}
+    },
+    {
+      "type": "timeseries",
+      "title": "Tiempo de respuesta",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{"expr": "probe_duration_seconds{job=\"velmorax-public\"}", "legendFormat": "Dominio público", "refId": "A"}],
+      "fieldConfig": {"defaults": {"unit": "s"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0}
+    },
+    {
+      "type": "logs",
+      "title": "Errores de aplicación",
+      "datasource": {"type": "loki", "uid": "loki"},
+      "targets": [{"expr": "{service=\"app\"} | json | level=\"ERROR\"", "refId": "A"}],
+      "options": {"showTime": true, "showLabels": true, "wrapLogMessage": true, "enableLogDetails": true},
+      "gridPos": {"h": 9, "w": 24, "x": 0, "y": 8}
+    },
+    {
+      "type": "logs",
+      "title": "Actividad técnica reciente",
+      "datasource": {"type": "loki", "uid": "loki"},
+      "targets": [{"expr": "{service=~\"app|caddy|postgres|backup\"}", "refId": "A"}],
+      "options": {"showTime": true, "showLabels": false, "wrapLogMessage": true, "enableLogDetails": true},
+      "gridPos": {"h": 10, "w": 24, "x": 0, "y": 17}
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 41,
+  "tags": ["velmorax", "producción"],
+  "templating": {"list": []},
+  "time": {"from": "now-6h", "to": "now"},
+  "timezone": "browser",
+  "title": "Velmorax · Operación",
+  "uid": "velmorax-operations",
+  "version": 1
+}

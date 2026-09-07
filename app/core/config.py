@@ -34,6 +34,7 @@ class Settings(BaseModel):
     allowed_hosts: list[str] = ["localhost", "127.0.0.1", "testserver"]
     seed_demo_data: bool = True
     initialize_database: bool = True
+    log_level: str = "INFO"
 
     @property
     def is_production(self) -> bool:
@@ -94,4 +95,5 @@ def get_settings() -> Settings:
         allowed_hosts=allowed_hosts,
         seed_demo_data=os.getenv("SEED_DEMO_DATA", seed_demo_default) in {"1", "true", "True"},
         initialize_database=os.getenv("INITIALIZE_DATABASE", "1") in {"1", "true", "True"},
+        log_level=os.getenv("LOG_LEVEL", "INFO").strip().upper() or "INFO",
     )

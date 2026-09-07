@@ -1,0 +1,89 @@
+services:
+  blackbox:
+    image: prom/blackbox-exporter:v0.27.0
+    restart: unless-stopped
+    command: ["--config.file=/etc/blackbox/blackbox.yml"]
+    volumes:
+      - ./deploy/monitoring/blackbox.yml:/etc/blackbox/blackbox.yml:ro
+    networks: [monitoring, edge]
+    security_opt: ["no-new-privileges:true"]
+
+  prometheus:
+    image: prom/prometheus:v3.5.0
+    restart: unless-stopped
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - >-
+        sed "s|__VELMORAX_DOMAIN__|$${VELMORAX_DOMAIN}|g"
+        /etc/prometheus/prometheus.template.yml > /tmp/prometheus.yml &&
+        exec /bin/prometheus --config.file=/tmp/prometheus.yml
+        --storage.tsdb.path=/prometheus --storage.tsdb.retention.time=$${MONITORING_RETENTION:-30d}
+    environment:
+      VELMORAX_DOMAIN: ${VELMORAX_DOMAIN:?Define VELMORAX_DOMAIN en .env.production}
+      MONITORING_RETENTION: ${MONITORING_RETENTION:-30d}
+    volumes:
+      - ./deploy/monitoring/prometheus.template.yml:/etc/prometheus/prometheus.template.yml:ro
+      - ./deploy/monitoring/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - prometheus_data:/prometheus
+    depends_on: [blackbox]
+    networks: [monitoring, edge]
+    security_opt: ["no-new-privileges:true"]
+
+  loki:
+    image: grafana/loki:3.5.5
+    restart: unless-stopped
+    command: ["-config.file=/etc/loki/loki.yml", "-config.expand-env=true"]
+    environment:
+      MONITORING_RETENTION: ${MONITORING_RETENTION:-30d}
+    volumes:
+      - ./deploy/monitoring/loki.yml:/etc/loki/loki.yml:ro
+      - loki_data:/loki
+    networks: [monitoring]
+    security_opt: ["no-new-privileges:true"]
+
+  alloy:
+    image: grafana/alloy:v1.19.2
+    restart: unless-stopped
+    command:
+      - run
+      - --storage.path=/var/lib/alloy/data
+      - --disable-reporting
+      - /etc/alloy/config.alloy
+    volumes:
+      - ./deploy/monitoring/config.alloy:/etc/alloy/config.alloy:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - alloy_data:/var/lib/alloy/data
+    depends_on: [loki]
+    networks: [monitoring]
+    security_opt: ["no-new-privileges:true"]
+
+  grafana:
+    image: grafana/grafana:12.1.1
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?Define GRAFANA_ADMIN_PASSWORD en .env.production}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
+      GF_PLUGINS_PREINSTALL_DISABLED: "true"
+    ports:
+      - "127.0.0.1:${GRAFANA_PORT:-3000}:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./deploy/monitoring/grafana-provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+      - ./deploy/monitoring/grafana-provisioning/dashboards/dashboards.yml:/etc/grafana/provisioning/dashboards/dashboards.yml:ro
+      - ./deploy/monitoring/dashboards:/var/lib/grafana/dashboards:ro
+    depends_on: [prometheus, loki]
+    networks: [monitoring]
+    security_opt: ["no-new-privileges:true"]
+
+volumes:
+  prometheus_data:
+  loki_data:
+  grafana_data:
+  alloy_data:
+
+networks:
+  monitoring:

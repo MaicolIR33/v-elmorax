@@ -3022,15 +3022,15 @@ async def remove_record(
     return RedirectResponse(url=f"/clinica?{suffix}" if suffix else "/clinica", status_code=303)
 
 
-@router.get("/health")
-async def healthcheck() -> dict:
+def health_payload(check_database: bool = True) -> tuple[dict, int]:
     database_status = "ok"
-    try:
-        with get_connection() as connection:
-            connection.execute("SELECT 1").fetchone()
-    except Exception:
-        database_status = "unavailable"
-    return {
+    if check_database:
+        try:
+            with get_connection() as connection:
+                connection.execute("SELECT 1").fetchone()
+        except Exception:
+            database_status = "unavailable"
+    payload = {
         "status": "ok" if database_status == "ok" else "degraded",
         "service": "velmorax-web",
         "database": get_database_dialect(),
@@ -3038,3 +3038,24 @@ async def healthcheck() -> dict:
         "version": settings.app_version,
         "session_idle_timeout_minutes": settings.session_idle_timeout_minutes,
     }
+    return payload, 200 if database_status == "ok" else 503
+
+
+@router.get("/health")
+async def healthcheck() -> JSONResponse:
+    payload, status_code = health_payload()
+    return JSONResponse(payload, status_code=status_code, headers={"Cache-Control": "no-store"})
+
+
+@router.get("/health/live")
+async def liveness() -> JSONResponse:
+    payload, _ = health_payload(check_database=False)
+    payload["check"] = "liveness"
+    return JSONResponse(payload, headers={"Cache-Control": "no-store"})
+
+
+@router.get("/health/ready")
+async def readiness() -> JSONResponse:
+    payload, status_code = health_payload()
+    payload["check"] = "readiness"
+    return JSONResponse(payload, status_code=status_code, headers={"Cache-Control": "no-store"})

@@ -1,0 +1,29 @@
+groups:
+  - name: velmorax-availability
+    rules:
+      - alert: VelmoraxUnavailable
+        expr: probe_success{job="velmorax-public"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Velmorax no está disponible por Internet"
+          description: "El dominio o HTTPS lleva al menos dos minutos sin responder correctamente."
+
+      - alert: VelmoraxInternalFailure
+        expr: probe_success{job="velmorax-internal"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Velmorax o PostgreSQL no están disponibles"
+          description: "La comprobación interna de aplicación y base de datos está fallando."
+
+      - alert: VelmoraxSlowResponse
+        expr: probe_duration_seconds{job="velmorax-public"} > 3
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Velmorax está respondiendo lentamente"
+          description: "La respuesta pública supera tres segundos durante cinco minutos."

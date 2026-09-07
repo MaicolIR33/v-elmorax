@@ -134,3 +134,45 @@ Frecuencia sugerida:
 
 Estos valores se cambian mediante `BACKUP_INTERVAL_SECONDS` y
 `BACKUP_RETENTION_DAYS`, sin modificar la aplicación.
+
+## Monitoreo, errores y disponibilidad
+
+Velmorax entrega un identificador `X-Request-ID` en cada respuesta y genera
+registros JSON con estado, duración y ruta. No registra formularios, claves,
+consultas de búsqueda ni datos clínicos. Los puntos de control son:
+
+- `/health/live`: confirma que el proceso sigue ejecutándose.
+- `/health/ready`: confirma que la aplicación y PostgreSQL pueden atender.
+- `/health`: conserva la comprobación operativa general.
+
+Para activar el centro de observabilidad:
+
+```bash
+docker compose --env-file .env.production \
+  -f docker-compose.production.yml \
+  -f docker-compose.monitoring.yml up -d
+```
+
+Incluye un tablero listo en Grafana con disponibilidad pública, aplicación,
+PostgreSQL, tiempos de respuesta y errores correlacionados. Grafana solo escucha
+en `127.0.0.1` para no exponerlo a Internet. Se accede de forma segura mediante
+un túnel administrativo:
+
+```bash
+ssh -L 3000:127.0.0.1:3000 usuario@servidor
+```
+
+Después abre `http://127.0.0.1:3000`. Prometheus conserva las métricas durante
+30 días y Loki recibe los registros mediante Grafana Alloy y los conserva
+durante 30 días; ambos periodos pueden ampliarse según capacidad y requisitos
+del cliente. La recolección anónima de uso de Alloy queda desactivada.
+
+Alertas incorporadas:
+
+- Dominio o HTTPS fuera de servicio durante dos minutos.
+- Aplicación o PostgreSQL sin responder durante un minuto.
+- Respuesta pública superior a tres segundos durante cinco minutos.
+
+Las alertas quedan visibles en Prometheus y Grafana. La entrega por correo,
+WhatsApp o mesa de ayuda se conectará dentro del punto de integraciones, evitando
+guardar credenciales de terceros en este repositorio.
