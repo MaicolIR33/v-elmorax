@@ -71,6 +71,7 @@ from app.services.inventory import (
     transfer_inventory_item,
     update_inventory_item,
 )
+from app.services.integrations import integration_outbox_summary, integration_readiness
 from app.services.legal import legal_context, record_legal_acceptance
 from app.services.mailer import (
     send_password_reset_email,
@@ -1392,6 +1393,8 @@ async def admin_page(
                 "La app soporta SQLite y PostgreSQL por DATABASE_URL, con auditoria y exportaciones operativas.",
             ],
             "subscription": organization_subscription(int(user["organization_id"])),
+            "integration_readiness": integration_readiness(),
+            "integration_outbox": integration_outbox_summary(int(user["organization_id"])),
         }
     )
     return templates.TemplateResponse(request=request, name="admin.html", context=context)

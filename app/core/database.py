@@ -274,6 +274,8 @@ def ensure_indexes(connection: DatabaseConnection) -> None:
         CREATE UNIQUE INDEX IF NOT EXISTS idx_patients_external ON patients(organization_id, source_system, external_id) WHERE external_id <> '';
         CREATE UNIQUE INDEX IF NOT EXISTS idx_appointments_external ON appointments(organization_id, source_system, external_id) WHERE external_id <> '';
         CREATE UNIQUE INDEX IF NOT EXISTS idx_inventory_external ON inventory_items(organization_id, source_system, external_id) WHERE external_id <> '';
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_integration_outbox_event_key ON integration_outbox(organization_id, event_key);
+        CREATE INDEX IF NOT EXISTS idx_integration_outbox_status ON integration_outbox(status, available_at);
         """
     )
 
@@ -672,6 +674,18 @@ def build_schema_sql(dialect: str) -> str:
             FOREIGN KEY (organization_id) REFERENCES organizations (id),
             FOREIGN KEY (location_id) REFERENCES locations (id),
             FOREIGN KEY (created_by) REFERENCES users (id)
+        );
+
+        CREATE TABLE IF NOT EXISTS integration_outbox (
+            id {id_column}, organization_id INTEGER NOT NULL, location_id INTEGER,
+            event_type TEXT NOT NULL, event_key TEXT NOT NULL,
+            payload TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'pending',
+            attempts INTEGER NOT NULL DEFAULT 0, last_error TEXT NOT NULL DEFAULT '',
+            available_at {created_at_type} NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            created_at {created_at_type} NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            processed_at TEXT NOT NULL DEFAULT '',
+            FOREIGN KEY (organization_id) REFERENCES organizations (id),
+            FOREIGN KEY (location_id) REFERENCES locations (id)
         );
     """
 

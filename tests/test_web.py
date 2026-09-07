@@ -23,6 +23,7 @@ from app.services.auth import effective_permissions, get_user_by_id, list_users
 from app.services.inventory import create_inventory_movement
 from app.services.commercial import assert_capacity, organization_subscription
 from app.services.client_migration import migrate_client_bundle
+from app.services.integrations import enqueue_integration_event, integration_outbox_summary, integration_readiness
 
 
 class VelmoraxWebTests(unittest.TestCase):
@@ -125,6 +126,20 @@ class VelmoraxWebTests(unittest.TestCase):
             connection.execute("DELETE FROM appointments WHERE source_system = ?", (source,))
             connection.execute("DELETE FROM inventory_items WHERE source_system = ?", (source,))
             connection.execute("DELETE FROM patients WHERE source_system = ?", (source,))
+            connection.commit()
+
+    def test_integration_outbox_is_idempotent_and_does_not_store_secrets(self):
+        key = "qa:integration:1"
+        created = enqueue_integration_event(organization_id=1, location_id=2, event_type="appointment.created", event_key=key, payload={"appointment_id": 9, "token": "never-store", "patient_name": "Nala"})
+        repeated = enqueue_integration_event(organization_id=1, location_id=2, event_type="appointment.created", event_key=key, payload={"appointment_id": 9})
+        self.assertTrue(created)
+        self.assertFalse(repeated)
+        self.assertEqual(len(integration_readiness()), 5)
+        self.assertGreaterEqual(integration_outbox_summary(1)["pending"], 1)
+        with get_connection() as connection:
+            payload = connection.execute("SELECT payload FROM integration_outbox WHERE event_key=?", (key,)).fetchone()["payload"]
+            self.assertNotIn("never-store", payload)
+            connection.execute("DELETE FROM integration_outbox WHERE event_key=?", (key,))
             connection.commit()
 
     def test_demo_user_can_login_and_open_clinical_module(self):

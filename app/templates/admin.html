@@ -70,6 +70,15 @@
         <a class="action-button" href="/planes">Comparar planes</a>
     </article>
 
+    <article class="panel-card commercial-summary">
+        <div class="commercial-summary-head"><div><p class="eyebrow">Integraciones</p><h3>Preparación y conexiones</h3><p class="muted-line">Solo se muestran como activas cuando existe una configuración real.</p></div><span class="metric-chip">{{ integration_outbox.pending }} pendientes</span></div>
+        <div class="commercial-usage-grid">
+            {% for integration in integration_readiness %}
+            <div class="commercial-usage-card"><div><strong>{{ integration.name }}</strong><span>{{ 'Configurada' if integration.configured else 'No configurada' }}</span></div><p class="muted-line">{{ integration.purpose }}</p></div>
+            {% endfor %}
+        </div>
+    </article>
+
     <div class="module-grid">
         <article class="panel-card">
             <div class="section-heading">
