@@ -1,0 +1,10 @@
+FROM postgres:16-alpine
+
+RUN apk add --no-cache openssl rclone tzdata
+
+COPY deploy/backup-cycle.sh /usr/local/bin/backup-cycle
+COPY deploy/backup-loop.sh /usr/local/bin/backup-loop
+COPY deploy/restore-backup.sh /usr/local/bin/restore-backup
+RUN chmod 0555 /usr/local/bin/backup-cycle /usr/local/bin/backup-loop /usr/local/bin/restore-backup
+
+ENTRYPOINT ["/usr/local/bin/backup-loop"]

@@ -60,6 +60,37 @@ services:
     security_opt:
       - no-new-privileges:true
 
+  backup:
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile.backup
+    restart: unless-stopped
+    environment:
+      PGHOST: postgres
+      PGPORT: "5432"
+      PGDATABASE: ${POSTGRES_DB:-velmorax}
+      PGUSER: ${POSTGRES_USER:-velmorax}
+      PGPASSWORD: ${POSTGRES_PASSWORD:?Define POSTGRES_PASSWORD en .env.production}
+      BACKUP_INTERVAL_SECONDS: ${BACKUP_INTERVAL_SECONDS:-21600}
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-30}
+      BACKUP_REMOTE: ${BACKUP_REMOTE:-}
+    volumes:
+      - ${BACKUP_HOST_PATH:-./backups}:/backups
+      - ./.secrets:/run/secrets:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "test -f /backups/last_success_epoch && age=$$(($$(date -u +%s)-$$(cat /backups/last_success_epoch))) && test $$age -le ${BACKUP_HEALTH_MAX_AGE_SECONDS:-25200}"]
+      interval: 5m
+      timeout: 10s
+      retries: 3
+      start_period: 5m
+    networks:
+      - backend
+    security_opt:
+      - no-new-privileges:true
+
   caddy:
     image: caddy:2-alpine
     restart: unless-stopped

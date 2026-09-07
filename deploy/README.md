@@ -26,7 +26,18 @@ la capacidad y mide antes de ampliarlo.
    openssl rand -hex 32
    ```
 
-4. Usa uno para `SESSION_SECRET` y otro para `POSTGRES_PASSWORD`.
+4. Usa uno para `SESSION_SECRET`, otro para `POSTGRES_PASSWORD` y guarda un
+   tercero como clave de cifrado del respaldo:
+
+   ```bash
+   mkdir -p .secrets backups
+   chmod 700 .secrets backups
+   openssl rand -hex 32 > .secrets/backup_passphrase
+   chmod 600 .secrets/backup_passphrase
+   ```
+
+   Conserva una copia de esa clave en el gestor de contraseñas empresarial. Sin
+   ella, los respaldos cifrados no pueden recuperarse.
 5. Comprueba la configuración antes de iniciar:
 
    ```bash
@@ -71,3 +82,55 @@ docker compose --env-file .env.production -f docker-compose.production.yml logs 
 
 La base de datos vive en el volumen `postgres_data`; los certificados, en
 `caddy_data`. No borres esos volúmenes al detener los servicios.
+
+## Copias automáticas y recuperación
+
+El servicio `backup` genera inmediatamente una copia y repite el ciclo cada seis
+horas por defecto. Cada copia:
+
+1. Se crea con el formato recuperable de PostgreSQL.
+2. Se cifra con una clave independiente.
+3. Se valida mediante suma de integridad.
+4. Se restaura en una base temporal.
+5. Comprueba las tablas operativas y elimina la restauración temporal.
+6. Se conserva 30 días y, si se configuró, se envía fuera del servidor.
+
+Consulta el último resultado:
+
+```bash
+docker compose --env-file .env.production -f docker-compose.production.yml ps backup
+cat backups/last_success_at backups/last_success_file backups/last_success_status
+```
+
+Fuerza una copia antes de una actualización importante:
+
+```bash
+docker compose --env-file .env.production -f docker-compose.production.yml exec backup backup-cycle
+```
+
+Comprueba manualmente una copia concreta sin tocar producción:
+
+```bash
+docker compose --env-file .env.production -f docker-compose.production.yml exec backup \
+  restore-backup /backups/velmorax_FECHA.dump.enc
+```
+
+La restauración manual crea una base temporal e informa su nombre. Esto permite
+revisarla antes de reemplazar datos reales. El reemplazo de producción debe
+realizarse durante una ventana controlada, con la aplicación detenida y después
+de generar una copia de seguridad adicional.
+
+Para cumplir una estrategia 3-2-1, configura `BACKUP_REMOTE` y crea
+`.secrets/rclone.conf` con un destino externo cifrado (S3, almacenamiento de otro
+proveedor o servidor independiente). Una copia ubicada únicamente en el mismo
+servidor no protege contra pérdida total del equipo.
+
+Frecuencia sugerida:
+
+- Clínica pequeña: cada 12 horas, conservación mínima de 30 días.
+- Clínica mediana: cada 6 horas y copia externa obligatoria.
+- Clínica grande o urgencias 24/7: cada hora, almacenamiento externo con
+  versionado y una prueba de recuperación supervisada cada mes.
+
+Estos valores se cambian mediante `BACKUP_INTERVAL_SECONDS` y
+`BACKUP_RETENTION_DAYS`, sin modificar la aplicación.
