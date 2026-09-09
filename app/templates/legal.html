@@ -9,8 +9,9 @@
 <body class="legal-page">
     <main class="legal-shell">
         <header class="legal-header">
-            <a href="/login" class="legal-brand">Velmorax</a>
+            <a href="/login?intent=veterinaria" class="legal-brand" aria-label="Volver al acceso de Velmorax">Velmorax</a>
             <nav aria-label="Documentos legales">
+                <a class="legal-back-link" href="/login?intent=veterinaria">← Volver al acceso</a>
                 <a href="/privacidad"{% if document == 'privacy' %} aria-current="page"{% endif %}>Privacidad</a>
                 <a href="/tratamiento-de-datos"{% if document == 'data' %} aria-current="page"{% endif %}>Tratamiento de datos</a>
                 <a href="/terminos"{% if document == 'terms' %} aria-current="page"{% endif %}>Términos</a>

@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Velmorax Veterinaria: cuidado animal cercano y una gestión clínica profesional.">
+    <title>Velmorax | Veterinaria</title>
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/veterinary-landing.css') }}?v=20260907-1">
+</head>
+<body>
+    <a class="skip-link" href="#contenido">Ir al contenido</a>
+    <div class="vet-site-shell">
+        <header class="vet-site-header" aria-label="Navegación principal">
+            <a class="vet-brand" href="/veterinaria" aria-label="Velmorax Veterinaria, inicio">
+                <span class="vet-brand-mark" aria-hidden="true">
+                    <svg viewBox="0 0 64 64" role="img">
+                        <ellipse cx="16" cy="21" rx="7" ry="10"></ellipse>
+                        <ellipse cx="29" cy="13" rx="7" ry="10"></ellipse>
+                        <ellipse cx="45" cy="16" rx="7" ry="10"></ellipse>
+                        <ellipse cx="52" cy="30" rx="7" ry="10"></ellipse>
+                        <path d="M32 25c-12 0-22 10-22 22 0 8 6 13 14 13 4 0 6-3 8-3s4 3 8 3c8 0 14-5 14-13 0-12-10-22-22-22Zm0 24c-5-7-12-8-12-14 0-4 3-7 7-7 3 0 5 2 5 4 1-2 3-4 6-4 4 0 7 3 7 7 0 6-8 8-13 14Z"></path>
+                    </svg>
+                </span>
+                <span><strong>Velmorax</strong><small>Veterinaria</small></span>
+            </a>
+
+            <nav class="vet-nav" aria-label="Secciones">
+                <a class="is-active" href="#inicio">Inicio</a>
+                <a href="#servicios">Experiencia</a>
+                <a href="#como-funciona">Cómo funciona</a>
+                <a href="#contacto">Contacto</a>
+            </nav>
+
+            <a class="vet-header-cta" href="{% if current_user %}/{% else %}/login?intent=veterinaria{% endif %}">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 2v3M16 2v3M4 9h16M5 4h14a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Zm3 9h3v3H8v-3Z"></path></svg>
+                {% if current_user %}Ir al tablero{% else %}Ingresar{% endif %}
+            </a>
+        </header>
+
+        <main id="contenido">
+            <section class="vet-hero" id="inicio">
+                <div class="vet-hero-copy">
+                    <p class="vet-overline">Cuidado inteligente, atención más humana</p>
+                    <h1>Bienestar animal, <span>gestión que da confianza.</span></h1>
+                    <p class="vet-hero-lead">Organiza pacientes, agenda, insumos y alertas en una experiencia clara para que tu equipo dedique más tiempo a cuidar.</p>
+                    <div class="vet-hero-actions">
+                        <a class="vet-btn vet-btn-primary" href="{% if current_user %}/{% else %}/login?intent=veterinaria{% endif %}">
+                            {% if current_user %}Abrir mi tablero{% else %}Entrar a Velmorax{% endif %}
+                            <span aria-hidden="true">→</span>
+                        </a>
+                        <a class="vet-btn vet-btn-secondary" href="#servicios">Conocer la experiencia</a>
+                    </div>
+
+                    <div class="vet-trust-grid" id="beneficios" aria-label="Beneficios principales">
+                        <article>
+                            <span class="vet-trust-icon vet-trust-heart" aria-hidden="true">♡</span>
+                            <p>Seguimiento<br>preventivo</p>
+                        </article>
+                        <article>
+                            <span class="vet-trust-icon vet-trust-shield" aria-hidden="true">✓</span>
+                            <p>Trazabilidad<br>profesional</p>
+                        </article>
+                        <article>
+                            <span class="vet-trust-icon vet-trust-paw" aria-hidden="true">●</span>
+                            <p>Un equipo<br>coordinado</p>
+                        </article>
+                    </div>
+                </div>
+
+                <div class="vet-hero-visual" aria-label="Perro y gato bajo cuidado veterinario">
+                    <div class="vet-blob vet-blob-main"></div>
+                    <div class="vet-blob vet-blob-coral"></div>
+                    <span class="vet-doodle vet-doodle-heart" aria-hidden="true">♡</span>
+                    <span class="vet-doodle vet-doodle-lines" aria-hidden="true">⌁</span>
+                    <img src="{{ url_for('static', path='/images/veterinary-hero-pets.png') }}" alt="Un perro golden retriever y un gato atigrado juntos" width="1200" height="1200">
+                    <div class="vet-care-card">
+                        <span class="vet-care-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24"><path d="M6 3v5a4 4 0 0 0 8 0V3M4 3h4m4 0h4m-6 9v3a5 5 0 0 0 10 0v-1m0 0a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z"></path></svg>
+                        </span>
+                        <span><small>Tu operación, conectada</small><strong>Más control. Más tiempo para cuidar.</strong></span>
+                        <span class="vet-card-heart" aria-hidden="true">♥</span>
+                    </div>
+                </div>
+            </section>
+
+            <section class="vet-experience" id="servicios" aria-labelledby="experience-title">
+                <div>
+                    <p class="vet-section-kicker">Una sola experiencia</p>
+                    <h2 id="experience-title">Todo lo importante, conectado.</h2>
+                </div>
+                <div class="vet-experience-grid">
+                    <article><strong>01</strong><span>Agenda clínica</span><p>Horarios, llegadas y atención del día sin duplicar tareas.</p></article>
+                    <article><strong>02</strong><span>Historia del paciente</span><p>Información clara para continuar el cuidado con seguridad.</p></article>
+                    <article><strong>03</strong><span>Insumos y alertas</span><p>Control por lote, consumo y vencimiento con trazabilidad.</p></article>
+                </div>
+            </section>
+
+            <section class="vet-workflow" id="como-funciona" aria-labelledby="workflow-title">
+                <div class="vet-workflow-heading">
+                    <div>
+                        <p class="vet-section-kicker">Un ritmo de trabajo más claro</p>
+                        <h2 id="workflow-title">Del ingreso al seguimiento, sin perder el hilo.</h2>
+                    </div>
+                    <p>Velmorax acompaña al equipo en los momentos que más coordinación requieren, manteniendo cada dato en el lugar donde se necesita.</p>
+                </div>
+                <ol class="vet-workflow-list">
+                    <li>
+                        <span class="vet-step-number">01</span>
+                        <div><h3>Recibe y prioriza</h3><p>Agenda, llegada y triaje visibles para saber qué atención sigue y cuándo actuar primero.</p></div>
+                    </li>
+                    <li>
+                        <span class="vet-step-number">02</span>
+                        <div><h3>Atiende con contexto</h3><p>Paciente, responsable, antecedentes y registro clínico reunidos para una continuidad segura.</p></div>
+                    </li>
+                    <li>
+                        <span class="vet-step-number">03</span>
+                        <div><h3>Cierra con trazabilidad</h3><p>Consumos, lotes, alertas y pendientes quedan listos para el siguiente turno.</p></div>
+                    </li>
+                </ol>
+            </section>
+
+            <section class="vet-platform" id="beneficios" aria-labelledby="platform-title">
+                <div class="vet-platform-copy">
+                    <p class="vet-section-kicker">Hecho para la operación real</p>
+                    <h2 id="platform-title">Una plataforma que acompaña a cada rol.</h2>
+                    <p>La misma información, con una vista útil para recepción, equipo clínico, inventario y coordinación. Menos mensajes dispersos; más decisiones con contexto.</p>
+                    <a class="vet-text-link" href="/planes">Ver planes y capacidades <span aria-hidden="true">→</span></a>
+                </div>
+                <div class="vet-role-stack" aria-label="Roles que usan la plataforma">
+                    <article><span class="vet-role-icon" aria-hidden="true">⌁</span><div><strong>Equipo clínico</strong><p>Consulta, seguimiento y entrega de turno.</p></div><span class="vet-role-arrow" aria-hidden="true">→</span></article>
+                    <article><span class="vet-role-icon" aria-hidden="true">◇</span><div><strong>Insumos</strong><p>Lotes, cadena de frío y abastecimiento.</p></div><span class="vet-role-arrow" aria-hidden="true">→</span></article>
+                    <article><span class="vet-role-icon" aria-hidden="true">⌾</span><div><strong>Coordinación</strong><p>Capacidad, alertas y operación diaria.</p></div><span class="vet-role-arrow" aria-hidden="true">→</span></article>
+                </div>
+            </section>
+
+            <section class="vet-closing-cta" aria-labelledby="closing-title">
+                <div>
+                    <p class="vet-section-kicker">Velmorax Veterinaria</p>
+                    <h2 id="closing-title">Más tiempo para cuidar. Más claridad para operar.</h2>
+                    <p>Conoce la plataforma y elige una forma más tranquila de coordinar el día a día de tu clínica.</p>
+                </div>
+                <div class="vet-closing-actions">
+                    <a class="vet-btn vet-btn-primary" href="{% if current_user %}/{% else %}/login?intent=veterinaria{% endif %}">{% if current_user %}Abrir mi tablero{% else %}Entrar a Velmorax{% endif %}<span aria-hidden="true">→</span></a>
+                    <a class="vet-btn vet-btn-secondary" href="/planes">Conocer planes</a>
+                </div>
+            </section>
+        </main>
+
+        <footer class="vet-site-footer" id="contacto">
+            <div><p><strong>Velmorax Veterinaria</strong> · Tecnología pensada para quienes cuidan.</p><small>Herramientas para una gestión veterinaria más conectada.</small></div>
+            <nav aria-label="Enlaces de pie de página"><a href="/privacidad">Privacidad</a><a href="/terminos">Términos</a><a href="mailto:velmoradmin@gmail.com">Contacto</a></nav>
+        </footer>
+    </div>
+</body>
+</html>

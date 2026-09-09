@@ -49,6 +49,47 @@ class VelmoraxWebTests(unittest.TestCase):
         self.assertIn("Clave", response.text)
         self.assertNotIn("Sede / ubicacion", response.text)
 
+    def test_veterinary_flow_opens_public_landing_and_preserves_login_intent(self):
+        self.client.post("/logout")
+        login = self.client.get("/login")
+        self.assertIn('data-flow-entry="/veterinaria"', login.text)
+
+        landing = self.client.get("/veterinaria")
+        self.assertEqual(landing.status_code, 200)
+        self.assertIn("Bienestar animal", landing.text)
+        self.assertIn("/login?intent=veterinaria", landing.text)
+        self.assertIn("/static/images/veterinary-hero-pets.png", landing.text)
+        self.assertIn("Del ingreso al seguimiento", landing.text)
+        self.assertIn("Una plataforma que acompaña a cada rol", landing.text)
+        self.assertIn("Conocer planes", landing.text)
+
+        selected_login = self.client.get("/login?intent=veterinaria")
+        self.assertEqual(selected_login.status_code, 200)
+        self.assertIn('data-selected-intent="veterinaria"', selected_login.text)
+
+    def test_unavailable_entry_flows_are_disabled_on_client_and_server(self):
+        self.client.post("/logout")
+        login = self.client.get("/login")
+        self.assertIn('data-flow-id="odontologia"', login.text)
+        self.assertIn('data-flow-id="consulta-general"', login.text)
+        self.assertEqual(login.text.count('data-flow-enabled="false"'), 2)
+        self.assertEqual(login.text.count("Próximamente"), 2)
+
+        rejected = self.client.post(
+            "/login",
+            data={
+                "intent": "odontologia",
+                "email": "admin@velmorax.local",
+                "password": "velmorax123",
+            },
+            follow_redirects=False,
+        )
+        self.assertEqual(rejected.status_code, 303)
+        self.assertTrue(rejected.headers["location"].startswith("/login?error="))
+
+        unavailable_query = self.client.get("/login?intent=consulta-general")
+        self.assertNotIn('data-selected-intent="consulta-general"', unavailable_query.text)
+
     def test_security_headers_and_cross_site_posts_are_protected(self):
         response = self.client.get("/login")
         for header in ("content-security-policy", "x-content-type-options", "x-frame-options", "referrer-policy", "permissions-policy"):
@@ -65,6 +106,7 @@ class VelmoraxWebTests(unittest.TestCase):
             response = self.client.get(path)
             self.assertEqual(response.status_code, 200)
             self.assertIn(heading, response.text)
+            self.assertIn("Volver al acceso", response.text)
 
         self.client.post("/logout")
         self.client.post(
@@ -174,7 +216,7 @@ class VelmoraxWebTests(unittest.TestCase):
         response = self.client.post(
             "/login",
             data={
-                "intent": "odontologia",
+                "intent": "veterinaria",
                 "email": "admin@velmorax.local",
                 "password": "velmorax123",
             },
@@ -218,7 +260,7 @@ class VelmoraxWebTests(unittest.TestCase):
             login = client.post(
                 "/login",
                 data={
-                    "intent": "odontologia",
+                    "intent": "veterinaria",
                     "email": "clinica@velmorax.local",
                     "password": "NuevaClave123",
                 },
@@ -416,6 +458,10 @@ class VelmoraxWebTests(unittest.TestCase):
         self.assertNotIn("Pacientes recientes", dashboard.text)
         self.assertNotIn("Referencias usadas para mejorar el flujo", dashboard.text)
         self.assertNotIn("Operacion en red", dashboard.text)
+        self.assertIn('data-theme="light"', dashboard.text)
+        self.assertIn('data-theme-toggle', dashboard.text)
+        self.assertIn('Vista clara', dashboard.text)
+        self.assertIn('/js/theme-toggle.js', dashboard.text)
 
         for path in ("/", "/agenda", "/inventario", "/clinica", "/admin"):
             page = self.client.get(path)

@@ -1,12 +1,19 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" data-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Velmorax{% endblock %}</title>
-    <link rel="stylesheet" href="{{ url_for('static', path='/css/styles.css') }}">
+    <script>
+        (function () {
+            var savedTheme = null;
+            try { savedTheme = localStorage.getItem("velmorax-theme"); } catch (error) {}
+            document.documentElement.dataset.theme = savedTheme === "dark" ? "dark" : "light";
+        }());
+    </script>
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/styles.css') }}?v=theme-2">
     {% if is_veterinary_flow %}
-    <link rel="stylesheet" href="{{ url_for('static', path='/css/veterinary-dashboard.css') }}?v=alerts-final-26">
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/veterinary-dashboard.css') }}?v=theme-2">
     {% endif %}
 </head>
 <body{% if is_veterinary_flow %} class="veterinary-dashboard-page"{% endif %}>
@@ -25,5 +32,6 @@
     {% if is_veterinary_flow and active_path != '/alertas' and veterinary_dashboard.alerts %}
     {% include "partials/alert_notification.html" %}
     {% endif %}
+    <script src="{{ url_for('static', path='/js/theme-toggle.js') }}?v=theme-1" defer></script>
 </body>
 </html>

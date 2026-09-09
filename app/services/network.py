@@ -1165,18 +1165,21 @@ def entry_flows() -> list[dict]:
             "title": "Odontologia",
             "description": "Agenda odontologica, odontograma y procedimientos. Inventario y bodega siguen disponibles como modulo comun.",
             "target": "/login?intent=odontologia",
+            "enabled": False,
         },
         {
             "id": "veterinaria",
             "title": "Veterinaria",
             "description": "Mascotas, propietarios, vacunacion y seguimiento. Inventario y bodega siguen disponibles para toda la operacion.",
             "target": "/login?intent=veterinaria",
+            "enabled": True,
         },
         {
             "id": "consulta-general",
             "title": "Consulta general",
             "description": "Historia flexible, triage, controles y seguimiento clinico. Inventario y bodega quedan como soporte transversal.",
             "target": "/login?intent=consulta-general",
+            "enabled": False,
         },
     ]
 

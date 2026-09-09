@@ -35,13 +35,16 @@
                     {% for flow in entry_flows %}
                     <button
                         type="button"
-                        class="entry-card entry-card-rich{% if selected_intent == flow.id %} is-selected{% endif %}"
+                        class="entry-card entry-card-rich{% if selected_intent == flow.id %} is-selected{% endif %}{% if not flow.enabled %} is-unavailable{% endif %}"
                         data-flow-card
                         data-flow-id="{{ flow.id }}"
+                        {% if flow.id == 'veterinaria' %}data-flow-entry="/veterinaria"{% endif %}
+                        data-flow-enabled="{{ 'true' if flow.enabled else 'false' }}"
                         data-flow-title="{{ flow.title }}"
                         data-flow-description="{% if flow.id == 'odontologia' %}Odontograma y procedimientos.{% elif flow.id == 'veterinaria' %}Mascotas y seguimiento.{% else %}Triage y consulta.{% endif %}"
                         data-flow-index="0{{ loop.index }}"
                         data-flow-tag="{% if loop.index == 1 %}Dental{% elif loop.index == 2 %}Animal{% else %}General{% endif %}"
+                        {% if not flow.enabled %}disabled aria-disabled="true"{% endif %}
                     >
                         <div class="entry-card-glow"></div>
                         <div class="entry-card-top">
@@ -54,8 +57,8 @@
                         <strong class="entry-card-title">{{ flow.title }}</strong>
                         <span class="entry-card-description">{% if flow.id == 'odontologia' %}Odontograma y procedimientos.{% elif flow.id == 'veterinaria' %}Mascotas y seguimiento.{% else %}Triage y consulta.{% endif %}</span>
                         <div class="entry-card-foot">
-                            <span>{% if selected_intent == flow.id %}Seleccionado{% else %}Disponible{% endif %}</span>
-                            <span class="entry-card-state">{% if selected_intent == flow.id %}Activo{% else %}Elegir{% endif %}</span>
+                            <span>{% if not flow.enabled %}En preparación{% elif selected_intent == flow.id %}Seleccionado{% else %}Disponible{% endif %}</span>
+                            <span class="entry-card-state">{% if not flow.enabled %}Próximamente{% elif selected_intent == flow.id %}Activo{% else %}Elegir{% endif %}</span>
                         </div>
                     </button>
                     {% endfor %}
@@ -264,7 +267,14 @@
             }
 
             cards.forEach((card) => {
-                card.addEventListener("click", () => updateLoginState(card.dataset.flowId));
+                card.addEventListener("click", () => {
+                    if (card.dataset.flowEnabled !== "true") return;
+                    if (card.dataset.flowEntry) {
+                        window.location.assign(card.dataset.flowEntry);
+                        return;
+                    }
+                    updateLoginState(card.dataset.flowId);
+                });
             });
 
             passwordToggles.forEach((toggle) => {

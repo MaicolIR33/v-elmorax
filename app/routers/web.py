@@ -632,6 +632,11 @@ async def login_page(
         return RedirectResponse(url="/", status_code=303)
 
     selected_intent = intent or request.session.get("entry_intent", "")
+    enabled_intents = {
+        flow["id"] for flow in entry_flows() if flow.get("enabled", True)
+    }
+    if selected_intent not in enabled_intents:
+        selected_intent = ""
     selected_organization_id = organization_id or request.session.get("preferred_organization_id", "")
     selected_location_id = location_id or request.session.get("preferred_location_id", "")
     if selected_intent:
@@ -666,6 +671,19 @@ async def login_page(
                 {"email": "inventario@velmorax.local", "role": "Inventario"},
             ],
             "legal": legal_context(),
+        },
+    )
+
+
+@router.get("/veterinaria", response_class=HTMLResponse)
+async def veterinary_landing_page(request: Request) -> HTMLResponse:
+    """Public entry page for the veterinary experience."""
+    return templates.TemplateResponse(
+        request=request,
+        name="veterinary_landing.html",
+        context={
+            "request": request,
+            "current_user": current_user_from_request(request),
         },
     )
 
@@ -918,6 +936,14 @@ async def login_action(
     if not selected_intent:
         return RedirectResponse(
             url="/login?error=Debes%20seleccionar%20un%20flujo%20clinico%20antes%20de%20iniciar%20sesion",
+            status_code=303,
+        )
+    enabled_intents = {
+        flow["id"] for flow in entry_flows() if flow.get("enabled", True)
+    }
+    if selected_intent not in enabled_intents:
+        return RedirectResponse(
+            url=f"/login?error={encoded_message('Este flujo todavía no está disponible. Ingresa por Veterinaria.')}",
             status_code=303,
         )
     accepted_legal = legal_acceptance in {"1", "true", "on", "yes"}
