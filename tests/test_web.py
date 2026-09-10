@@ -59,8 +59,6 @@ class VelmoraxWebTests(unittest.TestCase):
         self.assertIn("Bienestar animal", landing.text)
         self.assertIn("/login?intent=veterinaria", landing.text)
         self.assertIn("/static/images/veterinary-hero-pets.png", landing.text)
-        self.assertIn("/static/videos/veterinary-hero-animals.m4v", landing.text)
-        self.assertIn("/static/videos/veterinary-hero-alpha-mask.m4v", landing.text)
         self.assertIn("Del ingreso al seguimiento", landing.text)
         self.assertIn("Una plataforma que acompaña a cada rol", landing.text)
         self.assertIn("Conocer planes", landing.text)

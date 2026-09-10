@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Velmorax Veterinaria: cuidado animal cercano y una gestión clínica profesional.">
     <title>Velmorax | Veterinaria</title>
-    <link rel="stylesheet" href="{{ url_for('static', path='/css/veterinary-landing.css') }}?v=20260909-3">
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/veterinary-landing.css') }}?v=20260907-1">
 </head>
 <body>
     <a class="skip-link" href="#contenido">Ir al contenido</a>
@@ -72,14 +72,14 @@
                     <div class="vet-blob vet-blob-coral"></div>
                     <span class="vet-doodle vet-doodle-heart" aria-hidden="true">♡</span>
                     <span class="vet-doodle vet-doodle-lines" aria-hidden="true">⌁</span>
-                    <video class="vet-hero-motion" autoplay muted loop playsinline preload="metadata" aria-label="Un perro golden retriever y un gato atigrado juntos">
-                        <source src="{{ url_for('static', path='/videos/veterinary-hero-animals.m4v') }}" type="video/mp4">
-                    </video>
-                    <video class="vet-hero-mask" autoplay muted loop playsinline preload="metadata" aria-hidden="true">
-                        <source src="{{ url_for('static', path='/videos/veterinary-hero-alpha-mask.m4v') }}" type="video/mp4">
-                    </video>
-                    <canvas class="vet-hero-canvas" aria-hidden="true"></canvas>
-                    <img class="vet-hero-still" src="{{ url_for('static', path='/images/veterinary-hero-pets.png') }}" alt="Un perro golden retriever y un gato atigrado juntos" width="1200" height="1200">
+                    <img src="{{ url_for('static', path='/images/veterinary-hero-pets.png') }}" alt="Un perro golden retriever y un gato atigrado juntos" width="1200" height="1200">
+                    <div class="vet-care-card">
+                        <span class="vet-care-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24"><path d="M6 3v5a4 4 0 0 0 8 0V3M4 3h4m4 0h4m-6 9v3a5 5 0 0 0 10 0v-1m0 0a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z"></path></svg>
+                        </span>
+                        <span><small>Tu operación, conectada</small><strong>Más control. Más tiempo para cuidar.</strong></span>
+                        <span class="vet-card-heart" aria-hidden="true">♥</span>
+                    </div>
                 </div>
             </section>
 
@@ -151,168 +151,5 @@
             <nav aria-label="Enlaces de pie de página"><a href="/privacidad">Privacidad</a><a href="/terminos">Términos</a><a href="mailto:velmoradmin@gmail.com">Contacto</a></nav>
         </footer>
     </div>
-    <script>
-        (() => {
-            const video = document.querySelector('.vet-hero-motion');
-            const alphaVideo = document.querySelector('.vet-hero-mask');
-            const canvas = document.querySelector('.vet-hero-canvas');
-            if (!video || !alphaVideo || !canvas || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-
-            const context = canvas.getContext('2d', { willReadFrequently: true });
-            const alphaCanvas = document.createElement('canvas');
-            const alphaContext = alphaCanvas.getContext('2d', { willReadFrequently: true });
-            const size = 720;
-            const backgroundLimit = 30;
-            let frameId = 0;
-            let lastPaint = 0;
-            let lastSync = 0;
-
-            function removeBlackBackdrop(data) {
-                const pixelCount = size * size;
-                const isBackdrop = new Uint8Array(pixelCount);
-                const queue = new Int32Array(pixelCount);
-                let head = 0;
-                let tail = 0;
-
-                const isNearBlack = (pixel) => {
-                    const offset = pixel * 4;
-                    return Math.max(data[offset], data[offset + 1], data[offset + 2]) <= backgroundLimit;
-                };
-                const addBackdropPixel = (pixel) => {
-                    if (!isBackdrop[pixel] && isNearBlack(pixel)) {
-                        isBackdrop[pixel] = 1;
-                        queue[tail++] = pixel;
-                    }
-                };
-
-                for (let column = 0; column < size; column += 1) {
-                    addBackdropPixel(column);
-                    addBackdropPixel(pixelCount - size + column);
-                }
-                for (let row = 1; row < size - 1; row += 1) {
-                    addBackdropPixel(row * size);
-                    addBackdropPixel(row * size + size - 1);
-                }
-
-                while (head < tail) {
-                    const pixel = queue[head++];
-                    const column = pixel % size;
-                    if (column > 0) addBackdropPixel(pixel - 1);
-                    if (column < size - 1) addBackdropPixel(pixel + 1);
-                    if (pixel >= size) addBackdropPixel(pixel - size);
-                    if (pixel < pixelCount - size) addBackdropPixel(pixel + size);
-                }
-
-                // Retira solo las dos capas oscuras que rodean el sujeto. Al
-                // expandirse desde el fondo ya identificado, las sombras y
-                // rayas internas del pelaje no se ven afectadas.
-                let frontierStart = 0;
-                let frontierEnd = tail;
-                const addEdgePixel = (pixel) => {
-                    if (!isBackdrop[pixel]) {
-                        const offset = pixel * 4;
-                        if (Math.max(data[offset], data[offset + 1], data[offset + 2]) <= 128) {
-                            isBackdrop[pixel] = 1;
-                            queue[tail++] = pixel;
-                        }
-                    }
-                };
-                for (let layer = 0; layer < 3; layer += 1) {
-                    for (let entry = frontierStart; entry < frontierEnd; entry += 1) {
-                        const pixel = queue[entry];
-                        const column = pixel % size;
-                        if (column > 0) addEdgePixel(pixel - 1);
-                        if (column < size - 1) addEdgePixel(pixel + 1);
-                        if (pixel >= size) addEdgePixel(pixel - size);
-                        if (pixel < pixelCount - size) addEdgePixel(pixel + size);
-                    }
-                    frontierStart = frontierEnd;
-                    frontierEnd = tail;
-                }
-
-                // El video original fue compuesto sobre negro: aun después de
-                // retirar el fondo, una línea oscura puede permanecer en el
-                // contorno. Sustituimos solo esa línea por el color inmediato
-                // del pelaje que tiene hacia dentro, sin tocar sus detalles.
-                const source = new Uint8ClampedArray(data);
-                const copyInnerColor = (pixel, sample) => {
-                    const target = pixel * 4;
-                    const origin = sample * 4;
-                    data[target] = source[origin];
-                    data[target + 1] = source[origin + 1];
-                    data[target + 2] = source[origin + 2];
-                };
-                for (let pixel = 0; pixel < pixelCount; pixel += 1) {
-                    if (isBackdrop[pixel]) continue;
-                    const offset = pixel * 4;
-                    if (Math.max(source[offset], source[offset + 1], source[offset + 2]) > 155) continue;
-
-                    const column = pixel % size;
-                    const row = Math.floor(pixel / size);
-                    if (column > 0 && isBackdrop[pixel - 1] && column < size - 3 && !isBackdrop[pixel + 3]) {
-                        copyInnerColor(pixel, pixel + 3);
-                    } else if (column < size - 1 && isBackdrop[pixel + 1] && column > 2 && !isBackdrop[pixel - 3]) {
-                        copyInnerColor(pixel, pixel - 3);
-                    } else if (row > 0 && isBackdrop[pixel - size] && row < size - 3 && !isBackdrop[pixel + size * 3]) {
-                        copyInnerColor(pixel, pixel + size * 3);
-                    } else if (row < size - 1 && isBackdrop[pixel + size] && row > 2 && !isBackdrop[pixel - size * 3]) {
-                        copyInnerColor(pixel, pixel - size * 3);
-                    }
-                }
-
-                for (let pixel = 0; pixel < pixelCount; pixel += 1) {
-                    const offset = pixel * 4;
-                    data[offset + 3] = isBackdrop[pixel] ? 0 : 255;
-                }
-            }
-
-            function drawFrame(timestamp) {
-                if (video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA && timestamp - lastPaint >= 66) {
-                    context.drawImage(video, 0, 0, size, size);
-                    const pixels = context.getImageData(0, 0, size, size);
-                    if (alphaVideo.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
-                        if (timestamp - lastSync > 500 && Math.abs(alphaVideo.currentTime - video.currentTime) > .08) {
-                            alphaVideo.currentTime = video.currentTime;
-                            lastSync = timestamp;
-                        }
-                        alphaContext.drawImage(alphaVideo, 0, 0, size, size);
-                        const alphaPixels = alphaContext.getImageData(0, 0, size, size).data;
-                        for (let index = 0; index < pixels.data.length; index += 4) {
-                            const alpha = alphaPixels[index];
-                            if (alpha < 250) {
-                                const correction = 255 / Math.max(alpha, 64);
-                                pixels.data[index] = Math.min(255, pixels.data[index] * correction);
-                                pixels.data[index + 1] = Math.min(255, pixels.data[index + 1] * correction);
-                                pixels.data[index + 2] = Math.min(255, pixels.data[index + 2] * correction);
-                            }
-                            pixels.data[index + 3] = alpha;
-                        }
-                    } else {
-                        removeBlackBackdrop(pixels.data);
-                    }
-                    context.putImageData(pixels, 0, 0);
-                    lastPaint = timestamp;
-                }
-                frameId = requestAnimationFrame(drawFrame);
-            }
-
-            function startMotion() {
-                if (frameId) return;
-                canvas.width = size;
-                canvas.height = size;
-                alphaCanvas.width = size;
-                alphaCanvas.height = size;
-                alphaVideo.currentTime = video.currentTime;
-                alphaVideo.play().catch(() => {});
-                document.documentElement.classList.add('has-vet-hero-motion');
-                drawFrame();
-            }
-
-            video.addEventListener('playing', startMotion, { once: true });
-            alphaVideo.addEventListener('playing', startMotion, { once: true });
-            video.play().catch(() => {});
-            alphaVideo.play().catch(() => {});
-        })();
-    </script>
 </body>
 </html>
