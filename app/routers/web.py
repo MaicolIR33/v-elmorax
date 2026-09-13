@@ -49,6 +49,7 @@ from app.services.clinical import (
     create_patient,
     delete_clinical_record,
     delete_patient,
+    find_patient_duplicate,
     list_clinical_records,
     list_patients,
     update_clinical_record_status,
@@ -2882,12 +2883,52 @@ async def create_new_patient(
     breed: str = Form(""),
     weight_kg: float = Form(0),
     vaccine_status: str = Form("No aplica"),
+    color: str = Form(""),
+    microchip: str = Form(""),
+    tutor_email: str = Form(""),
+    tutor_address: str = Form(""),
+    emergency_contact_name: str = Form(""),
+    emergency_contact_phone: str = Form(""),
+    emergency_contact_relationship: str = Form(""),
+    reproductive_status: str = Form(""),
+    sterilized: int = Form(0),
+    sterilization_date: str = Form(""),
+    allergies: str = Form(""),
+    preexisting_conditions: str = Form(""),
+    medical_history: str = Form(""),
+    deworming_status: str = Form(""),
+    deworming_date: str = Form(""),
+    clinical_alert: str = Form(""),
+    patient_status: str = Form("active"),
 ) -> RedirectResponse:
     user = user_with_permissions(request)
     if user is None:
         return redirect_to_login()
     if not user["permissions"]["manage_clinical"]:
         return redirect_to_module_with_error("/clinica", "Tu rol no puede registrar pacientes.")
+    if not inventory_scope_allowed(user, organization_id, location_id):
+        return redirect_to_module_with_error(
+            "/clinica",
+            "La organización o sede seleccionada no pertenece a tu alcance.")
+
+        duplicate = find_patient_duplicate(
+    organization_id=organization_id,
+    location_id=location_id,
+    display_name=display_name,
+    owner_name=owner_name,
+    document_number=document_number,
+    microchip=microchip,
+    phone=phone,
+    species=species,
+    birth_date=birth_date,
+    )
+
+    if duplicate:
+        return redirect_to_module_with_error(
+            "/clinica",
+            f"La mascota '{duplicate['display_name']}' ya está registrada."
+        )
+
 
     create_patient(
         {
@@ -2921,6 +2962,144 @@ async def create_new_patient(
     suffix = build_scope_query(str(organization_id), str(location_id))
     return RedirectResponse(url=f"/clinica?patient_saved=1&{suffix}", status_code=303)
 
+@router.post("/patients/{patient_id}/edit")
+async def edit_patient(
+    request: Request,
+    patient_id: int,
+    organization_id: int = Form(...),
+    location_id: int = Form(...),
+    display_name: str = Form(...),
+    patient_type: str = Form(...),
+    specialty: str = Form(...),
+    owner_name: str = Form(""),
+    phone: str = Form(""),
+    document_number: str = Form(""),
+    birth_date: str = Form(""),
+    sex: str = Form(""),
+    insurance_name: str = Form(""),
+    species: str = Form(""),
+    breed: str = Form(""),
+    weight_kg: float = Form(0),
+    vaccine_status: str = Form("No aplica"),
+    color: str = Form(""),
+    microchip: str = Form(""),
+    tutor_email: str = Form(""),
+    tutor_address: str = Form(""),
+    emergency_contact_name: str = Form(""),
+    emergency_contact_phone: str = Form(""),
+    emergency_contact_relationship: str = Form(""),
+    reproductive_status: str = Form(""),
+    sterilized: int = Form(0),
+    sterilization_date: str = Form(""),
+    allergies: str = Form(""),
+    preexisting_conditions: str = Form(""),
+    medical_history: str = Form(""),
+    deworming_status: str = Form(""),
+    deworming_date: str = Form(""),
+    clinical_alert: str = Form(""),
+    patient_status: str = Form("active"),
+) -> RedirectResponse:
+    user = user_with_permissions(request)
+
+    if user is None:
+        return redirect_to_login()
+
+    if not user["permissions"]["manage_clinical"]:
+        return redirect_to_module_with_error(
+            "/clinica",
+            "Tu rol no puede editar pacientes."
+        )
+
+    if not inventory_scope_allowed(user, organization_id, location_id):
+        return redirect_to_module_with_error(
+            "/clinica",
+            "La organización o sede seleccionada no pertenece a tu alcance."
+        )
+
+    patient = get_patient(patient_id)
+
+    if patient is None:
+        return redirect_to_module_with_error(
+            "/clinica",
+            "La mascota no existe."
+        )
+
+    duplicate = find_patient_duplicate(
+        organization_id=organization_id,
+        location_id=location_id,
+        display_name=display_name,
+        owner_name=owner_name,
+        document_number=document_number,
+        microchip=microchip,
+        phone=phone,
+        species=species,
+        birth_date=birth_date,
+        exclude_patient_id=patient_id,
+    )
+
+    if duplicate:
+        return redirect_to_module_with_error(
+            "/clinica",
+            f"La información coincide con la mascota '{duplicate['display_name']}'."
+        )
+
+    update_patient(
+        patient_id,
+        {
+            "display_name": display_name.strip(),
+            "patient_type": patient_type.strip(),
+            "specialty": specialty.strip(),
+            "owner_name": owner_name.strip(),
+            "phone": phone.strip(),
+            "document_number": document_number.strip(),
+            "birth_date": birth_date,
+            "sex": sex.strip(),
+            "insurance_name": insurance_name.strip(),
+            "species": species.strip(),
+            "breed": breed.strip(),
+            "weight_kg": weight_kg,
+            "vaccine_status": vaccine_status.strip(),
+            "color": color.strip(),
+            "microchip": microchip.strip(),
+            "tutor_email": tutor_email.strip(),
+            "tutor_address": tutor_address.strip(),
+            "emergency_contact_name": emergency_contact_name.strip(),
+            "emergency_contact_phone": emergency_contact_phone.strip(),
+            "emergency_contact_relationship": emergency_contact_relationship.strip(),
+            "reproductive_status": reproductive_status.strip(),
+            "sterilized": sterilized,
+            "sterilization_date": sterilization_date,
+            "allergies": allergies.strip(),
+            "preexisting_conditions": preexisting_conditions.strip(),
+            "medical_history": medical_history.strip(),
+            "deworming_status": deworming_status.strip(),
+            "deworming_date": deworming_date,
+            "clinical_alert": clinical_alert.strip(),
+            "patient_status": patient_status.strip() or "active",
+            "updated_at": datetime.now(UTC).isoformat(),
+            "updated_by_user_id": user["id"],
+        },
+    )
+
+    log_audit_event(
+        user_id=user["id"],
+        organization_id=organization_id,
+        location_id=location_id,
+        action="Edicion",
+        entity_type="Paciente",
+        entity_label=display_name.strip(),
+        detail=f"Paciente #{patient_id} actualizado",
+    )
+
+    suffix = build_scope_query(
+        str(organization_id),
+        str(location_id)
+    )
+
+    return RedirectResponse(
+        url=f"/clinica?patient_updated=1&{suffix}",
+        status_code=303,
+    )
 
 @router.post("/patients/{patient_id}/delete")
 async def remove_patient(
