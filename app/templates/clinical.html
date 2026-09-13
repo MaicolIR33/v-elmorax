@@ -1,60 +1,349 @@
 {% extends "base.html" %}
 
-{% block title %}Velmorax | Clinica{% endblock %}
+{% block title %}Velmorax | Pacientes{% endblock %}
 
 {% block content %}
+
 {% include "partials/clinical_section.html" %}
 
+
 <script>
-    const tabButtons = document.querySelectorAll("[data-tab-target]");
-    const tabPanels = document.querySelectorAll("[data-tab-panel]");
-    tabButtons.forEach((button) => {
+document.addEventListener("DOMContentLoaded", () => {
+
+    /* =====================================================
+       MODALES
+       ===================================================== */
+
+    const openModalButtons = document.querySelectorAll(
+        "[data-open-modal]"
+    );
+
+    const closeModalButtons = document.querySelectorAll(
+        "[data-close-modal]"
+    );
+
+    const modals = document.querySelectorAll(
+        "[data-modal]"
+    );
+
+
+    function openModal(modalId) {
+
+        const modal = document.getElementById(modalId);
+
+        if (!modal) {
+            return;
+        }
+
+        modal.classList.remove("is-hidden");
+
+        document.body.classList.add(
+            "vet-modal-open"
+        );
+
+        const firstInput = modal.querySelector(
+            "input:not([type='hidden']), select, textarea"
+        );
+
+        if (firstInput) {
+            setTimeout(() => {
+                firstInput.focus();
+            }, 100);
+        }
+    }
+
+
+    function closeModal(modal) {
+
+        if (!modal) {
+            return;
+        }
+
+        modal.classList.add("is-hidden");
+
+        if (
+            !document.querySelector(
+                "[data-modal]:not(.is-hidden)"
+            )
+        ) {
+            document.body.classList.remove(
+                "vet-modal-open"
+            );
+        }
+    }
+
+
+    openModalButtons.forEach((button) => {
+
         button.addEventListener("click", () => {
-            const target = button.dataset.tabTarget;
-            tabButtons.forEach((item) => item.classList.remove("is-active"));
-            tabPanels.forEach((panel) => panel.classList.remove("is-active"));
-            button.classList.add("is-active");
-            document.querySelector(`[data-tab-panel="${target}"]`).classList.add("is-active");
+
+            const modalId =
+                button.dataset.openModal;
+
+            openModal(modalId);
+
         });
+
     });
 
-    function setSectionVisibility(element, visible) {
-        if (!element) return;
-        element.classList.toggle("is-hidden", !visible);
-        element.querySelectorAll("input, select, textarea").forEach((field) => {
-            field.disabled = !visible;
+
+    closeModalButtons.forEach((button) => {
+
+        button.addEventListener("click", () => {
+
+            const modal =
+                button.closest("[data-modal]");
+
+            closeModal(modal);
+
         });
+
+    });
+
+
+    modals.forEach((modal) => {
+
+        modal.addEventListener("click", (event) => {
+
+            if (
+                event.target === modal ||
+                event.target.hasAttribute(
+                    "data-close-modal"
+                )
+            ) {
+                closeModal(modal);
+            }
+
+        });
+
+    });
+
+
+    document.addEventListener("keydown", (event) => {
+
+        if (event.key !== "Escape") {
+            return;
+        }
+
+        document
+            .querySelectorAll(
+                "[data-modal]:not(.is-hidden)"
+            )
+            .forEach((modal) => {
+                closeModal(modal);
+            });
+
+    });
+
+
+    /* =====================================================
+       BÚSQUEDA DE MASCOTAS
+       ===================================================== */
+
+    const searchForm = document.querySelector(
+        "[data-patient-search-form]"
+    );
+
+    const searchInput = document.querySelector(
+        "[data-patient-search]"
+    );
+
+    const searchButton = document.querySelector(
+        "[data-patient-search-button]"
+    );
+
+    const clearButton = document.querySelector(
+        "[data-patient-search-clear]"
+    );
+
+    const patientItems = document.querySelectorAll(
+        "[data-patient-item]"
+    );
+
+    const noResults = document.querySelector(
+        "[data-patient-no-results]"
+    );
+
+    const searchResult = document.querySelector(
+        "[data-patient-search-result]"
+    );
+
+
+    function searchPatients() {
+
+        if (!searchInput) {
+            return;
+        }
+
+        const value =
+            searchInput.value
+                .trim()
+                .toLowerCase();
+
+
+        let visiblePatients = 0;
+
+
+        patientItems.forEach((patient) => {
+
+            const name =
+                patient.dataset.patientName || "";
+
+            const species =
+                patient.dataset.patientSpecies || "";
+
+            const breed =
+                patient.dataset.patientBreed || "";
+
+
+            const matches =
+                value === "" ||
+                name.includes(value) ||
+                species.includes(value) ||
+                breed.includes(value);
+
+
+            patient.classList.toggle(
+                "is-hidden",
+                !matches
+            );
+
+
+            if (matches) {
+                visiblePatients++;
+            }
+
+        });
+
+
+        if (noResults) {
+
+            noResults.classList.toggle(
+                "is-hidden",
+                visiblePatients !== 0
+            );
+
+        }
+
+
+        if (searchResult) {
+
+            if (value === "") {
+
+                searchResult.textContent = "";
+
+            } else if (visiblePatients === 0) {
+
+                searchResult.textContent =
+                    "No se encontraron mascotas.";
+
+            } else {
+
+                searchResult.textContent =
+                    `${visiblePatients} mascota${
+                        visiblePatients === 1 ? "" : "s"
+                    } encontrada${
+                        visiblePatients === 1 ? "" : "s"
+                    }.`;
+
+            }
+
+        }
+
     }
 
-    const patientForm = document.querySelector("[data-patient-form]");
-    if (patientForm) {
-        const patientType = patientForm.querySelector("[data-patient-type]");
-        const animalSections = patientForm.querySelectorAll("[data-animal-only]");
-        const syncPatientForm = () => {
-            const isAnimal = patientType.value === "Animal";
-            animalSections.forEach((section) => setSectionVisibility(section, isAnimal));
-        };
-        patientType.addEventListener("change", syncPatientForm);
-        syncPatientForm();
+
+    if (searchForm) {
+
+        searchForm.addEventListener(
+            "submit",
+            (event) => {
+
+                event.preventDefault();
+
+                searchPatients();
+
+            }
+        );
+
     }
 
-    const recordForm = document.querySelector("[data-record-form]");
-    if (recordForm) {
-        const recordSpecialty = recordForm.querySelector("[data-record-specialty]");
-        const dentalSections = recordForm.querySelectorAll("[data-dental-only]");
-        const vetSections = recordForm.querySelectorAll("[data-vet-only]");
-        const generalSections = recordForm.querySelectorAll("[data-general-only]");
-        const syncRecordForm = () => {
-            const value = recordSpecialty.value;
-            const isDental = value === "Odontologia";
-            const isVet = value === "Veterinaria";
-            const isGeneral = value === "Consulta general";
-            dentalSections.forEach((section) => setSectionVisibility(section, isDental));
-            vetSections.forEach((section) => setSectionVisibility(section, isVet));
-            generalSections.forEach((section) => setSectionVisibility(section, isGeneral));
-        };
-        recordSpecialty.addEventListener("change", syncRecordForm);
-        syncRecordForm();
+
+    if (searchButton) {
+
+        searchButton.addEventListener(
+            "click",
+            searchPatients
+        );
+
     }
+
+
+    if (searchInput) {
+
+        searchInput.addEventListener(
+            "keydown",
+            (event) => {
+
+                if (event.key === "Enter") {
+
+                    event.preventDefault();
+
+                    searchPatients();
+
+                }
+
+            }
+        );
+
+    }
+
+
+    if (clearButton) {
+
+        clearButton.addEventListener(
+            "click",
+            () => {
+
+                if (searchInput) {
+                    searchInput.value = "";
+                }
+
+                patientItems.forEach((patient) => {
+
+                    patient.classList.remove(
+                        "is-hidden"
+                    );
+
+                });
+
+
+                if (noResults) {
+
+                    noResults.classList.add(
+                        "is-hidden"
+                    );
+
+                }
+
+
+                if (searchResult) {
+
+                    searchResult.textContent = "";
+
+                }
+
+
+                if (searchInput) {
+                    searchInput.focus();
+                }
+
+            }
+        );
+
+    }
+
+});
 </script>
+
 {% endblock %}

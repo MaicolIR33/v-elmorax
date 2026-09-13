@@ -1,328 +1,2028 @@
-<section class="module-section" id="especialidades">
-    <div class="section-heading">
-        <p class="eyebrow">{% if is_veterinary_flow %}Clinica veterinaria{% else %}Clinica{% endif %}</p>
-        <h2 class="page-title">{% if is_veterinary_flow %}Pacientes y consultas{% else %}Pacientes, especialidades y notas{% endif %}</h2>
-    </div>
-    {% if patient_saved %}
-    <div class="flash-message">Paciente registrado correctamente.</div>
-    {% endif %}
-    {% if record_saved %}
-    <div class="flash-message">Atencion clinica registrada correctamente.</div>
-    {% endif %}
-    {% if permission_error %}
-    <div class="flash-message flash-message-error">{{ permission_error }}</div>
-    {% endif %}
-    <div class="inventory-metrics">
-        <div class="metric-chip">Pacientes: {{ clinical_summary.patients_total }}</div>
-        <div class="metric-chip">Notas recientes: {{ clinical_summary.records_total }}</div>
-        <div class="metric-chip metric-chip-yellow">Seguimientos: {{ clinical_summary.follow_up }}</div>
-        <div class="metric-chip metric-chip-red">Casos abiertos: {{ clinical_summary.open_cases }}</div>
-        <div class="metric-chip">Contexto: {{ scope.scope_label }}</div>
-    </div>
-    <article class="panel-card daily-summary-card">
-        <div class="split-heading">
-            <div>
-                <p class="eyebrow">{% if is_veterinary_flow %}Cierre veterinario{% else %}Cierre diario{% endif %}</p>
-                <h3>Pacientes y recaudo del dia</h3>
-            </div>
-            <div class="queue-meta">
-                <span>{{ daily_financial_summary.date }}</span>
-                <strong>${{ "%.0f"|format(daily_financial_summary.total_collected) }}</strong>
-            </div>
+<section class="module-section vet-patients-module" id="especialidades">
+
+    <!-- =====================================================
+         ENCABEZADO
+         ===================================================== -->
+
+    <div class="section-heading split-heading vet-patients-header">
+
+        <div>
+            <p class="eyebrow">Clínica veterinaria</p>
+
+            <h2 class="page-title">
+                Pacientes
+            </h2>
+
+            <p class="lead compact">
+                Gestiona las mascotas de la sede, consulta su información y revisa sus atenciones clínicas.
+            </p>
         </div>
-        <div class="daily-summary-actions">
-            <a
-                class="btn btn-secondary"
-                href="/clinica/cierre-diario/export?day={{ daily_financial_summary.date }}{% if scope.organization_id %}&organization_id={{ scope.organization_id }}{% endif %}{% if scope.location_id %}&location_id={{ scope.location_id }}{% endif %}"
-            >
-                Exportar Excel-compatible
-            </a>
-            <a
-                class="btn btn-secondary"
-                href="/clinica/reportes/atenciones/export{% if scope.organization_id or scope.location_id %}?{% endif %}{% if scope.organization_id %}organization_id={{ scope.organization_id }}{% endif %}{% if scope.organization_id and scope.location_id %}&{% endif %}{% if scope.location_id %}location_id={{ scope.location_id }}{% endif %}"
-            >
-                Exportar atenciones
-            </a>
-            <a
-                class="btn btn-primary"
-                href="/clinica/cierre-diario/imprimir?day={{ daily_financial_summary.date }}{% if scope.organization_id %}&organization_id={{ scope.organization_id }}{% endif %}{% if scope.location_id %}&location_id={{ scope.location_id }}{% endif %}"
-                target="_blank"
-                rel="noopener noreferrer"
-            >
-                Imprimir / Guardar PDF
-            </a>
-        </div>
-        <div class="daily-summary-grid">
-            {% for item in daily_financial_summary.specialties %}
-            <div class="compact-card daily-summary-item">
-                <p class="panel-label">{{ item.label }}</p>
-                <strong>{{ item.patients_total }} pacientes</strong>
-                <p>Pagaron: {{ item.paying_patients }}</p>
-                <p>Total recogido: ${{ "%.0f"|format(item.total_collected) }}</p>
-            </div>
-            {% endfor %}
-        </div>
-        <div class="daily-summary-grid">
-            <div class="compact-card daily-summary-item">
-                <p class="panel-label">Medios de pago</p>
-                {% for item in daily_financial_summary.by_payment_method %}
-                <p>{{ item.label }}: {{ item.count }} | ${{ "%.0f"|format(item.total_collected) }}</p>
-                {% else %}
-                <p>Sin pagos registrados hoy.</p>
-                {% endfor %}
-            </div>
-            <div class="compact-card daily-summary-item">
-                <p class="panel-label">Por profesional</p>
-                {% for item in daily_financial_summary.by_professional %}
-                <p>{{ item.label }}: {{ item.count }} | ${{ "%.0f"|format(item.total_collected) }}</p>
-                {% else %}
-                <p>Sin atenciones registradas hoy.</p>
-                {% endfor %}
-            </div>
-        </div>
-    </article>
-    <div class="tab-row">
-        {% for specialty in specialty_tabs %}
-        <button class="tab-button{% if loop.first %} is-active{% endif %}" type="button" data-tab-target="{{ specialty.id }}">{{ specialty.name }}</button>
-        {% endfor %}
-    </div>
-    <div class="tab-panels">
-        {% for specialty in specialty_tabs %}
-        <article class="tab-panel{% if loop.first %} is-active{% endif %}" data-tab-panel="{{ specialty.id }}">
-            <div class="tab-main">
-                <p class="lead compact">{{ specialty.summary }}</p>
-                <div class="specialty-columns">
-                    <div>
-                        <p class="panel-label">Flujo sugerido</p>
-                        <ol class="roadmap-list single-column">
-                            {% for flow in specialty.flows %}
-                            <li>{{ flow }}</li>
-                            {% endfor %}
-                        </ol>
-                    </div>
-                    <div>
-                        <p class="panel-label">Panel fijo del profesional</p>
-                        <ul class="feature-list">
-                            {% for point in specialty.focus %}
-                            <li>{{ point }}</li>
-                            {% endfor %}
-                        </ul>
-                    </div>
-                </div>
-                {% if specialty.id == "vet" %}
-                <div class="specialty-highlight-grid">
-                    <div class="compact-card">
-                        <p class="panel-label">Ficha veterinaria activa</p>
-                        {% if veterinary_snapshot.latest_record %}
-                        <strong>{{ veterinary_snapshot.latest_record.display_name }}</strong>
-                        <p>{{ veterinary_snapshot.latest_record.species }} | {{ veterinary_snapshot.latest_record.breed }}{% if veterinary_snapshot.latest_record.owner_name %} | {{ veterinary_snapshot.latest_record.owner_name }}{% endif %}</p>
-                        <p>Peso actual: {{ veterinary_snapshot.latest_record.current_weight_kg }} kg</p>
-                        <p>Vacunas: {{ veterinary_snapshot.latest_record.vaccine_status or 'Pendiente de definir' }}</p>
-                        <p>Seguimiento: {{ veterinary_snapshot.latest_record.follow_up_date or 'Sin fecha' }}</p>
-                        {% else %}
-                        <p>No hay ficha veterinaria reciente.</p>
-                        {% endif %}
-                    </div>
-                    <div class="compact-card">
-                        <p class="panel-label">Pacientes veterinarios</p>
-                        <div class="movement-list">
-                            {% for patient in veterinary_snapshot.patients %}
-                            <div class="movement-item">
-                                <div>
-                                    <strong>{{ patient.display_name }}</strong>
-                                    <p>{{ patient.species }} | {{ patient.breed }}</p>
-                                </div>
-                                <div class="queue-meta">
-                                    <span>{{ patient.weight_kg }} kg</span>
-                                    <span>{{ patient.vaccine_status or 'Sin esquema' }}</span>
-                                </div>
-                            </div>
-                            {% endfor %}
-                        </div>
-                    </div>
-                </div>
-                {% endif %}
-                {% if specialty.id == "dental" %}
-                <div class="specialty-highlight-grid">
-                    <div class="compact-card">
-                        <p class="panel-label">Odontograma rapido</p>
-                        <div class="odontogram-grid">
-                            {% for cell in dental_snapshot.cells %}
-                            <div class="tooth-card tooth-{{ cell.tone }}">
-                                <strong>{{ cell.tooth }}</strong>
-                                <span>{{ cell.state }}</span>
-                            </div>
-                            {% endfor %}
-                        </div>
-                    </div>
-                    <div class="compact-card">
-                        <p class="panel-label">Ultima nota odontologica</p>
-                        {% if dental_snapshot.latest_record %}
-                        <strong>{{ dental_snapshot.latest_record.display_name }}</strong>
-                        <p>{{ dental_snapshot.latest_record.reason }}</p>
-                        <p>{{ dental_snapshot.latest_record.note }}</p>
-                        <p>Resumen dental: {{ dental_snapshot.latest_record.dental_chart or 'Sin detalle adicional' }}</p>
-                        <p>Control sugerido: {{ dental_snapshot.latest_record.follow_up_date or 'Sin fecha' }}</p>
-                        {% else %}
-                        <p>No hay registros odontologicos recientes.</p>
-                        {% endif %}
-                    </div>
-                </div>
-                {% endif %}
-            </div>
-        </article>
-        {% endfor %}
-    </div>
-    <div class="clinical-grid">
+
+
         {% if permissions.manage_clinical %}
-        <article class="panel-card" id="nuevo-paciente">
-            <div class="section-heading"><p class="eyebrow">Paciente</p><h3>Registrar paciente</h3></div>
-            <form action="/patients" method="post" class="inventory-form" data-patient-form>
-                <input type="hidden" name="organization_id" value="{{ scope.selected_organization.id if scope.selected_organization else scope.organizations[0].id }}">
-                <input type="hidden" name="location_id" value="{{ scope.selected_location.id if scope.selected_location else scope.locations[0].id if scope.locations else '' }}">
-                <label><span>Nombre visible</span><input type="text" name="display_name" placeholder="Paciente o mascota" required></label>
-                <div class="form-grid">
-                    <label><span>Tipo</span><select name="patient_type" data-patient-type>{% if is_veterinary_flow %}<option selected>Animal</option>{% else %}<option selected>{{ patient_form_defaults.patient_type }}</option><option>Animal</option>{% endif %}</select></label>
-                    <label><span>Especialidad</span><select name="specialty" data-patient-specialty>{% if is_veterinary_flow %}<option selected>Veterinaria</option>{% else %}<option selected>{{ patient_form_defaults.specialty }}</option><option>Veterinaria</option><option>Consulta general</option>{% endif %}</select></label>
-                </div>
-                <div class="form-grid">
-                    <label><span>Documento</span><input type="text" name="document_number" placeholder="CC, TI o identificador interno"></label>
-                    <label><span>Fecha nacimiento</span><input type="date" name="birth_date"></label>
-                </div>
-                <div class="form-grid">
-                    <label><span>Sexo</span><select name="sex"><option value="">Sin definir</option><option>Femenino</option><option>Masculino</option><option>Otro</option></select></label>
-                    <label><span>Asegurador / plan</span><input type="text" name="insurance_name" placeholder="EPS, prepagada o convenio"></label>
-                </div>
-                <label data-animal-only><span>Responsable</span><input type="text" name="owner_name" placeholder="Solo si aplica"></label>
-                <div class="form-grid" data-animal-only>
-                    <label><span>Especie</span><input type="text" name="species" placeholder="Canino, felino, humano..."></label>
-                    <label><span>Raza</span><input type="text" name="breed" placeholder="Raza o subtipo"></label>
-                </div>
-                <div class="form-grid" data-animal-only>
-                    <label><span>Peso kg</span><input type="number" min="0" step="0.1" name="weight_kg" value="0"></label>
-                    <label><span>Vacunas</span><select name="vaccine_status"><option selected>{{ patient_form_defaults.vaccine_status }}</option><option>Al dia</option><option>Pendiente</option><option>En seguimiento</option></select></label>
-                </div>
-                <label><span>Telefono</span><input type="text" name="phone" placeholder="Contacto del paciente o responsable"></label>
-                <button class="btn btn-primary btn-block" type="submit">Guardar paciente</button>
-            </form>
-        </article>
-        <article class="panel-card" id="registro-clinico">
-            <div class="section-heading"><p class="eyebrow">Atencion</p><h3>Registrar nota clinica</h3></div>
-            <form action="/clinical-records" method="post" class="inventory-form" data-record-form>
-                <input type="hidden" name="organization_id" value="{{ scope.selected_organization.id if scope.selected_organization else scope.organizations[0].id }}">
-                <input type="hidden" name="location_id" value="{{ scope.selected_location.id if scope.selected_location else scope.locations[0].id if scope.locations else '' }}">
-                <label><span>Paciente</span><select name="patient_id">{% for option in patient_options %}<option value="{{ option.id }}"{% if selected_patient_id == option.id %} selected{% endif %}>{{ option.label }}</option>{% endfor %}</select></label>
-                <div class="form-grid">
-                    <label><span>Fecha</span><input type="date" name="encounter_date" value="{{ clinical_form_defaults.encounter_date }}" required></label>
-                    <label><span>Especialidad</span><select name="specialty" data-record-specialty>{% if is_veterinary_flow %}<option selected>Veterinaria</option>{% else %}<option selected>{{ clinical_form_defaults.specialty }}</option><option>Veterinaria</option><option>Consulta general</option>{% endif %}</select></label>
-                </div>
-                <label><span>Motivo</span><input type="text" name="reason" placeholder="Motivo de consulta" required></label>
-                <label><span>Nota clinica</span><input type="text" name="note" placeholder="Resumen clinico corto" required></label>
-                <div class="form-grid">
-                    <label><span>Servicio realizado</span><input type="text" name="service_performed" placeholder="Consulta, profilaxis, vacunacion..."></label>
-                    <label><span>Diagnostico</span><input type="text" name="diagnosis" placeholder="Diagnostico principal"></label>
-                </div>
-                <label><span>Plan / conducta</span><input type="text" name="treatment_plan" placeholder="Plan de manejo o tratamiento"></label>
-                <div class="form-grid">
-                    <label><span>Alergias</span><input type="text" name="allergies" placeholder="Medicamentos o antecedentes"></label>
-                    <label><span>Signos vitales</span><input type="text" name="vital_signs" placeholder="TA, FC, peso, temperatura..."></label>
-                </div>
-                <label data-dental-only><span>Resumen odontologico</span><input type="text" name="dental_chart" placeholder="Ej. 16 caries, 17 resina, 26 ausente"></label>
-                <div class="form-grid">
-                    <label><span>Estado</span><select name="status"><option selected>{{ clinical_form_defaults.status }}</option><option>Seguimiento</option><option>Abierta</option></select></label>
-                    <label><span>Profesional</span><input type="text" name="professional" placeholder="Nombre del profesional" required></label>
-                </div>
-                <div class="form-grid" data-vet-only>
-                    <label><span>Peso actual kg</span><input type="number" min="0" step="0.1" name="current_weight_kg" value="0"></label>
-                    <label><span>Proximo control</span><input type="date" name="follow_up_date" value="{{ clinical_form_defaults.follow_up_date }}"></label>
-                </div>
-                <label data-vet-only><span>Proxima vacuna</span><input type="date" name="next_vaccine_due"></label>
-                <label data-general-only><span>Proximo control</span><input type="date" name="follow_up_date" value="{{ clinical_form_defaults.follow_up_date }}"></label>
-                <label><span>Formula / indicaciones</span><input type="text" name="prescription" placeholder="Medicamentos o indicaciones"></label>
-                <label><span>Recomendaciones de salida</span><input type="text" name="discharge_notes" placeholder="Controles, signos de alarma, cuidados"></label>
-                <div class="form-grid">
-                    <label><span>Valor pagado</span><input type="number" min="0" step="1000" name="payment_amount" value="0"></label>
-                    <label><span>Medio de pago</span><select name="payment_method"><option>Efectivo</option><option>Transferencia</option><option>Tarjeta</option><option>Mixto</option><option>Sin definir</option></select></label>
-                </div>
-                <button class="btn btn-primary btn-block" type="submit">Guardar atencion</button>
-            </form>
-        </article>
+
+        <div class="vet-patient-actions">
+
+            <button
+                type="button"
+                class="btn btn-primary"
+                data-open-modal="patient-modal"
+            >
+                + Registrar mascota
+            </button>
+
+            <button
+                type="button"
+                class="btn btn-secondary"
+                data-open-modal="record-modal"
+            >
+                + Registrar nota
+            </button>
+
+        </div>
+
         {% endif %}
-        <article class="panel-card">
-            <div class="section-heading"><p class="eyebrow">Pacientes</p><h3>Listado actual</h3></div>
-            <div class="movement-list">
-                {% for patient in patients %}
-                <div class="movement-item">
-                    <div>
-                        <strong>{{ patient.display_name }}</strong>
-                        <p>{{ patient.patient_type }} | {{ patient.specialty }} | {{ patient.site_name }}{% if patient.document_number %} | {{ patient.document_number }}{% endif %}{% if patient.owner_name %} | {{ patient.owner_name }}{% endif %}{% if patient.species %} | {{ patient.species }}{% endif %}{% if patient.breed %} | {{ patient.breed }}{% endif %}</p>
-                        {% if patient.insurance_name or patient.sex or patient.birth_date %}
-                        <p>{{ patient.insurance_name or 'Sin plan' }}{% if patient.sex %} | {{ patient.sex }}{% endif %}{% if patient.birth_date %} | {{ patient.birth_date }}{% endif %}</p>
-                        {% endif %}
-                    </div>
-                    <div class="queue-meta">
-                        <span>{{ patient.phone or 'Sin telefono' }}</span>
-                        <span>{% if patient.weight_kg %}{{ patient.weight_kg }} kg{% else %}Sin peso{% endif %}</span>
-                        <span>{{ patient.last_visit }}</span>
-                        {% if permissions.manage_clinical %}
-                        <form action="/patients/{{ patient.id }}/delete" method="post" class="inline-form">
-                            <input type="hidden" name="organization_id" value="{{ scope.organization_id }}">
-                            <input type="hidden" name="location_id" value="{{ scope.location_id }}">
-                            <button class="action-button action-danger" type="submit">Eliminar</button>
-                        </form>
-                        {% endif %}
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
-        </article>
-        <article class="panel-card">
-            <div class="section-heading"><p class="eyebrow">Notas</p><h3>Atenciones recientes</h3></div>
-            <div class="movement-list">
-                {% for record in clinical_records %}
-                <div class="movement-item">
-                    <div>
-                        <strong>{{ record.display_name }}</strong>
-                        <p>{{ record.reason }} | {{ record.specialty }} | {{ record.site_name }}</p>
-                        {% if record.service_performed or record.diagnosis %}
-                        <p>{{ record.service_performed or 'Sin servicio detallado' }}{% if record.diagnosis %} | Dx: {{ record.diagnosis }}{% endif %}</p>
-                        {% endif %}
-                        <p>{{ record.note }}</p>
-                        {% if record.treatment_plan %}<p>Plan: {{ record.treatment_plan }}</p>{% endif %}
-                        {% if record.vital_signs %}<p>Signos: {{ record.vital_signs }}</p>{% endif %}
-                        {% if record.allergies %}<p>Alergias: {{ record.allergies }}</p>{% endif %}
-                        {% if record.prescription %}<p>Formula: {{ record.prescription }}</p>{% endif %}
-                        {% if record.discharge_notes %}<p>Salida: {{ record.discharge_notes }}</p>{% endif %}
-                        {% if record.dental_chart %}<p>Dental: {{ record.dental_chart }}</p>{% endif %}
-                        {% if record.current_weight_kg %}<p>Peso: {{ record.current_weight_kg }} kg</p>{% endif %}
-                        {% if record.next_vaccine_due %}<p>Proxima vacuna: {{ record.next_vaccine_due }}</p>{% endif %}
-                        <p>Pago: ${{ "%.0f"|format(record.payment_amount or 0) }}{% if record.payment_method %} | {{ record.payment_method }}{% endif %}</p>
-                    </div>
-                    <div class="queue-meta">
-                        <span class="table-badge table-badge-{% if record.status == 'Cerrada' %}green{% elif record.status == 'Seguimiento' %}yellow{% else %}red{% endif %}">{{ record.status }}</span>
-                        <span>{{ record.follow_up_date or 'Sin control' }}</span>
-                        <span>{{ record.encounter_date }}</span>
-                        {% if permissions.manage_clinical %}
-                        <form action="/clinical-records/{{ record.id }}/status" method="post" class="inline-form">
-                            <input type="hidden" name="organization_id" value="{{ scope.organization_id }}">
-                            <input type="hidden" name="location_id" value="{{ scope.location_id }}">
-                            <select name="status">
-                                <option{% if record.status == "Cerrada" %} selected{% endif %}>Cerrada</option>
-                                <option{% if record.status == "Seguimiento" %} selected{% endif %}>Seguimiento</option>
-                                <option{% if record.status == "Abierta" %} selected{% endif %}>Abierta</option>
-                            </select>
-                            <button class="action-button" type="submit">Actualizar</button>
-                        </form>
-                        <form action="/clinical-records/{{ record.id }}/delete" method="post" class="inline-form">
-                            <input type="hidden" name="organization_id" value="{{ scope.organization_id }}">
-                            <input type="hidden" name="location_id" value="{{ scope.location_id }}">
-                            <button class="action-button action-danger" type="submit">Eliminar</button>
-                        </form>
-                        {% endif %}
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
-        </article>
+
     </div>
+
+
+    <!-- =====================================================
+         MENSAJES
+         ===================================================== -->
+
+    {% if patient_saved %}
+
+    <div class="flash-message">
+        Paciente registrado correctamente.
+    </div>
+
+    {% endif %}
+
+
+    {% if record_saved %}
+
+    <div class="flash-message">
+        Atención clínica registrada correctamente.
+    </div>
+
+    {% endif %}
+
+
+    {% if permission_error %}
+
+    <div class="flash-message flash-message-error">
+        {{ permission_error }}
+    </div>
+
+    {% endif %}
+
+
+    <!-- =====================================================
+         MÉTRICAS
+         ===================================================== -->
+
+    <div class="inventory-metrics vet-patient-metrics">
+
+        <div class="metric-chip">
+            Pacientes: {{ clinical_summary.patients_total }}
+        </div>
+
+        <div class="metric-chip">
+            Atenciones: {{ clinical_summary.records_total }}
+        </div>
+
+        <div class="metric-chip metric-chip-yellow">
+            Seguimientos: {{ clinical_summary.follow_up }}
+        </div>
+
+        <div class="metric-chip metric-chip-red">
+            Casos abiertos: {{ clinical_summary.open_cases }}
+        </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         BÚSQUEDA
+         ===================================================== -->
+
+    <article class="panel-card vet-patient-search-card">
+
+        <div class="section-heading">
+
+            <p class="eyebrow">
+                Consulta rápida
+            </p>
+
+            <h3>
+                Buscar mascota
+            </h3>
+
+        </div>
+
+
+        <form
+            class="filter-bar vet-patient-search"
+            data-patient-search-form
+            onsubmit="return false;"
+        >
+
+            <label>
+
+                <span>
+                    Buscar paciente
+                </span>
+
+                <input
+                    type="search"
+                    id="patient-search"
+                    data-patient-search
+                    placeholder="Nombre, especie o raza..."
+                    autocomplete="off"
+                >
+
+            </label>
+
+
+            <div class="filter-actions">
+
+                <button
+                    type="submit"
+                    class="btn btn-secondary"
+                    data-patient-search-button
+                >
+                    🔎 Buscar
+                </button>
+
+
+                <button
+                    type="button"
+                    class="btn btn-secondary"
+                    data-patient-search-clear
+                >
+                    Limpiar
+                </button>
+
+            </div>
+
+        </form>
+
+
+        <p
+            class="vet-search-result"
+            data-patient-search-result
+            aria-live="polite"
+        ></p>
+
+    </article>
+
+
+    <!-- =====================================================
+         PACIENTES + ATENCIONES
+         ===================================================== -->
+
+    <div class="vet-patients-layout">
+
+
+        <!-- =================================================
+             LISTADO DE PACIENTES
+             ================================================= -->
+
+        <article class="panel-card vet-patient-list-card">
+
+            <div class="split-heading vet-card-heading">
+
+                <div>
+
+                    <p class="eyebrow">
+                        Pacientes registrados
+                    </p>
+
+                    <h3>
+                        Listado de mascotas
+                    </h3>
+
+                </div>
+
+
+                <strong class="vet-list-count">
+                    {{ clinical_summary.patients_total }}
+                </strong>
+
+            </div>
+
+
+            <div
+                class="vet-patient-list"
+                data-patient-list
+            >
+
+                {% for patient in patients %}
+
+                <div
+                    class="vet-patient-item"
+                    data-patient-item
+                    data-patient-name="{{ patient.display_name|lower }}"
+                    data-patient-species="{{ patient.species|default('', true)|lower }}"
+                    data-patient-breed="{{ patient.breed|default('', true)|lower }}"
+                >
+
+                    <div class="vet-patient-main">
+
+                        <div class="vet-patient-icon">
+
+                            {% if patient.species|lower == "canino" %}
+                                🐶
+                            {% elif patient.species|lower == "felino" %}
+                                🐱
+                            {% elif patient.species|lower == "ave" %}
+                                🐦
+                            {% elif patient.species|lower == "reptil" %}
+                                🦎
+                            {% elif patient.species|lower == "roedor" %}
+                                🐹
+                            {% else %}
+                                🐾
+                            {% endif %}
+
+                        </div>
+
+
+                        <div>
+
+                            <strong>
+                                {{ patient.display_name }}
+                            </strong>
+
+                            <p class="vet-patient-description">
+
+                                {{ patient.species or "Especie sin registrar" }}
+
+                                {% if patient.breed %}
+                                    · {{ patient.breed }}
+                                {% endif %}
+
+                            </p>
+
+
+                            <p class="vet-patient-secondary">
+
+                                {% if patient.sex %}
+                                    {{ patient.sex }}
+                                {% endif %}
+
+                                {% if patient.sex and patient.birth_date %}
+                                    ·
+                                {% endif %}
+
+                                {% if patient.birth_date %}
+                                    {{ patient.birth_date }}
+                                {% endif %}
+
+                            </p>
+
+                        </div>
+
+                    </div>
+
+
+                    <div class="vet-patient-info">
+
+                        <span>
+
+                            {% if patient.weight_kg %}
+                                {{ patient.weight_kg }} kg
+                            {% else %}
+                                Sin peso
+                            {% endif %}
+
+                        </span>
+
+
+                        <span
+                            class="table-badge table-badge-green"
+                        >
+                            {{ patient.vaccine_status or "Sin esquema" }}
+                        </span>
+
+
+                        <span>
+                            Última atención:
+                            {{ patient.last_visit or "Sin atenciones" }}
+                        </span>
+
+
+                        {% if permissions.manage_clinical %}
+                        <button
+                            type="button"
+                            class="action-button"
+                            data-edit-patient
+                            data-patient-id="{{ patient.id }}"
+                            data-patient-name="{{ patient.display_name|default('', true) }}"
+                            data-patient-species="{{ patient.species|default('', true) }}"
+                            data-patient-breed="{{ patient.breed|default('', true) }}"
+                            data-patient-sex="{{ patient.sex|default('', true) }}"
+                            data-patient-birth-date="{{ patient.birth_date|default('', true) }}"
+                            data-patient-weight="{{ patient.weight_kg|default('', true) }}"
+                            data-patient-vaccine="{{ patient.vaccine_status|default('No aplica', true) }}"
+                        >
+                            Actualizar
+                        </button>
+
+                        <form
+                            action="/patients/{{ patient.id }}/delete"
+                            method="post"
+                            class="inline-form"
+                            onsubmit="return confirm('¿Deseas eliminar esta mascota?');"
+                        >
+
+                            <input
+                                type="hidden"
+                                name="organization_id"
+                                value="{{ scope.organization_id }}"
+                            >
+
+                            <input
+                                type="hidden"
+                                name="location_id"
+                                value="{{ scope.location_id }}"
+                            >
+
+                            <button
+                                class="action-button action-danger"
+                                type="submit"
+                            >
+                                Eliminar
+                            </button>
+
+                        </form>
+
+                        {% endif %}
+
+                    </div>
+
+                </div>
+
+
+                {% else %}
+
+                <div class="vet-empty-state">
+
+                    <div class="vet-empty-icon">
+                        🐾
+                    </div>
+
+                    <strong>
+                        No hay mascotas registradas
+                    </strong>
+
+                    <p>
+                        Utiliza "Registrar mascota" para agregar el primer paciente.
+                    </p>
+
+                </div>
+
+                {% endfor %}
+
+
+                <div
+                    class="vet-empty-state is-hidden"
+                    data-patient-no-results
+                >
+
+                    <div class="vet-empty-icon">
+                        🔎
+                    </div>
+
+                    <strong>
+                        No se encontraron mascotas
+                    </strong>
+
+                    <p>
+                        Prueba con otro nombre, especie o raza.
+                    </p>
+
+                </div>
+
+            </div>
+
+        </article>
+
+
+        <!-- =================================================
+             ATENCIONES RECIENTES
+             ================================================= -->
+
+        <article class="panel-card vet-recent-card">
+
+            <div class="split-heading vet-card-heading">
+
+                <div>
+
+                    <p class="eyebrow">
+                        Historial reciente
+                    </p>
+
+                    <h3>
+                        Atenciones recientes
+                    </h3>
+
+                </div>
+
+
+                <strong class="vet-list-count">
+                    {{ clinical_summary.records_total }}
+                </strong>
+
+            </div>
+
+
+            <div class="vet-recent-list">
+
+                {% for record in clinical_records %}
+
+                <div class="vet-recent-item">
+
+                    <div class="vet-recent-main">
+
+                        <div class="vet-recent-icon">
+                            🩺
+                        </div>
+
+
+                        <div>
+
+                            <strong>
+                                {{ record.display_name }}
+                            </strong>
+
+                            <p>
+                                {{ record.reason }}
+                            </p>
+
+
+                            {% if record.service_performed %}
+
+                            <p class="vet-recent-detail">
+                                {{ record.service_performed }}
+                            </p>
+
+                            {% endif %}
+
+
+                            <p class="vet-recent-note">
+                                {{ record.note }}
+                            </p>
+
+                        </div>
+
+                    </div>
+
+
+                    <div class="vet-recent-meta">
+
+                        <span>
+                            {{ record.encounter_date }}
+                        </span>
+
+
+                        <span
+                            class="table-badge table-badge-{% if record.status == 'Cerrada' %}green{% elif record.status == 'Seguimiento' %}yellow{% else %}red{% endif %}"
+                        >
+                            {{ record.status }}
+                        </span>
+
+
+                        {% if record.follow_up_date %}
+
+                        <small>
+                            Control: {{ record.follow_up_date }}
+                        </small>
+
+                        {% endif %}
+
+                    </div>
+
+                </div>
+
+
+                {% else %}
+
+                <div class="vet-empty-state">
+
+                    <div class="vet-empty-icon">
+                        🩺
+                    </div>
+
+                    <strong>
+                        No hay atenciones recientes
+                    </strong>
+
+                    <p>
+                        Las notas clínicas aparecerán aquí después de registrar una atención.
+                    </p>
+
+                </div>
+
+                {% endfor %}
+
+            </div>
+
+        </article>
+
+    </div>
+
+
+    <!-- =====================================================
+         MODAL — REGISTRAR MASCOTA
+         ===================================================== -->
+
+    {% if permissions.manage_clinical %}
+
+    <div
+        class="vet-modal is-hidden"
+        id="patient-modal"
+        data-modal
+    >
+
+        <div
+            class="vet-modal-backdrop"
+            data-close-modal
+        ></div>
+
+
+        <div
+            class="vet-modal-content"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="patient-modal-title"
+        >
+
+            <div class="vet-modal-header">
+
+                <div>
+
+                    <p class="eyebrow" data-patient-modal-eyebrow>
+                        Nueva mascota
+                    </p>
+
+                    <h3 id="patient-modal-title">
+                        Registrar paciente
+                    </h3>
+
+                    <p data-patient-modal-description>
+                        Ingresa únicamente la información de la mascota.
+                    </p>
+
+                </div>
+
+
+                <button
+                    type="button"
+                    class="vet-modal-close"
+                    data-close-modal
+                    aria-label="Cerrar"
+                >
+                    ×
+                </button>
+
+            </div>
+
+
+            <form
+                action="/patients"
+                method="post"
+                class="inventory-form vet-modal-form"
+                data-patient-form
+            >
+
+                <input
+                    type="hidden"
+                    name="organization_id"
+                    value="{{ scope.organization_id }}"
+                >
+
+                <input
+                    type="hidden"
+                    name="location_id"
+                    value="{{ scope.location_id }}"
+                >
+
+                <input
+                    type="hidden"
+                    name="patient_type"
+                    value="Animal"
+                >
+
+                <input
+                    type="hidden"
+                    name="specialty"
+                    value="Veterinaria"
+                >
+
+                <!-- Campos conservados para compatibilidad con el backend -->
+                <input type="hidden" name="owner_name" value="">
+                <input type="hidden" name="phone" value="">
+                <input type="hidden" name="document_number" value="">
+                <input type="hidden" name="insurance_name" value="">
+
+
+                <div class="form-grid">
+
+                    <label>
+
+                        <span>
+                            Nombre de la mascota *
+                        </span>
+
+                        <input
+                            type="text"
+                            name="display_name"
+                            placeholder="Ej. Max"
+                            required
+                        >
+
+                    </label>
+
+
+                    <label>
+
+                        <span>
+                            Especie *
+                        </span>
+
+                        <select
+                            name="species"
+                            required
+                        >
+
+                            <option value="">
+                                Seleccionar
+                            </option>
+
+                            <option value="Canino">
+                                Canino
+                            </option>
+
+                            <option value="Felino">
+                                Felino
+                            </option>
+
+                            <option value="Ave">
+                                Ave
+                            </option>
+
+                            <option value="Roedor">
+                                Roedor
+                            </option>
+
+                            <option value="Reptil">
+                                Reptil
+                            </option>
+
+                            <option value="Otro">
+                                Otro
+                            </option>
+
+                        </select>
+
+                    </label>
+
+                </div>
+
+
+                <div class="form-grid">
+
+                    <label>
+
+                        <span>
+                            Raza
+                        </span>
+
+                        <input
+                            type="text"
+                            name="breed"
+                            placeholder="Ej. Labrador"
+                        >
+
+                    </label>
+
+
+                    <label>
+
+                        <span>
+                            Sexo
+                        </span>
+
+                        <select name="sex">
+
+                            <option value="">
+                                Sin definir
+                            </option>
+
+                            <option value="Macho">
+                                Macho
+                            </option>
+
+                            <option value="Hembra">
+                                Hembra
+                            </option>
+
+                        </select>
+
+                    </label>
+
+                </div>
+
+
+                <div class="form-grid">
+
+                    <label>
+
+                        <span>
+                            Fecha de nacimiento
+                        </span>
+
+                        <input
+                            type="date"
+                            name="birth_date"
+                        >
+
+                    </label>
+
+
+                    <label>
+
+                        <span>
+                            Peso actual (kg)
+                        </span>
+
+                        <input
+                            type="number"
+                            name="weight_kg"
+                            min="0"
+                            step="0.1"
+                            placeholder="Ej. 12.5"
+                        >
+
+                    </label>
+
+                </div>
+
+
+                <label>
+
+                    <span>
+                        Estado de vacunación
+                    </span>
+
+                    <select name="vaccine_status">
+
+                        <option value="No aplica">
+                            No aplica
+                        </option>
+
+                        <option value="Al día">
+                            Al día
+                        </option>
+
+                        <option value="Pendiente">
+                            Pendiente
+                        </option>
+
+                        <option value="En seguimiento">
+                            En seguimiento
+                        </option>
+
+                    </select>
+
+                </label>
+
+
+                <div class="vet-modal-actions">
+
+                    <button
+                        type="button"
+                        class="btn btn-secondary"
+                        data-close-modal
+                    >
+                        Cancelar
+                    </button>
+
+
+                    <button
+                        type="submit"
+                        class="btn btn-primary"
+                        data-patient-submit
+                    >
+                        Guardar mascota
+                    </button>
+
+                </div>
+
+            </form>
+
+        </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         MODAL — REGISTRAR NOTA CLÍNICA
+         ===================================================== -->
+
+    <div
+        class="vet-modal is-hidden"
+        id="record-modal"
+        data-modal
+    >
+
+        <div
+            class="vet-modal-backdrop"
+            data-close-modal
+        ></div>
+
+
+        <div
+            class="vet-modal-content vet-record-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="record-modal-title"
+        >
+
+            <div class="vet-modal-header">
+
+                <div>
+
+                    <p class="eyebrow">
+                        Atención veterinaria
+                    </p>
+
+                    <h3 id="record-modal-title">
+                        Registrar nota clínica
+                    </h3>
+
+                    <p>
+                        Registra la información de la atención realizada.
+                    </p>
+
+                </div>
+
+
+                <button
+                    type="button"
+                    class="vet-modal-close"
+                    data-close-modal
+                    aria-label="Cerrar"
+                >
+                    ×
+                </button>
+
+            </div>
+
+
+            <form
+                action="/clinical-records"
+                method="post"
+                class="inventory-form vet-modal-form"
+            >
+
+                <input
+                    type="hidden"
+                    name="organization_id"
+                    value="{{ scope.organization_id }}"
+                >
+
+                <input
+                    type="hidden"
+                    name="location_id"
+                    value="{{ scope.location_id }}"
+                >
+
+                <input
+                    type="hidden"
+                    name="specialty"
+                    value="Veterinaria"
+                >
+
+                <label>
+
+                    <span>
+                        Mascota *
+                    </span>
+
+                    <select
+                        name="patient_id"
+                        required
+                    >
+
+                        <option value="">
+                            Seleccionar mascota
+                        </option>
+
+                        {% for option in patient_options %}
+
+                        <option
+                            value="{{ option.id }}"
+                            {% if selected_patient_id == option.id %}
+                            selected
+                            {% endif %}
+                        >
+                            {{ option.label }}
+                        </option>
+
+                        {% endfor %}
+
+                    </select>
+
+                </label>
+
+
+                <div class="form-grid">
+
+                    <label>
+
+                        <span>
+                            Fecha *
+                        </span>
+
+                        <input
+                            type="date"
+                            name="encounter_date"
+                            value="{{ clinical_form_defaults.encounter_date }}"
+                            required
+                        >
+
+                    </label>
+
+
+                    <label>
+
+                        <span>
+                            Profesional *
+                        </span>
+
+                        <input
+                            type="text"
+                            name="professional"
+                            placeholder="Nombre del profesional"
+                            required
+                        >
+
+                    </label>
+
+                </div>
+
+
+                <label>
+
+                    <span>
+                        Motivo de consulta *
+                    </span>
+
+                    <input
+                        type="text"
+                        name="reason"
+                        placeholder="Ej. Control, vacunación, enfermedad..."
+                        required
+                    >
+
+                </label>
+
+
+                <label>
+
+                    <span>
+                        Nota clínica *
+                    </span>
+
+                    <textarea
+                        name="note"
+                        rows="3"
+                        placeholder="Describe la atención realizada..."
+                        required
+                    ></textarea>
+
+                </label>
+
+
+                <div class="form-grid">
+
+                    <label>
+
+                        <span>
+                            Servicio realizado
+                        </span>
+
+                        <input
+                            type="text"
+                            name="service_performed"
+                            placeholder="Consulta, vacunación..."
+                        >
+
+                    </label>
+
+
+                    <label>
+
+                        <span>
+                            Diagnóstico
+                        </span>
+
+                        <input
+                            type="text"
+                            name="diagnosis"
+                            placeholder="Diagnóstico"
+                        >
+
+                    </label>
+
+                </div>
+
+
+                <label>
+
+                    <span>
+                        Plan / tratamiento
+                    </span>
+
+                    <input
+                        type="text"
+                        name="treatment_plan"
+                        placeholder="Tratamiento o conducta"
+                    >
+
+                </label>
+
+
+                <div class="form-grid">
+
+                    <label>
+
+                        <span>
+                            Peso actual (kg)
+                        </span>
+
+                        <input
+                            type="number"
+                            min="0"
+                            step="0.1"
+                            name="current_weight_kg"
+                            value="0"
+                        >
+
+                    </label>
+
+
+                    <label>
+
+                        <span>
+                            Próximo control
+                        </span>
+
+                        <input
+                            type="date"
+                            name="follow_up_date"
+                            value="{{ clinical_form_defaults.follow_up_date }}"
+                        >
+
+                    </label>
+
+                </div>
+
+
+                <div class="form-grid">
+
+                    <label>
+
+                        <span>
+                            Signos vitales
+                        </span>
+
+                        <input
+                            type="text"
+                            name="vital_signs"
+                            placeholder="Temperatura, FC..."
+                        >
+
+                    </label>
+
+
+                    <label>
+
+                        <span>
+                            Alergias
+                        </span>
+
+                        <input
+                            type="text"
+                            name="allergies"
+                            placeholder="Antecedentes relevantes"
+                        >
+
+                    </label>
+
+                </div>
+
+
+                <label>
+
+                    <span>
+                        Fórmula / indicaciones
+                    </span>
+
+                    <input
+                        type="text"
+                        name="prescription"
+                        placeholder="Medicamentos o indicaciones"
+                    >
+
+                </label>
+
+
+                <label>
+
+                    <span>
+                        Recomendaciones de salida
+                    </span>
+
+                    <input
+                        type="text"
+                        name="discharge_notes"
+                        placeholder="Cuidados y recomendaciones"
+                    >
+
+                </label>
+
+
+                <div class="form-grid">
+
+                    <label>
+
+                        <span>
+                            Estado
+                        </span>
+
+                        <select name="status">
+
+                            <option value="Cerrada">
+                                Cerrada
+                            </option>
+
+                            <option value="Seguimiento">
+                                Seguimiento
+                            </option>
+
+                            <option value="Abierta">
+                                Abierta
+                            </option>
+
+                        </select>
+
+                    </label>
+
+
+                    <label>
+
+                        <span>
+                            Próxima vacuna
+                        </span>
+
+                        <input
+                            type="date"
+                            name="next_vaccine_due"
+                        >
+
+                    </label>
+
+                </div>
+
+
+                <!-- Campos mantenidos para compatibilidad con el backend -->
+                <input
+                    type="hidden"
+                    name="dental_chart"
+                    value=""
+                >
+
+                <input
+                    type="hidden"
+                    name="payment_amount"
+                    value="0"
+                >
+
+                <input
+                    type="hidden"
+                    name="payment_method"
+                    value="Sin definir"
+                >
+
+
+                <div class="vet-modal-actions">
+
+                    <button
+                        type="button"
+                        class="btn btn-secondary"
+                        data-close-modal
+                    >
+                        Cancelar
+                    </button>
+
+
+                    <button
+                        type="submit"
+                        class="btn btn-primary"
+                    >
+                        Guardar atención
+                    </button>
+
+                </div>
+
+            </form>
+
+        </div>
+
+    </div>
+
+    {% endif %}
+
 </section>
+
+<style>
+/* =========================================================
+   PACIENTES VETERINARIA - DISEÑO FINAL
+   ========================================================= */
+
+/* -------------------------
+   PACIENTES + ATENCIONES
+   ------------------------- */
+
+.vet-patients-layout {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
+    gap: 14px !important;
+    width: 100% !important;
+    align-items: stretch !important;
+}
+
+.vet-patient-list-card,
+.vet-recent-card {
+    width: 100% !important;
+    min-width: 0 !important;
+    height: 300px !important;
+    max-height: 300px !important;
+    overflow: hidden !important;
+    box-sizing: border-box !important;
+}
+
+/* Contenido desplazable dentro de cada cuadro */
+
+.vet-patient-list,
+.vet-recent-list {
+    max-height: 220px !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    padding-right: 5px !important;
+}
+
+/* -------------------------
+   PANEL LATERAL
+   ------------------------- */
+
+.vet-modal {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+
+    display: flex !important;
+    justify-content: flex-end !important;
+    align-items: stretch !important;
+
+    z-index: 99999 !important;
+
+    background: transparent !important;
+
+    opacity: 1 !important;
+    visibility: visible !important;
+    pointer-events: auto !important;
+
+    margin: 0 !important;
+    padding: 0 !important;
+
+    box-sizing: border-box !important;
+}
+
+/* MODAL CERRADO */
+
+.vet-modal.is-hidden {
+    display: none !important;
+    opacity: 0 !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+}
+
+/* Fondo oscuro */
+
+.vet-modal-backdrop {
+    position: absolute !important;
+    inset: 0 !important;
+
+    background: rgba(2, 12, 14, 0.72) !important;
+    backdrop-filter: blur(2px) !important;
+
+    cursor: pointer !important;
+}
+
+/* -------------------------
+   PANEL DERECHO
+   ------------------------- */
+
+.vet-modal-content {
+    position: relative !important;
+    z-index: 2 !important;
+
+    width: 560px !important;
+    max-width: 48vw !important;
+    min-width: 500px !important;
+
+    height: 100vh !important;
+    max-height: 100vh !important;
+
+    margin: 0 !important;
+
+    padding: 24px !important;
+
+    box-sizing: border-box !important;
+
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+
+    background: #102528 !important;
+
+    border-left: 1px solid rgba(105, 188, 177, 0.45) !important;
+
+    box-shadow:
+        -20px 0 50px rgba(0, 0, 0, 0.40) !important;
+
+    transform: translateX(0) !important;
+
+    animation: vetPanelEntrada 0.25s ease-out !important;
+}
+
+@keyframes vetPanelEntrada {
+    from {
+        transform: translateX(100%);
+    }
+
+    to {
+        transform: translateX(0);
+    }
+}
+
+/* -------------------------
+   CABECERA DEL PANEL
+   ------------------------- */
+
+.vet-modal-header {
+    display: flex !important;
+    align-items: flex-start !important;
+    justify-content: space-between !important;
+
+    gap: 20px !important;
+
+    padding-bottom: 16px !important;
+    margin-bottom: 18px !important;
+
+    border-bottom: 1px solid rgba(105, 188, 177, 0.18) !important;
+}
+
+.vet-modal-header h3 {
+    margin-top: 3px !important;
+    margin-bottom: 5px !important;
+}
+
+/* Botón X */
+
+.vet-modal-close {
+    width: 36px !important;
+    height: 36px !important;
+
+    min-width: 36px !important;
+
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+
+    border: 1px solid rgba(105, 188, 177, 0.35) !important;
+    border-radius: 9px !important;
+
+    background: rgba(30, 67, 70, 0.75) !important;
+
+    color: #e9f3f1 !important;
+
+    font-size: 22px !important;
+    line-height: 1 !important;
+
+    cursor: pointer !important;
+}
+
+.vet-modal-close:hover {
+    background: rgba(55, 105, 108, 0.9) !important;
+}
+
+/* -------------------------
+   FORMULARIOS
+   ------------------------- */
+
+.vet-modal-form {
+    width: 100% !important;
+    box-sizing: border-box !important;
+}
+
+.vet-modal-form input,
+.vet-modal-form select,
+.vet-modal-form textarea {
+    box-sizing: border-box !important;
+    width: 100% !important;
+}
+
+.vet-modal-actions {
+    display: flex !important;
+    justify-content: flex-end !important;
+    align-items: center !important;
+
+    gap: 10px !important;
+
+    margin-top: 18px !important;
+    padding-top: 16px !important;
+
+    border-top: 1px solid rgba(105, 188, 177, 0.18) !important;
+}
+
+/* -------------------------
+   BÚSQUEDA
+   ------------------------- */
+
+.vet-patient-search input[type="search"] {
+    background: #0b3034 !important;
+
+    border: 1px solid rgba(74, 161, 164, 0.55) !important;
+    border-radius: 10px !important;
+
+    padding: 0 13px !important;
+
+    min-height: 42px !important;
+
+    color: #e8f3f1 !important;
+
+    outline: none !important;
+
+    box-sizing: border-box !important;
+}
+
+.vet-patient-search input[type="search"]::placeholder {
+    color: rgba(200, 224, 220, 0.60) !important;
+}
+
+.vet-patient-search input[type="search"]:focus {
+    border-color: #69bcb1 !important;
+
+    background: #0e363a !important;
+
+    box-shadow:
+        0 0 0 3px rgba(105, 188, 177, 0.10) !important;
+}
+
+/* -------------------------
+   MÓVIL
+   ------------------------- */
+
+@media (max-width: 900px) {
+
+    .vet-patients-layout {
+        grid-template-columns: 1fr !important;
+    }
+
+    .vet-modal-content {
+        width: 90vw !important;
+        max-width: 90vw !important;
+        min-width: 0 !important;
+    }
+}
+
+@media (max-width: 600px) {
+
+    .vet-modal-content {
+        width: 100vw !important;
+        max-width: 100vw !important;
+    }
+}
+</style>
+
+
+<script>
+/* =========================================================
+   PACIENTES VETERINARIA
+   MODALES + BÚSQUEDA
+   ========================================================= */
+
+document.addEventListener("DOMContentLoaded", function () {
+
+    /* =====================================================
+       MODALES
+       ===================================================== */
+
+    const openButtons = document.querySelectorAll("[data-open-modal]");
+    const closeButtons = document.querySelectorAll("[data-close-modal]");
+    const modals = document.querySelectorAll("[data-modal]");
+
+
+    /* Abrir modal */
+
+    openButtons.forEach(function (button) {
+
+        button.addEventListener("click", function (event) {
+
+            event.preventDefault();
+
+            const modalId = button.getAttribute("data-open-modal");
+
+            const modal = document.getElementById(modalId);
+
+            if (!modal) {
+                console.error("No se encontró el modal:", modalId);
+                return;
+            }
+
+            /* Cerrar cualquier otro modal */
+
+            modals.forEach(function (item) {
+                item.classList.add("is-hidden");
+            });
+
+            /* Abrir el seleccionado */
+
+            modal.classList.remove("is-hidden");
+
+            document.body.style.overflow = "hidden";
+
+            /* Enfocar primer campo */
+
+            const firstInput = modal.querySelector(
+                "input:not([type='hidden']), select, textarea"
+            );
+
+            if (firstInput) {
+
+                setTimeout(function () {
+                    firstInput.focus();
+                }, 150);
+
+            }
+
+        });
+
+    });
+
+
+    /* Cerrar modal */
+
+    closeButtons.forEach(function (button) {
+
+        button.addEventListener("click", function (event) {
+
+            event.preventDefault();
+
+            const modal = button.closest("[data-modal]");
+
+            if (modal) {
+                modal.classList.add("is-hidden");
+            }
+
+            document.body.style.overflow = "";
+
+        });
+
+    });
+
+
+    /* Cerrar al hacer clic en el fondo */
+
+    modals.forEach(function (modal) {
+
+        const backdrop = modal.querySelector(".vet-modal-backdrop");
+
+        if (backdrop) {
+
+            backdrop.addEventListener("click", function () {
+
+                modal.classList.add("is-hidden");
+
+                document.body.style.overflow = "";
+
+            });
+
+        }
+
+    });
+
+
+    /* Cerrar con ESC */
+
+    document.addEventListener("keydown", function (event) {
+
+        if (event.key !== "Escape") {
+            return;
+        }
+
+        modals.forEach(function (modal) {
+
+            if (!modal.classList.contains("is-hidden")) {
+
+                modal.classList.add("is-hidden");
+
+            }
+
+        });
+
+        document.body.style.overflow = "";
+
+    });
+
+
+    /* =====================================================
+       BÚSQUEDA DE MASCOTAS
+       ===================================================== */
+
+    const searchForm =
+        document.querySelector("[data-patient-search-form]");
+
+    const searchInput =
+        document.querySelector("[data-patient-search]");
+
+    const searchButton =
+        document.querySelector("[data-patient-search-button]");
+
+    const clearButton =
+        document.querySelector("[data-patient-search-clear]");
+
+    const searchResult =
+        document.querySelector("[data-patient-search-result]");
+
+    const patientItems =
+        document.querySelectorAll("[data-patient-item]");
+
+
+    function buscarMascota() {
+
+        if (!searchInput) {
+            return;
+        }
+
+        const texto =
+            searchInput.value
+                .trim()
+                .toLowerCase();
+
+        let encontrados = 0;
+
+
+        patientItems.forEach(function (patient) {
+
+            const nombre =
+                patient
+                    .getAttribute("data-patient-name") || "";
+
+            const especie =
+                patient
+                    .getAttribute("data-patient-species") || "";
+
+            const raza =
+                patient
+                    .getAttribute("data-patient-breed") || "";
+
+
+            const coincide =
+                texto === "" ||
+                nombre.includes(texto) ||
+                especie.includes(texto) ||
+                raza.includes(texto);
+
+
+            if (coincide) {
+
+                patient.style.display = "";
+
+                encontrados++;
+
+            } else {
+
+                patient.style.display = "none";
+
+            }
+
+        });
+
+
+        if (searchResult) {
+
+            if (texto === "") {
+
+                searchResult.textContent = "";
+
+            } else if (encontrados === 0) {
+
+                searchResult.textContent =
+                    "No se encontraron mascotas.";
+
+            } else if (encontrados === 1) {
+
+                searchResult.textContent =
+                    "1 mascota encontrada.";
+
+            } else {
+
+                searchResult.textContent =
+                    encontrados + " mascotas encontradas.";
+
+            }
+
+        }
+
+    }
+
+
+    /* Botón Buscar */
+
+    if (searchButton) {
+
+        searchButton.addEventListener("click", function (event) {
+
+            event.preventDefault();
+
+            buscarMascota();
+
+        });
+
+    }
+
+
+    /* Buscar presionando ENTER */
+
+    if (searchForm) {
+
+        searchForm.addEventListener("submit", function (event) {
+
+            event.preventDefault();
+
+            buscarMascota();
+
+        });
+
+    }
+
+
+    /* Búsqueda mientras escribe */
+
+    if (searchInput) {
+
+        searchInput.addEventListener("input", function () {
+
+            if (searchInput.value.trim() === "") {
+
+                patientItems.forEach(function (patient) {
+
+                    patient.style.display = "";
+
+                });
+
+                if (searchResult) {
+                    searchResult.textContent = "";
+                }
+
+            }
+
+        });
+
+    }
+
+
+    /* Botón Limpiar */
+
+    if (clearButton) {
+
+        clearButton.addEventListener("click", function () {
+
+            if (searchInput) {
+                searchInput.value = "";
+            }
+
+            patientItems.forEach(function (patient) {
+
+                patient.style.display = "";
+
+            });
+
+            if (searchResult) {
+                searchResult.textContent = "";
+            }
+
+            if (searchInput) {
+                searchInput.focus();
+            }
+
+        });
+
+    }
+
+});
+</script>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+
+    const patientForm = document.querySelector("[data-patient-form]");
+    const patientModal = document.getElementById("patient-modal");
+
+    if (!patientForm || !patientModal) {
+        return;
+    }
+
+    const modalTitle = document.querySelector("#patient-modal-title");
+    const modalEyebrow = document.querySelector("[data-patient-modal-eyebrow]");
+    const modalDescription = document.querySelector("[data-patient-modal-description]");
+    const submitButton = document.querySelector("[data-patient-submit]");
+
+    const displayNameInput = patientForm.querySelector('[name="display_name"]');
+    const speciesInput = patientForm.querySelector('[name="species"]');
+    const breedInput = patientForm.querySelector('[name="breed"]');
+    const sexInput = patientForm.querySelector('[name="sex"]');
+    const birthDateInput = patientForm.querySelector('[name="birth_date"]');
+    const weightInput = patientForm.querySelector('[name="weight_kg"]');
+    const vaccineInput = patientForm.querySelector('[name="vaccine_status"]');
+
+    const registerButton = document.querySelector(
+        '[data-open-modal="patient-modal"]'
+    );
+
+    function prepareRegisterMode() {
+        patientForm.action = "/patients";
+
+        if (modalEyebrow) {
+            modalEyebrow.textContent = "Nueva mascota";
+        }
+
+        if (modalTitle) {
+            modalTitle.textContent = "Registrar paciente";
+        }
+
+        if (modalDescription) {
+            modalDescription.textContent =
+                "Ingresa únicamente la información de la mascota.";
+        }
+
+        if (submitButton) {
+            submitButton.textContent = "Guardar mascota";
+        }
+
+        patientForm.reset();
+
+        if (vaccineInput) {
+            vaccineInput.value = "No aplica";
+        }
+    }
+
+    function prepareEditMode(button) {
+
+        const patientId = button.dataset.patientId;
+
+        patientForm.action = `/patients/${patientId}/edit`;
+
+        displayNameInput.value =
+            button.dataset.patientName || "";
+
+        speciesInput.value =
+            button.dataset.patientSpecies || "";
+
+        breedInput.value =
+            button.dataset.patientBreed || "";
+
+        sexInput.value =
+            button.dataset.patientSex || "";
+
+        birthDateInput.value =
+            button.dataset.patientBirthDate || "";
+
+        weightInput.value =
+            button.dataset.patientWeight || "";
+
+        vaccineInput.value =
+            button.dataset.patientVaccine || "No aplica";
+
+        if (modalEyebrow) {
+            modalEyebrow.textContent = "Editar mascota";
+        }
+
+        if (modalTitle) {
+            modalTitle.textContent = "Actualizar paciente";
+        }
+
+        if (modalDescription) {
+            modalDescription.textContent =
+                "Modifica la información registrada de la mascota.";
+        }
+
+        if (submitButton) {
+            submitButton.textContent = "Actualizar mascota";
+        }
+
+        patientModal.classList.remove("is-hidden");
+    }
+
+    if (registerButton) {
+        registerButton.addEventListener("click", function () {
+            prepareRegisterMode();
+        });
+    }
+
+    document.querySelectorAll("[data-edit-patient]").forEach(function (button) {
+
+        button.addEventListener("click", function () {
+            prepareEditMode(button);
+        });
+
+    });
+
+});
+</script>
+
+<style>
+
+/* ==========================================
+   PACIENTES - SOLO MODO CLARO
+   ========================================== */
+
+html[data-theme="light"] .vet-patient-search input[type="search"] {
+    background: #ffffff !important;
+    color: #1f2937 !important;
+    border: 1px solid #cfdcde !important;
+}
+
+html[data-theme="light"] .vet-patient-search input[type="search"]::placeholder {
+    color: #7b898f !important;
+}
+
+html[data-theme="light"] .vet-patient-item {
+    background: #ffffff !important;
+    background-color: #ffffff !important;
+    color: #1f2937 !important;
+    border: 1px solid #d9e4e5 !important;
+}
+
+html[data-theme="light"] .vet-patient-item strong {
+    color: #1f2937 !important;
+}
+
+html[data-theme="light"] .vet-patient-item p,
+html[data-theme="light"] .vet-patient-item span {
+    color: #66767d !important;
+}
+
+
+/* Atención reciente */
+
+html[data-theme="light"] .vet-recent-item {
+    background: #ffffff !important;
+    background-color: #ffffff !important;
+    color: #1f2937 !important;
+}
+
+
+/* ==========================================
+   MODALES - SOLO MODO CLARO
+   ========================================== */
+
+html[data-theme="light"] .vet-modal-content {
+    background: #ffffff !important;
+    background-color: #ffffff !important;
+    color: #1f2937 !important;
+}
+
+html[data-theme="light"] .vet-modal-form input,
+html[data-theme="light"] .vet-modal-form select,
+html[data-theme="light"] .vet-modal-form textarea {
+    background: #ffffff !important;
+    color: #1f2937 !important;
+    border: 1px solid #cfdcde !important;
+}
+
+html[data-theme="light"] .vet-modal-header h3 {
+    color: #1f2937 !important;
+}
+
+html[data-theme="light"] .vet-modal-header p {
+    color: #66767d !important;
+}
+
+</style>

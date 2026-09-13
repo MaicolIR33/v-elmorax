@@ -3641,3 +3641,1708 @@ textarea:focus-visible {
         flex-direction: column;
     }
 }
+/* =========================================================
+   VELMORAX - MÓDULO DE PACIENTES VETERINARIOS
+   ========================================================= */
+
+.vet-patients-module {
+    gap: 16px;
+}
+
+
+/* =========================================================
+   ENCABEZADO
+   ========================================================= */
+
+.vet-patients-header {
+    margin-bottom: 0;
+    align-items: flex-end;
+}
+
+.vet-patient-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+.vet-patient-actions .btn {
+    white-space: nowrap;
+}
+
+
+/* =========================================================
+   MÉTRICAS
+   ========================================================= */
+
+.vet-patient-metrics {
+    margin-bottom: 0;
+}
+
+
+/* =========================================================
+   BUSCADOR
+   ========================================================= */
+
+.vet-patient-search-card {
+    padding: 20px 22px;
+}
+
+.vet-patient-search-card .section-heading {
+    margin-bottom: 12px;
+}
+
+.vet-patient-search-card .section-heading h3 {
+    margin-bottom: 4px;
+}
+
+.vet-patient-search {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 12px;
+    align-items: end;
+    margin-bottom: 0;
+}
+
+
+/*
+   Misma idea visual que la barra de Inventario:
+   campo integrado + acciones compactas.
+*/
+
+.vet-patient-search label {
+    display: grid;
+    gap: 6px;
+    margin: 0;
+}
+
+.vet-patient-search label > span {
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--accent-deep);
+}
+
+
+/* Caja de búsqueda */
+
+.vet-patient-search input {
+    width: 100%;
+    min-height: 48px;
+    padding: 12px 15px;
+
+    border-radius: 14px;
+    border: 1px solid var(--border);
+
+    /*
+       Fondo ligeramente más claro que el fondo general,
+       igual que la sensación de la barra de Inventario.
+    */
+
+    background: rgba(11, 58, 66, 0.48);
+
+    color: var(--text);
+
+    outline: none;
+
+    transition:
+        border-color .2s ease,
+        background .2s ease,
+        box-shadow .2s ease;
+}
+
+
+.vet-patient-search input::placeholder {
+    color: rgba(168, 216, 219, 0.70);
+}
+
+
+.vet-patient-search input:hover {
+    background: rgba(11, 58, 66, 0.60);
+}
+
+
+.vet-patient-search input:focus {
+    border-color: var(--accent);
+
+    background: rgba(11, 58, 66, 0.68);
+
+    box-shadow:
+        0 0 0 3px var(--accent-soft);
+}
+
+
+.vet-patient-search .filter-actions {
+    align-items: center;
+}
+
+
+.vet-search-result {
+    min-height: 18px;
+    margin: 8px 0 0;
+
+    color: var(--muted);
+
+    font-size: 0.78rem;
+}
+
+
+/* =========================================================
+   PACIENTES + ATENCIONES
+   ========================================================= */
+
+.vet-patients-layout {
+    display: grid;
+
+    /*
+       La parte de pacientes ocupa un poco más,
+       pero ambas quedan en la misma fila.
+    */
+
+    grid-template-columns:
+        minmax(0, 1.08fr)
+        minmax(0, 0.92fr);
+
+    gap: 18px;
+
+    align-items: stretch;
+}
+
+
+.vet-patient-list-card,
+.vet-recent-card {
+    min-width: 0;
+    padding: 20px 22px;
+}
+
+
+.vet-card-heading {
+    margin-bottom: 8px;
+    align-items: center;
+}
+
+
+.vet-card-heading h3 {
+    margin: 0;
+}
+
+
+.vet-list-count {
+    display: inline-flex;
+
+    min-width: 32px;
+    height: 32px;
+
+    align-items: center;
+    justify-content: center;
+
+    padding: 0 9px;
+
+    border-radius: 999px;
+
+    background: var(--accent-soft);
+
+    color: var(--accent-deep);
+
+    font-size: 0.82rem;
+}
+
+
+/* =========================================================
+   LISTADO DE MASCOTAS
+   ========================================================= */
+
+.vet-patient-list {
+    display: grid;
+    gap: 8px;
+}
+
+
+.vet-patient-item {
+    display: grid;
+
+    grid-template-columns:
+        minmax(0, 1fr)
+        auto;
+
+    gap: 16px;
+
+    padding: 13px 0;
+
+    border-bottom:
+        1px solid var(--border);
+}
+
+
+.vet-patient-item:last-of-type {
+    border-bottom: none;
+}
+
+
+.vet-patient-main {
+    min-width: 0;
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 12px;
+}
+
+
+.vet-patient-icon {
+    flex: 0 0 44px;
+
+    width: 44px;
+    height: 44px;
+
+    display: grid;
+    place-items: center;
+
+    border-radius: 13px;
+
+    background:
+        rgba(25, 152, 157, 0.16);
+
+    border:
+        1px solid var(--border);
+
+    font-size: 1.25rem;
+}
+
+
+.vet-patient-main strong {
+    display: block;
+
+    margin-bottom: 3px;
+
+    font-size: 0.98rem;
+}
+
+
+.vet-patient-description {
+    margin: 0;
+
+    color: var(--muted);
+
+    font-size: 0.82rem;
+}
+
+
+.vet-patient-secondary {
+    margin: 2px 0 0;
+
+    color: var(--muted);
+
+    font-size: 0.72rem;
+}
+
+
+.vet-patient-info {
+    display: flex;
+
+    align-items: center;
+    justify-content: flex-end;
+
+    gap: 8px;
+
+    flex-wrap: wrap;
+
+    max-width: 240px;
+
+    text-align: right;
+
+    color: var(--muted);
+
+    font-size: 0.72rem;
+}
+
+
+.vet-patient-info .table-badge {
+    font-size: 0.68rem;
+    padding: 5px 8px;
+}
+
+
+.vet-patient-info .inline-form {
+    display: inline-flex;
+}
+
+
+/* =========================================================
+   ATENCIONES RECIENTES
+   ========================================================= */
+
+.vet-recent-list {
+    display: grid;
+}
+
+
+.vet-recent-item {
+    display: grid;
+
+    grid-template-columns:
+        minmax(0, 1fr)
+        auto;
+
+    gap: 12px;
+
+    padding: 13px 0;
+
+    border-bottom:
+        1px solid var(--border);
+}
+
+
+.vet-recent-item:last-child {
+    border-bottom: none;
+}
+
+
+.vet-recent-main {
+    min-width: 0;
+
+    display: flex;
+
+    gap: 10px;
+}
+
+
+.vet-recent-icon {
+    flex: 0 0 36px;
+
+    width: 36px;
+    height: 36px;
+
+    display: grid;
+    place-items: center;
+
+    border-radius: 11px;
+
+    background:
+        rgba(25, 152, 157, 0.15);
+
+    border:
+        1px solid var(--border);
+}
+
+
+.vet-recent-main strong {
+    display: block;
+
+    margin-bottom: 2px;
+
+    font-size: 0.9rem;
+}
+
+
+.vet-recent-main p {
+    margin: 0;
+
+    color: var(--muted);
+
+    font-size: 0.76rem;
+
+    line-height: 1.4;
+}
+
+
+.vet-recent-detail {
+    margin-top: 2px !important;
+
+    color: var(--accent-deep) !important;
+}
+
+
+.vet-recent-note {
+    margin-top: 4px !important;
+
+    color: var(--text) !important;
+
+    display: -webkit-box;
+
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+
+    overflow: hidden;
+}
+
+
+.vet-recent-meta {
+    display: grid;
+
+    justify-items: end;
+
+    align-content: start;
+
+    gap: 5px;
+
+    text-align: right;
+
+    color: var(--muted);
+
+    font-size: 0.7rem;
+}
+
+
+.vet-recent-meta .table-badge {
+    font-size: 0.67rem;
+    padding: 5px 8px;
+}
+
+
+/* =========================================================
+   ESTADO VACÍO
+   ========================================================= */
+
+.vet-empty-state {
+    display: grid;
+
+    justify-items: center;
+
+    gap: 5px;
+
+    padding: 26px 15px;
+
+    text-align: center;
+
+    border:
+        1px dashed var(--border);
+
+    border-radius: 15px;
+
+    background:
+        rgba(6, 17, 22, 0.18);
+}
+
+
+.vet-empty-icon {
+    width: 40px;
+    height: 40px;
+
+    display: grid;
+    place-items: center;
+
+    margin-bottom: 3px;
+
+    border-radius: 12px;
+
+    background:
+        var(--accent-soft);
+}
+
+
+.vet-empty-state strong {
+    font-size: 0.86rem;
+}
+
+
+.vet-empty-state p {
+    max-width: 300px;
+
+    margin: 0;
+
+    color: var(--muted);
+
+    font-size: 0.74rem;
+
+    line-height: 1.4;
+}
+
+
+/* =========================================================
+   MODALES
+   ========================================================= */
+
+.vet-modal {
+    position: fixed;
+
+    inset: 0;
+
+    z-index: 9999;
+
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    padding: 24px;
+}
+
+
+.vet-modal.is-hidden {
+    display: none !important;
+}
+
+
+.vet-modal-backdrop {
+    position: absolute;
+
+    inset: 0;
+
+    background:
+        rgba(3, 12, 15, 0.78);
+
+    backdrop-filter:
+        blur(7px);
+}
+
+
+.vet-modal-content {
+    position: relative;
+
+    z-index: 1;
+
+    width: min(720px, 100%);
+
+    max-height:
+        calc(100vh - 48px);
+
+    overflow-y: auto;
+
+    padding: 24px;
+
+    border:
+        1px solid var(--border);
+
+    border-radius: 24px;
+
+    background:
+        var(--surface);
+
+    box-shadow:
+        0 25px 80px rgba(0, 0, 0, 0.40);
+}
+
+
+.vet-record-modal {
+    width: min(820px, 100%);
+}
+
+
+.vet-modal-header {
+    display: flex;
+
+    align-items: flex-start;
+
+    justify-content: space-between;
+
+    gap: 20px;
+
+    margin-bottom: 18px;
+}
+
+
+.vet-modal-header h3 {
+    margin: 0 0 5px;
+}
+
+
+.vet-modal-header p:not(.eyebrow) {
+    margin: 0;
+
+    color: var(--muted);
+
+    font-size: 0.82rem;
+}
+
+
+.vet-modal-close {
+    flex: 0 0 auto;
+
+    width: 36px;
+    height: 36px;
+
+    display: grid;
+    place-items: center;
+
+    border:
+        1px solid var(--border);
+
+    border-radius: 12px;
+
+    background:
+        rgba(6, 17, 22, 0.35);
+
+    color: var(--text);
+
+    font-size: 1.35rem;
+
+    cursor: pointer;
+}
+
+
+.vet-modal-close:hover {
+    background:
+        var(--accent-soft);
+}
+
+
+.vet-modal-form {
+    gap: 11px;
+}
+
+
+.vet-modal-form label {
+    display: grid;
+
+    gap: 5px;
+
+    font-weight: 700;
+
+    color: var(--accent-deep);
+}
+
+
+.vet-modal-form label > span {
+    font-size: 0.8rem;
+}
+
+
+.vet-modal-form input:not([type="hidden"]),
+.vet-modal-form select,
+.vet-modal-form textarea {
+    width: 100%;
+
+    padding: 11px 13px;
+
+    border:
+        1px solid var(--border);
+
+    border-radius: 13px;
+
+    background:
+        rgba(11, 58, 66, 0.45);
+
+    color: var(--text);
+
+    outline: none;
+}
+
+
+.vet-modal-form input:not([type="hidden"]):focus,
+.vet-modal-form select:focus,
+.vet-modal-form textarea:focus {
+    border-color:
+        var(--accent);
+
+    box-shadow:
+        0 0 0 3px var(--accent-soft);
+}
+
+
+.vet-modal-form textarea {
+    resize: vertical;
+
+    min-height: 78px;
+}
+
+
+.vet-modal-actions {
+    display: flex;
+
+    justify-content: flex-end;
+
+    gap: 10px;
+
+    margin-top: 5px;
+}
+
+
+.vet-modal-open {
+    overflow: hidden;
+}
+
+
+/* =========================================================
+   TEMA CLARO
+   ========================================================= */
+
+html[data-theme="light"] .vet-patient-search input,
+html[data-theme="light"] .vet-modal-form input:not([type="hidden"]),
+html[data-theme="light"] .vet-modal-form select,
+html[data-theme="light"] .vet-modal-form textarea {
+    background:
+        rgba(255, 255, 255, 0.88);
+
+    color: var(--text);
+}
+
+
+html[data-theme="light"] .vet-modal-backdrop {
+    background:
+        rgba(10, 25, 28, 0.55);
+}
+
+
+/* =========================================================
+   RESPONSIVE
+   ========================================================= */
+
+@media (max-width: 1050px) {
+
+    .vet-patients-layout {
+        grid-template-columns: 1fr;
+    }
+
+}
+
+
+@media (max-width: 760px) {
+
+    .vet-patients-header {
+        align-items: flex-start;
+    }
+
+
+    .vet-patient-actions {
+        width: 100%;
+
+        justify-content: flex-start;
+    }
+
+
+    .vet-patient-search {
+        grid-template-columns: 1fr;
+    }
+
+
+    .vet-patient-search .filter-actions {
+        justify-content: flex-start;
+    }
+
+
+    .vet-patient-item,
+    .vet-recent-item {
+        grid-template-columns: 1fr;
+    }
+
+
+    .vet-patient-info {
+        max-width: none;
+
+        justify-content: flex-start;
+
+        text-align: left;
+    }
+
+
+    .vet-recent-meta {
+        justify-items: start;
+
+        text-align: left;
+    }
+
+
+    .vet-modal {
+        padding: 12px;
+    }
+
+
+    .vet-modal-content {
+        max-height:
+            calc(100vh - 24px);
+
+        padding: 19px;
+    }
+
+
+    .form-grid {
+        grid-template-columns: 1fr;
+    }
+
+}
+
+
+@media (max-width: 500px) {
+
+    .vet-patient-actions {
+        flex-direction: column;
+    }
+
+
+    .vet-patient-actions .btn {
+        width: 100%;
+    }
+
+
+    .vet-modal-actions {
+        flex-direction: column-reverse;
+    }
+
+
+    .vet-modal-actions .btn {
+        width: 100%;
+    }
+
+}
+
+/* =========================================================
+   PACIENTES VETERINARIA — AJUSTE FINAL
+   ========================================================= */
+
+
+/* =========================================================
+   1. PACIENTES + ATENCIONES EN DOS COLUMNAS
+   ========================================================= */
+
+.vet-patients-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 14px;
+    width: 100%;
+    align-items: stretch;
+}
+
+
+/* Ambos bloques ocupan aproximadamente el mismo espacio */
+
+.vet-patient-list-card,
+.vet-recent-card {
+    min-width: 0;
+    width: 100%;
+    height: 100%;
+    min-height: 250px;
+    max-height: 360px;
+    overflow: hidden;
+}
+
+
+/* =========================================================
+   2. CONTENIDO INTERNO DE LOS DOS BLOQUES
+   ========================================================= */
+
+.vet-patient-list,
+.vet-recent-list {
+    width: 100%;
+    overflow-y: auto;
+    overflow-x: hidden;
+    max-height: 255px;
+    padding-right: 4px;
+}
+
+
+/* Barra de desplazamiento discreta */
+
+.vet-patient-list::-webkit-scrollbar,
+.vet-recent-list::-webkit-scrollbar {
+    width: 5px;
+}
+
+.vet-patient-list::-webkit-scrollbar-track,
+.vet-recent-list::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.vet-patient-list::-webkit-scrollbar-thumb,
+.vet-recent-list::-webkit-scrollbar-thumb {
+    background: rgba(105, 188, 177, 0.35);
+    border-radius: 10px;
+}
+
+
+/* =========================================================
+   3. CADA MASCOTA DENTRO DE SU MISMO BLOQUE
+   ========================================================= */
+
+.vet-patient-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    width: 100%;
+    padding: 12px 14px;
+    margin-bottom: 8px;
+    border: 1px solid rgba(105, 188, 177, 0.22);
+    border-radius: 12px;
+    background: rgba(12, 35, 38, 0.48);
+    box-sizing: border-box;
+}
+
+.vet-patient-item:last-child {
+    margin-bottom: 0;
+}
+
+.vet-patient-main {
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.vet-patient-main > div:last-child {
+    min-width: 0;
+}
+
+.vet-patient-description,
+.vet-patient-secondary {
+    margin: 3px 0 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.vet-patient-info {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    flex-wrap: wrap;
+    text-align: right;
+    font-size: 12px;
+    flex-shrink: 0;
+}
+
+
+/* =========================================================
+   4. ATENCIONES RECIENTES
+   ========================================================= */
+
+.vet-recent-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    width: 100%;
+    padding: 12px 14px;
+    margin-bottom: 8px;
+    border: 1px solid rgba(105, 188, 177, 0.22);
+    border-radius: 12px;
+    background: rgba(12, 35, 38, 0.48);
+    box-sizing: border-box;
+}
+
+.vet-recent-item:last-child {
+    margin-bottom: 0;
+}
+
+.vet-recent-main {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    min-width: 0;
+}
+
+.vet-recent-main > div:last-child {
+    min-width: 0;
+}
+
+.vet-recent-main p {
+    margin: 3px 0 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.vet-recent-note {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.vet-recent-meta {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 5px;
+    flex-shrink: 0;
+    font-size: 12px;
+}
+
+
+/* =========================================================
+   5. PANEL LATERAL PARA REGISTRAR MASCOTA / NOTA
+   ========================================================= */
+
+/*
+   El formulario ya funciona.
+   Aquí solamente cambiamos su posición visual:
+   aparece desde el lado derecho de la pantalla.
+*/
+
+.vet-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+
+    display: flex;
+    justify-content: flex-end;
+    align-items: stretch;
+
+    width: 100%;
+    height: 100vh;
+
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+
+    transition:
+        opacity 0.2s ease,
+        visibility 0.2s ease;
+}
+
+
+/* Estado cerrado */
+
+.vet-modal.is-hidden {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+}
+
+
+/* Fondo oscuro detrás del panel */
+
+.vet-modal-backdrop {
+    position: absolute;
+    inset: 0;
+
+    background: rgba(2, 12, 14, 0.68);
+    backdrop-filter: blur(2px);
+
+    cursor: pointer;
+}
+
+
+/* =========================================================
+   6. PANEL QUE SALE DESDE LA DERECHA
+   ========================================================= */
+
+.vet-modal-content {
+    position: relative;
+    z-index: 2;
+
+    width: min(760px, 48vw);
+    min-width: 560px;
+    height: 100vh;
+
+    margin: 0;
+
+    padding: 22px 24px;
+
+    overflow-y: auto;
+    overflow-x: hidden;
+
+    background: #102528;
+    border-left: 1px solid rgba(105, 188, 177, 0.45);
+    box-shadow: -18px 0 45px rgba(0, 0, 0, 0.35);
+
+    box-sizing: border-box;
+
+    transform: translateX(0);
+    transition: transform 0.25s ease;
+}
+
+
+/* Cuando está oculto, el panel se desplaza hacia la derecha */
+
+.vet-modal.is-hidden .vet-modal-content {
+    transform: translateX(100%);
+}
+
+
+/* =========================================================
+   7. CABECERA DEL PANEL
+   ========================================================= */
+
+.vet-modal-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 20px;
+
+    padding-bottom: 16px;
+    margin-bottom: 18px;
+
+    border-bottom: 1px solid rgba(105, 188, 177, 0.18);
+}
+
+.vet-modal-header h3 {
+    margin: 3px 0 5px;
+    font-size: 22px;
+}
+
+.vet-modal-header p {
+    margin: 0;
+}
+
+
+/* Botón X */
+
+.vet-modal-close {
+    width: 36px;
+    height: 36px;
+
+    flex-shrink: 0;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border: 1px solid rgba(105, 188, 177, 0.35);
+    border-radius: 9px;
+
+    background: rgba(30, 67, 70, 0.7);
+    color: #e9f3f1;
+
+    font-size: 22px;
+    line-height: 1;
+
+    cursor: pointer;
+
+    transition:
+        background 0.2s ease,
+        transform 0.2s ease;
+}
+
+.vet-modal-close:hover {
+    background: rgba(55, 105, 108, 0.85);
+    transform: scale(1.04);
+}
+
+
+/* =========================================================
+   8. FORMULARIOS DENTRO DEL PANEL
+   ========================================================= */
+
+.vet-modal-form {
+    width: 100%;
+}
+
+.vet-modal-form label {
+    min-width: 0;
+}
+
+.vet-modal-form input,
+.vet-modal-form select,
+.vet-modal-form textarea {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+
+/* Campos más compactos para evitar demasiado scroll */
+
+.vet-modal-form input,
+.vet-modal-form select {
+    min-height: 40px;
+}
+
+.vet-modal-form textarea {
+    min-height: 78px;
+    resize: vertical;
+}
+
+
+/* Espaciado de los grupos */
+
+.vet-modal-form .form-grid {
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.vet-modal-form > label {
+    display: block;
+    margin-bottom: 12px;
+}
+
+
+/* =========================================================
+   9. BOTONES DEL PANEL
+   ========================================================= */
+
+.vet-modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 10px;
+
+    margin-top: 18px;
+    padding-top: 16px;
+
+    border-top: 1px solid rgba(105, 188, 177, 0.18);
+}
+
+
+/* =========================================================
+   10. BÚSQUEDA — MÁS PARECIDA A INVENTARIO
+   ========================================================= */
+
+.vet-patient-search-card {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.vet-patient-search {
+    display: flex;
+    align-items: flex-end;
+    gap: 10px;
+    width: 100%;
+}
+
+.vet-patient-search > label {
+    flex: 1;
+    min-width: 0;
+}
+
+.vet-patient-search input[type="search"] {
+    width: 100%;
+    min-height: 42px;
+
+    padding: 0 13px;
+
+    border: 1px solid rgba(74, 161, 164, 0.55);
+    border-radius: 10px;
+
+    background: #0b3034;
+    color: #e8f3f1;
+
+    outline: none;
+    box-sizing: border-box;
+
+    transition:
+        border-color 0.2s ease,
+        background 0.2s ease,
+        box-shadow 0.2s ease;
+}
+
+.vet-patient-search input[type="search"]::placeholder {
+    color: rgba(200, 224, 220, 0.58);
+}
+
+.vet-patient-search input[type="search"]:focus {
+    border-color: #69bcb1;
+    background: #0e363a;
+    box-shadow: 0 0 0 3px rgba(105, 188, 177, 0.10);
+}
+
+.vet-patient-search .filter-actions {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+
+/* =========================================================
+   11. EVITAR QUE LOS BLOQUES CREZCAN DEMASIADO
+   ========================================================= */
+
+.vet-patient-list-card .vet-card-heading,
+.vet-recent-card .vet-card-heading {
+    margin-bottom: 10px;
+}
+
+
+/* =========================================================
+   12. PANTALLAS PEQUEÑAS
+   ========================================================= */
+
+@media (max-width: 900px) {
+
+    .vet-patients-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .vet-patient-list-card,
+    .vet-recent-card {
+        max-height: 340px;
+    }
+
+    .vet-modal-content {
+        width: min(760px, 88vw);
+        min-width: 0;
+    }
+}
+
+
+@media (max-width: 640px) {
+
+    .vet-patient-search {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .vet-patient-search .filter-actions {
+        width: 100%;
+    }
+
+    .vet-patient-search .filter-actions .btn {
+        flex: 1;
+    }
+
+    .vet-patient-item,
+    .vet-recent-item {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .vet-patient-info,
+    .vet-recent-meta {
+        align-items: flex-start;
+        justify-content: flex-start;
+        text-align: left;
+    }
+
+    .vet-modal-content {
+        width: 100%;
+        min-width: 0;
+        padding: 18px;
+    }
+}
+
+/* =========================================================
+   PACIENTES - COLORES MODO CLARO
+   ========================================================= */
+
+/* ---------- BARRA DE BÚSQUEDA ---------- */
+
+.vet-patient-search-card .vet-patient-search {
+    background: #ffffff !important;
+    border: 1px solid #d9e4e5 !important;
+    color: #243447 !important;
+}
+
+.vet-patient-search-card .vet-patient-search label {
+    color: #0f766e !important;
+}
+
+.vet-patient-search-card .vet-patient-search input {
+    background: #ffffff !important;
+    color: #243447 !important;
+    border: 1px solid #cfdcde !important;
+}
+
+.vet-patient-search-card .vet-patient-search input::placeholder {
+    color: #7b898f !important;
+}
+
+.vet-patient-search-card .vet-patient-search input:focus {
+    background: #ffffff !important;
+    color: #243447 !important;
+    border-color: #0f766e !important;
+    outline: none !important;
+    box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.10) !important;
+}
+
+
+/* ---------- TARJETAS DE MASCOTAS ---------- */
+
+.vet-patient-item {
+    background: #ffffff !important;
+    background-color: #ffffff !important;
+    color: #243447 !important;
+    border: 1px solid #d9e4e5 !important;
+    box-shadow: none !important;
+}
+
+
+/* Nombre */
+.vet-patient-item strong,
+.vet-patient-item .vet-patient-name {
+    color: #243447 !important;
+}
+
+
+/* Información secundaria */
+.vet-patient-item span {
+    color: #66767d !important;
+}
+
+
+/* Peso */
+.vet-patient-item .vet-patient-weight {
+    color: #66767d !important;
+}
+
+
+/* Última atención */
+.vet-patient-item .vet-patient-last-visit {
+    color: #66767d !important;
+}
+
+
+/* ---------- ICONO ---------- */
+
+.vet-patient-item .vet-patient-icon {
+    background: #eef7f6 !important;
+    background-color: #eef7f6 !important;
+    border: 1px solid #d5e9e7 !important;
+}
+
+
+/* ---------- ESTADO DE VACUNACIÓN ---------- */
+
+.vet-patient-item .table-badge {
+    background: #e8f6f3 !important;
+    color: #16756d !important;
+    border: 1px solid #cce9e4 !important;
+}
+
+
+/* ---------- BOTONES ---------- */
+
+.vet-patient-item .action-button {
+    background: #ffffff !important;
+    color: #0f766e !important;
+    border: 1px solid #cfdcde !important;
+}
+
+.vet-patient-item .action-button:hover {
+    background: #eef7f6 !important;
+    color: #0b625c !important;
+}
+
+
+/* Eliminar */
+.vet-patient-item .action-danger {
+    background: #ffffff !important;
+    color: #dc5b52 !important;
+    border: 1px solid #f0c9c5 !important;
+}
+
+.vet-patient-item .action-danger:hover {
+    background: #fff4f2 !important;
+    color: #c7473e !important;
+}
+
+
+/* =========================================================
+   ATENCIONES RECIENTES
+   ========================================================= */
+
+.vet-recent-card,
+.vet-recent-item,
+.vet-attention-item {
+    background: #ffffff !important;
+    background-color: #ffffff !important;
+    color: #243447 !important;
+    border-color: #d9e4e5 !important;
+}
+
+
+/* Textos de atención */
+.vet-recent-card strong,
+.vet-recent-item strong,
+.vet-attention-item strong {
+    color: #243447 !important;
+}
+
+.vet-recent-card span,
+.vet-recent-item span,
+.vet-attention-item span,
+.vet-recent-card p,
+.vet-recent-item p,
+.vet-attention-item p {
+    color: #66767d !important;
+}
+
+/* =========================================================
+   VELMORAX - AJUSTE DEFINITIVO MODO CLARO
+   PACIENTES Y MODALES
+   ========================================================= */
+
+html[data-theme="light"] .vet-patient-search {
+    background: #ffffff !important;
+    color: #243447 !important;
+    border-color: #d9e4e5 !important;
+}
+
+html[data-theme="light"] .vet-patient-search input,
+html[data-theme="light"] .vet-patient-search input[type="search"] {
+    background: #ffffff !important;
+    background-color: #ffffff !important;
+    color: #243447 !important;
+    border: 1px solid #cfdcde !important;
+}
+
+html[data-theme="light"] .vet-patient-search input::placeholder {
+    color: #7b898f !important;
+}
+
+html[data-theme="light"] .vet-patient-search input:hover,
+html[data-theme="light"] .vet-patient-search input:focus {
+    background: #ffffff !important;
+    color: #243447 !important;
+}
+
+
+/* =========================================================
+   TARJETAS DE MASCOTAS
+   ========================================================= */
+
+html[data-theme="light"] .vet-patient-item {
+    background: #ffffff !important;
+    background-color: #ffffff !important;
+    color: #243447 !important;
+    border: 1px solid #d9e4e5 !important;
+    box-shadow: none !important;
+}
+
+html[data-theme="light"] .vet-patient-item strong {
+    color: #243447 !important;
+}
+
+html[data-theme="light"] .vet-patient-item p,
+html[data-theme="light"] .vet-patient-item span {
+    color: #66767d !important;
+}
+
+
+/* Icono de mascota */
+
+html[data-theme="light"] .vet-patient-item .vet-patient-icon {
+    background: #eef7f6 !important;
+    background-color: #eef7f6 !important;
+    border-color: #d5e9e7 !important;
+}
+
+
+/* Estado de vacunación */
+
+html[data-theme="light"] .vet-patient-item .table-badge {
+    background: #e8f6f3 !important;
+    color: #16756d !important;
+    border-color: #cce9e4 !important;
+}
+
+
+/* Botones */
+
+html[data-theme="light"] .vet-patient-item .action-button {
+    background: #ffffff !important;
+    color: #0f766e !important;
+    border: 1px solid #cfdcde !important;
+}
+
+html[data-theme="light"] .vet-patient-item .action-button:hover {
+    background: #eef7f6 !important;
+}
+
+html[data-theme="light"] .vet-patient-item .action-danger {
+    background: #ffffff !important;
+    color: #dc5b52 !important;
+    border-color: #f0c9c5 !important;
+}
+
+html[data-theme="light"] .vet-patient-item .action-danger:hover {
+    background: #fff4f2 !important;
+}
+
+
+/* =========================================================
+   ATENCIONES RECIENTES
+   ========================================================= */
+
+html[data-theme="light"] .vet-recent-item {
+    background: #ffffff !important;
+    background-color: #ffffff !important;
+    color: #243447 !important;
+    border-color: #d9e4e5 !important;
+}
+
+html[data-theme="light"] .vet-recent-item strong {
+    color: #243447 !important;
+}
+
+html[data-theme="light"] .vet-recent-item p,
+html[data-theme="light"] .vet-recent-item span {
+    color: #66767d !important;
+}
+
+
+/* =========================================================
+   MODAL REGISTRAR PACIENTE / REGISTRAR NOTA
+   ========================================================= */
+
+html[data-theme="light"] .vet-modal-content {
+    background: #ffffff !important;
+    background-color: #ffffff !important;
+    color: #243447 !important;
+    border-color: #d9e4e5 !important;
+    box-shadow: -18px 0 45px rgba(31, 41, 55, 0.15) !important;
+}
+
+html[data-theme="light"] .vet-modal-header {
+    color: #243447 !important;
+    border-bottom-color: #d9e4e5 !important;
+}
+
+html[data-theme="light"] .vet-modal-header h3 {
+    color: #243447 !important;
+}
+
+html[data-theme="light"] .vet-modal-header p {
+    color: #66767d !important;
+}
+
+
+/* Etiquetas */
+
+html[data-theme="light"] .vet-modal-form label,
+html[data-theme="light"] .vet-modal-form label > span {
+    color: #0f766e !important;
+}
+
+
+/* Campos */
+
+html[data-theme="light"] .vet-modal-form input:not([type="hidden"]),
+html[data-theme="light"] .vet-modal-form select,
+html[data-theme="light"] .vet-modal-form textarea {
+    background: #ffffff !important;
+    background-color: #ffffff !important;
+    color: #243447 !important;
+    border: 1px solid #cfdcde !important;
+}
+
+html[data-theme="light"] .vet-modal-form input::placeholder,
+html[data-theme="light"] .vet-modal-form textarea::placeholder {
+    color: #87959b !important;
+}
+
+html[data-theme="light"] .vet-modal-form input:focus,
+html[data-theme="light"] .vet-modal-form select:focus,
+html[data-theme="light"] .vet-modal-form textarea:focus {
+    background: #ffffff !important;
+    color: #243447 !important;
+    border-color: #0f766e !important;
+    box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.10) !important;
+}
+
+
+/* Botón X */
+
+html[data-theme="light"] .vet-modal-close {
+    background: #eef7f6 !important;
+    color: #0f766e !important;
+    border-color: #cfe2df !important;
+}
+
+html[data-theme="light"] .vet-modal-close:hover {
+    background: #e1f2ef !important;
+}
+
+
+/* Botones inferiores */
+
+html[data-theme="light"] .vet-modal-actions {
+    border-top-color: #d9e4e5 !important;
+}
+
+html[data-theme="light"] .vet-modal-actions .btn-secondary {
+    background: #ffffff !important;
+    color: #0f766e !important;
+    border-color: #cfdcde !important;
+}
+
+html[data-theme="light"] .vet-modal-actions .btn-primary {
+    background: #0f766e !important;
+    color: #ffffff !important;
+    border-color: #0f766e !important;
+}
+
+
+/* Fondo detrás del modal */
+
+html[data-theme="light"] .vet-modal-backdrop {
+    background: rgba(31, 41, 55, 0.35) !important;
+}
