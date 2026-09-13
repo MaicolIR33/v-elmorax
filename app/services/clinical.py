@@ -28,6 +28,25 @@ def list_patients(
             patients.breed,
             patients.weight_kg,
             patients.vaccine_status,
+            patients.color,
+            patients.microchip,
+            patients.tutor_email,
+            patients.tutor_address,
+            patients.emergency_contact_name,
+            patients.emergency_contact_phone,
+            patients.emergency_contact_relationship,
+            patients.reproductive_status,
+            patients.sterilized,
+            patients.sterilization_date,
+            patients.allergies,
+            patients.preexisting_conditions,
+            patients.medical_history,
+            patients.deworming_status,
+            patients.deworming_date,
+            patients.clinical_alert,
+            patients.patient_status,
+            patients.updated_at,
+            patients.updated_by_user_id,
             patients.created_at,
             organizations.name AS organization_name,
             locations.name AS site_name,
@@ -67,6 +86,25 @@ def list_patients(
             "breed": row["breed"],
             "weight_kg": row["weight_kg"],
             "vaccine_status": row["vaccine_status"],
+            "color": row["color"],
+            "microchip": row["microchip"],
+            "tutor_email": row["tutor_email"],
+            "tutor_address": row["tutor_address"],
+            "emergency_contact_name": row["emergency_contact_name"],
+            "emergency_contact_phone": row["emergency_contact_phone"],
+            "emergency_contact_relationship": row["emergency_contact_relationship"],
+            "reproductive_status": row["reproductive_status"],
+            "sterilized": bool(row["sterilized"]),
+            "sterilization_date": row["sterilization_date"],
+            "allergies": row["allergies"],
+            "preexisting_conditions": row["preexisting_conditions"],
+            "medical_history": row["medical_history"],
+            "deworming_status": row["deworming_status"],
+            "deworming_date": row["deworming_date"],
+            "clinical_alert": row["clinical_alert"],
+            "patient_status": row["patient_status"],
+            "updated_at": row["updated_at"],
+            "updated_by_user_id": row["updated_by_user_id"],
             "organization_name": row["organization_name"] or "-",
             "site_name": row["site_name"] or "-",
             "site_city": row["site_city"] or "-",
@@ -89,26 +127,239 @@ def patient_options(organization_id: str = "", location_id: str = "") -> list[di
         for item in items
     ]
 
+def find_patient_duplicate(
+    organization_id,
+    location_id,
+    display_name,
+    owner_name="",
+    document_number="",
+    microchip="",
+    phone="",
+    species="",
+    birth_date="",
+    exclude_patient_id=None,
+):
+    connection = get_connection()
+
+    conditions = [
+        "organization_id = :organization_id",
+    ]
+
+    params = {
+        "organization_id": organization_id,
+    }
+
+    # El microchip identifica de forma única a una mascota
+    if microchip.strip():
+        conditions.append("LOWER(TRIM(microchip)) = LOWER(TRIM(:microchip))")
+        params["microchip"] = microchip.strip()
+
+    # Documento del tutor
+    elif document_number.strip():
+        conditions.append(
+            "LOWER(TRIM(document_number)) = LOWER(TRIM(:document_number))"
+        )
+        params["document_number"] = document_number.strip()
+
+    # Si no hay microchip ni documento, usamos una combinación
+    # para detectar posibles duplicados
+    else:
+        conditions.extend(
+            [
+                "LOWER(TRIM(display_name)) = LOWER(TRIM(:display_name))",
+                "LOWER(TRIM(owner_name)) = LOWER(TRIM(:owner_name))",
+                "LOWER(TRIM(species)) = LOWER(TRIM(:species))",
+            ]
+        )
+
+        params["display_name"] = display_name.strip()
+        params["owner_name"] = owner_name.strip()
+        params["species"] = species.strip()
+
+        if birth_date.strip():
+            conditions.append("birth_date = :birth_date")
+            params["birth_date"] = birth_date.strip()
+
+    if location_id:
+        conditions.append("location_id = :location_id")
+        params["location_id"] = location_id
+
+    if exclude_patient_id is not None:
+        conditions.append("id != :exclude_patient_id")
+        params["exclude_patient_id"] = exclude_patient_id
+
+    query = f"""
+        SELECT *
+        FROM patients
+        WHERE {" AND ".join(conditions)}
+        LIMIT 1
+    """
+
+    row = connection.execute(query, params).fetchone()
+
+    connection.close()
+
+    if row is None:
+        return None
+
+    return dict(row)
+def get_patient(patient_id):
+    connection = get_connection()
+
+    row = connection.execute(
+        """
+        SELECT *
+        FROM patients
+        WHERE id = ?
+        """,
+        (patient_id,),
+    ).fetchone()
+
+    connection.close()
+
+    if row is None:
+        return None
+
+    patient = dict(row)
+
+    patient["sterilized"] = bool(patient.get("sterilized"))
+
+    return patient
+
+def update_patient(patient_id, payload):
+    connection = get_connection()
+
+    connection.execute(
+        """
+        UPDATE patients
+        SET
+            display_name = :display_name,
+            patient_type = :patient_type,
+            specialty = :specialty,
+            owner_name = :owner_name,
+            phone = :phone,
+            document_number = :document_number,
+            birth_date = :birth_date,
+            sex = :sex,
+            insurance_name = :insurance_name,
+            species = :species,
+            breed = :breed,
+            weight_kg = :weight_kg,
+            vaccine_status = :vaccine_status,
+            color = :color,
+            microchip = :microchip,
+            tutor_email = :tutor_email,
+            tutor_address = :tutor_address,
+            emergency_contact_name = :emergency_contact_name,
+            emergency_contact_phone = :emergency_contact_phone,
+            emergency_contact_relationship = :emergency_contact_relationship,
+            reproductive_status = :reproductive_status,
+            sterilized = :sterilized,
+            sterilization_date = :sterilization_date,
+            allergies = :allergies,
+            preexisting_conditions = :preexisting_conditions,
+            medical_history = :medical_history,
+            deworming_status = :deworming_status,
+            deworming_date = :deworming_date,
+            clinical_alert = :clinical_alert,
+            patient_status = :patient_status,
+            updated_at = :updated_at,
+            updated_by_user_id = :updated_by_user_id
+        WHERE id = :patient_id
+        """,
+        {
+            **payload,
+            "patient_id": patient_id,
+        },
+    )
+
+    connection.commit()
+    connection.close()
 
 def create_patient(payload: dict) -> None:
     with get_connection() as connection:
         connection.execute(
-            """
-            INSERT INTO patients (
-                organization_id, location_id, display_name, patient_type, specialty,
-                owner_name, phone, last_visit, document_number, birth_date, sex, insurance_name,
-                species, breed, weight_kg, vaccine_status
-            )
-            VALUES (
-                :organization_id, :location_id, :display_name, :patient_type, :specialty,
-                :owner_name, :phone, :last_visit, :document_number, :birth_date, :sex, :insurance_name,
-                :species, :breed, :weight_kg, :vaccine_status
-            )
-            """,
-            payload,
+        """
+        INSERT INTO patients (
+            organization_id,
+            location_id,
+            display_name,
+            patient_type,
+            specialty,
+            owner_name,
+            phone,
+            last_visit,
+            document_number,
+            birth_date,
+            sex,
+            insurance_name,
+            species,
+            breed,
+            weight_kg,
+            vaccine_status,
+            color,
+            microchip,
+            tutor_email,
+            tutor_address,
+            emergency_contact_name,
+            emergency_contact_phone,
+            emergency_contact_relationship,
+            reproductive_status,
+            sterilized,
+            sterilization_date,
+            allergies,
+            preexisting_conditions,
+            medical_history,
+            deworming_status,
+            deworming_date,
+            clinical_alert,
+            patient_status,
+            updated_at,
+            updated_by_user_id
         )
-        connection.commit()
+        VALUES (
+            :organization_id,
+            :location_id,
+            :display_name,
+            :patient_type,
+            :specialty,
+            :owner_name,
+            :phone,
+            :last_visit,
+            :document_number,
+            :birth_date,
+            :sex,
+            :insurance_name,
+            :species,
+            :breed,
+            :weight_kg,
+            :vaccine_status,
+            :color,
+            :microchip,
+            :tutor_email,
+            :tutor_address,
+            :emergency_contact_name,
+            :emergency_contact_phone,
+            :emergency_contact_relationship,
+            :reproductive_status,
+            :sterilized,
+            :sterilization_date,
+            :allergies,
+            :preexisting_conditions,
+            :medical_history,
+            :deworming_status,
+            :deworming_date,
+            :clinical_alert,
+            :patient_status,
+            :updated_at,
+            :updated_by_user_id
+        )
+        """,
+        payload,
+    )
 
+    connection.commit()
+    connection.close()
 
 def delete_patient(patient_id: int) -> None:
     with get_connection() as connection:

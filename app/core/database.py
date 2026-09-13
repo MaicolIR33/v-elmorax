@@ -221,6 +221,25 @@ def init_db() -> None:
         ensure_column(connection, "patients", "vaccine_status", "TEXT NOT NULL DEFAULT ''")
         ensure_column(connection, "patients", "source_system", "TEXT NOT NULL DEFAULT ''")
         ensure_column(connection, "patients", "external_id", "TEXT NOT NULL DEFAULT ''")
+        ensure_column(connection, "patients", "color", "TEXT")
+        ensure_column(connection, "patients", "microchip", "TEXT")
+        ensure_column(connection,"patients", "tutor_email", "TEXT")
+        ensure_column(connection,"patients", "tutor_address", "TEXT")
+        ensure_column(connection,"patients", "emergency_contact_name", "TEXT")
+        ensure_column(connection,"patients", "emergency_contact_phone", "TEXT")
+        ensure_column(connection,"patients", "emergency_contact_relationship", "TEXT")
+        ensure_column(connection,"patients", "reproductive_status", "TEXT")
+        ensure_column(connection,"patients", "sterilized", "INTEGER NOT NULL DEFAULT 0")
+        ensure_column(connection,"patients", "sterilization_date", "TEXT")
+        ensure_column(connection,"patients", "allergies", "TEXT")
+        ensure_column(connection,"patients", "preexisting_conditions", "TEXT")
+        ensure_column(connection,"patients", "medical_history", "TEXT")
+        ensure_column(connection,"patients", "deworming_status", "TEXT")
+        ensure_column(connection,"patients", "deworming_date", "TEXT")
+        ensure_column(connection,"patients", "clinical_alert", "TEXT")
+        ensure_column(connection,"patients","patient_status","TEXT NOT NULL DEFAULT 'active'")
+        ensure_column(connection,"patients", "updated_at", "TEXT")
+        ensure_column(connection,"patients", "updated_by_user_id", "INTEGER")
         ensure_column(connection, "clinical_records", "follow_up_date", "TEXT NOT NULL DEFAULT ''")
         ensure_column(connection, "clinical_records", "dental_chart", "TEXT NOT NULL DEFAULT ''")
         ensure_column(connection, "clinical_records", "current_weight_kg", "REAL NOT NULL DEFAULT 0")
@@ -687,6 +706,7 @@ def build_schema_sql(dialect: str) -> str:
             FOREIGN KEY (organization_id) REFERENCES organizations (id),
             FOREIGN KEY (location_id) REFERENCES locations (id)
         );
+        
     """
 
 
@@ -822,6 +842,62 @@ def seed_db() -> None:
                 ("Bodega Principal", "inventario@velmorax.local", DEMO_PASSWORD_HASH, "inventory", 1, 1, "Insumos"),
             ],
         )
+                # Historial de peso
+        connection.executemany("""
+            CREATE TABLE IF NOT EXISTS patient_weight_history (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                patient_id INTEGER NOT NULL,
+                weight_kg REAL NOT NULL,
+                recorded_at TEXT NOT NULL,
+                recorded_by_user_id INTEGER,
+                notes TEXT,
+                FOREIGN KEY (patient_id)
+                    REFERENCES patients(id)
+                    ON DELETE CASCADE,
+                FOREIGN KEY (recorded_by_user_id)
+                    REFERENCES users(id)
+            )
+        """)
+
+        # Vacunas
+        connection.executemany("""
+            CREATE TABLE IF NOT EXISTS patient_vaccines (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                patient_id INTEGER NOT NULL,
+                vaccine_name TEXT NOT NULL,
+                application_date TEXT,
+                next_date TEXT,
+                lot_number TEXT,
+                veterinarian TEXT,
+                notes TEXT,
+                created_at TEXT NOT NULL,
+                created_by_user_id INTEGER,
+                FOREIGN KEY (patient_id)
+                    REFERENCES patients(id)
+                    ON DELETE CASCADE,
+                FOREIGN KEY (created_by_user_id)
+                    REFERENCES users(id)
+            )
+        """)
+
+        # Archivos adjuntos
+        connection.executemany("""
+            CREATE TABLE IF NOT EXISTS patient_attachments (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                patient_id INTEGER NOT NULL,
+                file_name TEXT NOT NULL,
+                file_path TEXT NOT NULL,
+                file_type TEXT,
+                description TEXT,
+                uploaded_at TEXT NOT NULL,
+                uploaded_by_user_id INTEGER,
+                FOREIGN KEY (patient_id)
+                    REFERENCES patients(id)
+                    ON DELETE CASCADE,
+                FOREIGN KEY (uploaded_by_user_id)
+                    REFERENCES users(id)
+            )
+        """)
         connection.commit()
 
 
