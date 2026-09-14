@@ -1959,70 +1959,56 @@ document.addEventListener("DOMContentLoaded", function () {
 
 <style>
 
+.vet-modal-content {
+    position: relative !important;
+    z-index: 2 !important;
+    width: 560px !important;
+    max-width: 48vw !important;
+    min-width: 500px !important;
+    height: 100vh !important;
+    max-height: 100vh !important;
+    margin: 0 !important;
+    padding: 24px !important;
+    box-sizing: border-box !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    background: var(--surface) !important;
+    border-left: 1px solid rgba(105, 188, 177, 0.45) !important;
+    box-shadow:
+        -20px 0 50px rgba(0, 0, 0, 0.40) !important;
+    transform: translateX(0) !important;
+    animation: vetPanelEntrada 0.25s ease-out !important;
+}
 /* ==========================================
-   PACIENTES - SOLO MODO CLARO
+   BARRA DE BÚSQUEDA - MODO OSCURO
    ========================================== */
 
-html[data-theme="light"] .vet-patient-search input[type="search"] {
-    background: #ffffff !important;
-    color: #1f2937 !important;
-    border: 1px solid #cfdcde !important;
+html[data-theme="dark"] .vet-patient-search {
+    background: transparent !important;
+    border: none !important;
 }
 
-html[data-theme="light"] .vet-patient-search input[type="search"]::placeholder {
-    color: #7b898f !important;
+html[data-theme="dark"] .vet-patient-search input[type="search"] {
+    background: #0b3034 !important;
+    background-color: #0b3034 !important;
+    color: #e8f3f1 !important;
+    border: 1px solid rgba(74, 161, 164, 0.55) !important;
 }
 
-html[data-theme="light"] .vet-patient-item {
-    background: #ffffff !important;
-    background-color: #ffffff !important;
-    color: #1f2937 !important;
-    border: 1px solid #d9e4e5 !important;
+html[data-theme="dark"] .vet-patient-search input[type="search"]::placeholder {
+    color: rgba(200, 224, 220, 0.60) !important;
 }
 
-html[data-theme="light"] .vet-patient-item strong {
-    color: #1f2937 !important;
+html[data-theme="dark"] .vet-patient-search input[type="search"]:focus {
+    background: #0e363a !important;
+    color: #e8f3f1 !important;
+    border-color: #69bcb1 !important;
 }
 
-html[data-theme="light"] .vet-patient-item p,
-html[data-theme="light"] .vet-patient-item span {
-    color: #66767d !important;
-}
-
-
-/* Atención reciente */
-
-html[data-theme="light"] .vet-recent-item {
-    background: #ffffff !important;
-    background-color: #ffffff !important;
-    color: #1f2937 !important;
-}
-
-
-/* ==========================================
-   MODALES - SOLO MODO CLARO
-   ========================================== */
-
-html[data-theme="light"] .vet-modal-content {
-    background: #ffffff !important;
-    background-color: #ffffff !important;
-    color: #1f2937 !important;
-}
-
-html[data-theme="light"] .vet-modal-form input,
-html[data-theme="light"] .vet-modal-form select,
-html[data-theme="light"] .vet-modal-form textarea {
-    background: #ffffff !important;
-    color: #1f2937 !important;
-    border: 1px solid #cfdcde !important;
-}
-
-html[data-theme="light"] .vet-modal-header h3 {
-    color: #1f2937 !important;
-}
-
-html[data-theme="light"] .vet-modal-header p {
-    color: #66767d !important;
+html[data-theme="dark"] .vet-patient-search button {
+    background: #163438 !important;
+    color: #8fd5ca !important;
+    border: 1px solid rgba(105, 188, 177, 0.35) !important;
 }
 
 </style>

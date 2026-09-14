@@ -5346,3 +5346,60 @@ html[data-theme="light"] .vet-modal-actions .btn-primary {
 html[data-theme="light"] .vet-modal-backdrop {
     background: rgba(31, 41, 55, 0.35) !important;
 }
+
+/* =========================================================
+   CORRECCIÓN MODO OSCURO - PACIENTES
+   ========================================================= */
+
+html[data-theme="dark"] .vet-patient-search input,
+html[data-theme="dark"] .vet-patient-search input[type="search"] {
+    background: rgba(11, 58, 66, 0.48) !important;
+    color: #e8f1f2 !important;
+    border-color: rgba(126, 211, 198, 0.35) !important;
+}
+
+html[data-theme="dark"] .vet-patient-search input::placeholder {
+    color: #9fb4b7 !important;
+}
+
+/* Tarjetas de mascotas */
+html[data-theme="dark"] .vet-patient-item {
+    background: rgba(12, 35, 38, 0.48) !important;
+    background-color: rgba(12, 35, 38, 0.48) !important;
+    color: #e8f1f2 !important;
+    border-color: rgba(126, 211, 198, 0.35) !important;
+}
+
+/* Texto de las mascotas */
+html[data-theme="dark"] .vet-patient-item strong {
+    color: #e8f1f2 !important;
+}
+
+html[data-theme="dark"] .vet-patient-item p,
+html[data-theme="dark"] .vet-patient-item span {
+    color: #9fb4b7 !important;
+}
+
+/* Botón Actualizar */
+html[data-theme="dark"] .vet-patient-item .action-button {
+    background: transparent !important;
+    color: #9fe1d7 !important;
+    border-color: rgba(126, 211, 198, 0.35) !important;
+}
+
+/* Botón Eliminar */
+html[data-theme="dark"] .vet-patient-item .action-danger {
+    background: transparent !important;
+    color: #ff8f87 !important;
+    border-color: rgba(255, 143, 135, 0.35) !important;
+}
+
+/* Atenciones recientes */
+html[data-theme="dark"] .vet-recent-card,
+html[data-theme="dark"] .vet-recent-item,
+html[data-theme="dark"] .vet-attention-item {
+    background: rgba(12, 35, 38, 0.48) !important;
+    background-color: rgba(12, 35, 38, 0.48) !important;
+    color: #e8f1f2 !important;
+    border-color: rgba(126, 211, 198, 0.35) !important;
+}
