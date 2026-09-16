@@ -7,6 +7,7 @@ import unittest
 from concurrent.futures import ThreadPoolExecutor
 from datetime import date, datetime, timedelta
 from pathlib import Path
+from uuid import uuid4
 
 
 TEST_DB = Path("data") / "velmorax-test.db"
@@ -19,6 +20,7 @@ from app.main import app
 from app.core.database import get_connection
 from app.services.appointments import available_slots, create_appointment, list_appointments
 from app.services.alerts import acknowledge_alert, list_alerts
+from app.services.clinical import create_patient, get_patient
 from app.services.auth import effective_permissions, get_user_by_id, list_users
 from app.services.inventory import create_inventory_movement
 from app.services.commercial import assert_capacity, organization_subscription
@@ -238,6 +240,165 @@ class VelmoraxWebTests(unittest.TestCase):
         clinical = self.client.get(response.headers["location"])
         self.assertEqual(clinical.status_code, 200)
         self.assertIn("Pacientes", clinical.text)
+
+    def test_veterinary_patient_lifecycle_is_scoped_and_preserves_clinical_data(self):
+        self.client.post("/logout")
+        self.client.post(
+            "/login",
+            data={
+                "intent": "veterinaria",
+                "email": "admin@velmorax.local",
+                "password": "velmorax123",
+            },
+        )
+        self.client.post("/login/push-approval", data={"approve": "1"})
+
+        suffix = uuid4().hex[:10]
+        microchip = f"QA-CHIP-{suffix}"
+        patient_name = f"Nala QA {suffix}"
+        patient_payload = {
+            "organization_id": "1",
+            "location_id": "2",
+            "display_name": patient_name,
+            "patient_type": "Animal",
+            "specialty": "Veterinaria",
+            "owner_name": "Tutor QA",
+            "phone": "3000000000",
+            "document_number": f"DOC-{suffix}",
+            "birth_date": "2022-04-18",
+            "sex": "Hembra",
+            "insurance_name": "",
+            "species": "Canino",
+            "breed": "Mestizo",
+            "weight_kg": "12.4",
+            "vaccine_status": "Al día",
+            "microchip": microchip,
+            "color": "Canela",
+            "allergies": "Sin alergias conocidas",
+            "patient_status": "active",
+        }
+        created = self.client.post("/patients", data=patient_payload, follow_redirects=False)
+        self.assertEqual(created.status_code, 303)
+        self.assertIn("patient_saved=1", created.headers["location"])
+
+        with get_connection() as connection:
+            row = connection.execute(
+                "SELECT id FROM patients WHERE microchip = ?", (microchip,)
+            ).fetchone()
+        self.assertIsNotNone(row)
+        patient_id = row["id"]
+        stored = get_patient(patient_id)
+        self.assertEqual(stored["color"], "Canela")
+        self.assertEqual(stored["allergies"], "Sin alergias conocidas")
+
+        updated_payload = {
+            **patient_payload,
+            "display_name": f"Nala QA editada {suffix}",
+            "color": "",
+            "allergies": "",
+        }
+        updated = self.client.post(
+            f"/patients/{patient_id}/edit", data=updated_payload, follow_redirects=False
+        )
+        self.assertEqual(updated.status_code, 303)
+        self.assertIn("patient_updated=1", updated.headers["location"])
+        stored = get_patient(patient_id)
+        self.assertEqual(stored["microchip"], microchip)
+        self.assertEqual(stored["color"], "Canela")
+        self.assertEqual(stored["allergies"], "Sin alergias conocidas")
+
+        duplicate_payload = {**patient_payload, "display_name": f"Otra mascota {suffix}"}
+        duplicate = self.client.post("/patients", data=duplicate_payload, follow_redirects=False)
+        self.assertEqual(duplicate.status_code, 303)
+        self.assertIn("permission_error=", duplicate.headers["location"])
+
+        record_payload = {
+            "organization_id": "1",
+            "location_id": "2",
+            "patient_id": str(patient_id),
+            "encounter_date": "2026-09-16",
+            "specialty": "Veterinaria",
+            "reason": "Control preventivo QA",
+            "note": "Paciente estable",
+            "status": "Cerrada",
+            "professional": "Dra. QA",
+            "current_weight_kg": "12.8",
+            "payment_amount": "0",
+            "payment_method": "Sin definir",
+        }
+        invalid_record = self.client.post(
+            "/clinical-records",
+            data={**record_payload, "location_id": "1"},
+            follow_redirects=False,
+        )
+        self.assertEqual(invalid_record.status_code, 303)
+        self.assertIn("permission_error=", invalid_record.headers["location"])
+        with get_connection() as connection:
+            invalid_records = connection.execute(
+                "SELECT COUNT(*) AS total FROM clinical_records WHERE patient_id = ?",
+                (patient_id,),
+            ).fetchone()["total"]
+        self.assertEqual(invalid_records, 0)
+
+        created_record = self.client.post(
+            "/clinical-records", data=record_payload, follow_redirects=False
+        )
+        self.assertEqual(created_record.status_code, 303)
+        self.assertIn("record_saved=1", created_record.headers["location"])
+        self.assertEqual(get_patient(patient_id)["last_visit"], "2026-09-16")
+
+        deleted = self.client.post(
+            f"/patients/{patient_id}/delete",
+            data={"organization_id": "2", "location_id": "3"},
+            follow_redirects=False,
+        )
+        self.assertEqual(deleted.status_code, 303)
+        self.assertIsNone(get_patient(patient_id))
+        with get_connection() as connection:
+            remaining_records = connection.execute(
+                "SELECT COUNT(*) AS total FROM clinical_records WHERE patient_id = ?",
+                (patient_id,),
+            ).fetchone()["total"]
+        self.assertEqual(remaining_records, 0)
+
+        foreign_name = f"Paciente externo QA {suffix}"
+        create_patient(
+            {
+                "organization_id": 2,
+                "location_id": 3,
+                "display_name": foreign_name,
+                "patient_type": "Animal",
+                "specialty": "Veterinaria",
+                "owner_name": "Tutor externo",
+                "phone": "",
+                "last_visit": "",
+                "document_number": "",
+                "birth_date": "",
+                "sex": "",
+                "insurance_name": "",
+                "species": "Canino",
+                "breed": "",
+                "weight_kg": 0,
+                "vaccine_status": "",
+            }
+        )
+        try:
+            with get_connection() as connection:
+                foreign_patient = connection.execute(
+                    "SELECT id FROM patients WHERE display_name = ?", (foreign_name,)
+                ).fetchone()
+            rejected_delete = self.client.post(
+                f"/patients/{foreign_patient['id']}/delete",
+                data={"organization_id": "1", "location_id": "2"},
+                follow_redirects=False,
+            )
+            self.assertEqual(rejected_delete.status_code, 303)
+            self.assertIn("permission_error=", rejected_delete.headers["location"])
+            self.assertIsNotNone(get_patient(foreign_patient["id"]))
+        finally:
+            with get_connection() as connection:
+                connection.execute("DELETE FROM patients WHERE display_name = ?", (foreign_name,))
+                connection.commit()
 
     def test_password_reset_flow_generates_link_and_allows_new_login(self):
         with TestClient(app) as client:

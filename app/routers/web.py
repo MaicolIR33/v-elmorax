@@ -50,8 +50,10 @@ from app.services.clinical import (
     delete_clinical_record,
     delete_patient,
     find_patient_duplicate,
+    get_patient,
     list_clinical_records,
     list_patients,
+    update_patient,
     update_clinical_record_status,
 )
 from app.services.commercial import assert_capacity, list_commercial_plans, organization_subscription
@@ -2909,18 +2911,18 @@ async def create_new_patient(
     if not inventory_scope_allowed(user, organization_id, location_id):
         return redirect_to_module_with_error(
             "/clinica",
-            "La organización o sede seleccionada no pertenece a tu alcance.")
+            "La organización o sede seleccionada no pertenece a tu alcance.",
+        )
 
-        duplicate = find_patient_duplicate(
-    organization_id=organization_id,
-    location_id=location_id,
-    display_name=display_name,
-    owner_name=owner_name,
-    document_number=document_number,
-    microchip=microchip,
-    phone=phone,
-    species=species,
-    birth_date=birth_date,
+    duplicate = find_patient_duplicate(
+        organization_id=organization_id,
+        location_id=location_id,
+        display_name=display_name,
+        owner_name=owner_name,
+        document_number=document_number,
+        microchip=microchip,
+        species=species,
+        birth_date=birth_date,
     )
 
     if duplicate:
@@ -2948,6 +2950,25 @@ async def create_new_patient(
             "breed": breed.strip(),
             "weight_kg": weight_kg,
             "vaccine_status": vaccine_status.strip(),
+            "color": color.strip(),
+            "microchip": microchip.strip(),
+            "tutor_email": tutor_email.strip(),
+            "tutor_address": tutor_address.strip(),
+            "emergency_contact_name": emergency_contact_name.strip(),
+            "emergency_contact_phone": emergency_contact_phone.strip(),
+            "emergency_contact_relationship": emergency_contact_relationship.strip(),
+            "reproductive_status": reproductive_status.strip(),
+            "sterilized": int(bool(sterilized)),
+            "sterilization_date": sterilization_date,
+            "allergies": allergies.strip(),
+            "preexisting_conditions": preexisting_conditions.strip(),
+            "medical_history": medical_history.strip(),
+            "deworming_status": deworming_status.strip(),
+            "deworming_date": deworming_date,
+            "clinical_alert": clinical_alert.strip(),
+            "patient_status": patient_status.strip() or "active",
+            "updated_at": datetime.now(UTC).isoformat(),
+            "updated_by_user_id": user["id"],
         }
     )
     log_audit_event(
@@ -3024,14 +3045,22 @@ async def edit_patient(
             "La mascota no existe."
         )
 
+    if (
+        int(patient["organization_id"]) != organization_id
+        or int(patient["location_id"]) != location_id
+    ):
+        return redirect_to_module_with_error(
+            "/clinica",
+            "La mascota no pertenece a la sede seleccionada.",
+        )
+
     duplicate = find_patient_duplicate(
         organization_id=organization_id,
         location_id=location_id,
         display_name=display_name,
-        owner_name=owner_name,
-        document_number=document_number,
-        microchip=microchip,
-        phone=phone,
+        owner_name=owner_name.strip() or patient.get("owner_name", ""),
+        document_number=document_number.strip() or patient.get("document_number", ""),
+        microchip=microchip.strip() or patient.get("microchip", ""),
         species=species,
         birth_date=birth_date,
         exclude_patient_id=patient_id,
@@ -3047,35 +3076,35 @@ async def edit_patient(
         patient_id,
         {
             "display_name": display_name.strip(),
-            "patient_type": patient_type.strip(),
-            "specialty": specialty.strip(),
+            "patient_type": patient.get("patient_type", patient_type).strip(),
+            "specialty": patient.get("specialty", specialty).strip(),
             "owner_name": owner_name.strip(),
             "phone": phone.strip(),
-            "document_number": document_number.strip(),
+            "document_number": document_number.strip() or patient.get("document_number", ""),
             "birth_date": birth_date,
             "sex": sex.strip(),
-            "insurance_name": insurance_name.strip(),
+            "insurance_name": insurance_name.strip() or patient.get("insurance_name", ""),
             "species": species.strip(),
             "breed": breed.strip(),
             "weight_kg": weight_kg,
             "vaccine_status": vaccine_status.strip(),
-            "color": color.strip(),
+            "color": color.strip() or patient.get("color", ""),
             "microchip": microchip.strip(),
-            "tutor_email": tutor_email.strip(),
-            "tutor_address": tutor_address.strip(),
-            "emergency_contact_name": emergency_contact_name.strip(),
-            "emergency_contact_phone": emergency_contact_phone.strip(),
-            "emergency_contact_relationship": emergency_contact_relationship.strip(),
-            "reproductive_status": reproductive_status.strip(),
-            "sterilized": sterilized,
-            "sterilization_date": sterilization_date,
-            "allergies": allergies.strip(),
-            "preexisting_conditions": preexisting_conditions.strip(),
-            "medical_history": medical_history.strip(),
-            "deworming_status": deworming_status.strip(),
-            "deworming_date": deworming_date,
-            "clinical_alert": clinical_alert.strip(),
-            "patient_status": patient_status.strip() or "active",
+            "tutor_email": tutor_email.strip() or patient.get("tutor_email", ""),
+            "tutor_address": tutor_address.strip() or patient.get("tutor_address", ""),
+            "emergency_contact_name": emergency_contact_name.strip() or patient.get("emergency_contact_name", ""),
+            "emergency_contact_phone": emergency_contact_phone.strip() or patient.get("emergency_contact_phone", ""),
+            "emergency_contact_relationship": emergency_contact_relationship.strip() or patient.get("emergency_contact_relationship", ""),
+            "reproductive_status": reproductive_status.strip() or patient.get("reproductive_status", ""),
+            "sterilized": int(patient.get("sterilized", False)),
+            "sterilization_date": sterilization_date or patient.get("sterilization_date", ""),
+            "allergies": allergies.strip() or patient.get("allergies", ""),
+            "preexisting_conditions": preexisting_conditions.strip() or patient.get("preexisting_conditions", ""),
+            "medical_history": medical_history.strip() or patient.get("medical_history", ""),
+            "deworming_status": deworming_status.strip() or patient.get("deworming_status", ""),
+            "deworming_date": deworming_date or patient.get("deworming_date", ""),
+            "clinical_alert": clinical_alert.strip() or patient.get("clinical_alert", ""),
+            "patient_status": patient_status.strip() if patient_status != "active" else patient.get("patient_status", "active"),
             "updated_at": datetime.now(UTC).isoformat(),
             "updated_by_user_id": user["id"],
         },
@@ -3114,17 +3143,33 @@ async def remove_patient(
     if not user["permissions"]["manage_clinical"]:
         return redirect_to_module_with_error("/clinica", "Tu rol no puede eliminar pacientes.")
 
+    patient = get_patient(patient_id)
+    if patient is None:
+        return redirect_to_module_with_error("/clinica", "La mascota no existe.")
+    if not inventory_scope_allowed(
+        user,
+        int(patient["organization_id"]),
+        int(patient["location_id"]),
+    ):
+        return redirect_to_module_with_error(
+            "/clinica",
+            "Tu rol no puede eliminar mascotas de otra sede.",
+        )
+
     delete_patient(patient_id)
     log_audit_event(
         user_id=user["id"],
-        organization_id=organization_id or None,
-        location_id=location_id or None,
+        organization_id=patient["organization_id"],
+        location_id=patient["location_id"],
         action="Eliminacion",
         entity_type="Paciente",
-        entity_label=f"Paciente #{patient_id}",
+        entity_label=patient["display_name"],
         detail="Paciente y sus registros relacionados fueron eliminados",
     )
-    suffix = build_scope_query(str(organization_id or ""), str(location_id or ""))
+    suffix = build_scope_query(
+        str(patient["organization_id"]),
+        str(patient["location_id"]),
+    )
     return RedirectResponse(url=f"/clinica?{suffix}" if suffix else "/clinica", status_code=303)
 
 
@@ -3159,6 +3204,21 @@ async def create_new_record(
         return redirect_to_login()
     if not user["permissions"]["manage_clinical"]:
         return redirect_to_module_with_error("/clinica", "Tu rol no puede registrar atenciones.")
+    if not inventory_scope_allowed(user, organization_id, location_id):
+        return redirect_to_module_with_error(
+            "/clinica",
+            "La organización o sede seleccionada no pertenece a tu alcance.",
+        )
+
+    patient = get_patient(patient_id)
+    if patient is None or (
+        int(patient["organization_id"]) != organization_id
+        or int(patient["location_id"]) != location_id
+    ):
+        return redirect_to_module_with_error(
+            "/clinica",
+            "La mascota no pertenece a la sede seleccionada.",
+        )
 
     create_clinical_record(
         {

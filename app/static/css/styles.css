@@ -4446,7 +4446,7 @@ html[data-theme="light"] .vet-modal-backdrop {
     }
 
 
-    .form-grid {
+    .vet-modal-form .form-grid {
         grid-template-columns: 1fr;
     }
 
@@ -5362,6 +5362,16 @@ html[data-theme="dark"] .vet-patient-search input::placeholder {
     color: #9fb4b7 !important;
 }
 
+html[data-theme="dark"] .vet-patient-search {
+    background: #12292d !important;
+    color: #e8f1f2 !important;
+    border-color: rgba(126, 211, 198, 0.35) !important;
+}
+
+html[data-theme="dark"] .vet-patient-search label {
+    color: #c5dad6 !important;
+}
+
 /* Tarjetas de mascotas */
 html[data-theme="dark"] .vet-patient-item {
     background: rgba(12, 35, 38, 0.48) !important;
@@ -5402,4 +5412,22 @@ html[data-theme="dark"] .vet-attention-item {
     background-color: rgba(12, 35, 38, 0.48) !important;
     color: #e8f1f2 !important;
     border-color: rgba(126, 211, 198, 0.35) !important;
+}
+
+html[data-theme="dark"] .vet-recent-card strong,
+html[data-theme="dark"] .vet-recent-item strong,
+html[data-theme="dark"] .vet-attention-item strong {
+    color: #e8f1f2 !important;
+}
+
+html[data-theme="dark"] .vet-recent-card p,
+html[data-theme="dark"] .vet-recent-card span,
+html[data-theme="dark"] .vet-recent-card small,
+html[data-theme="dark"] .vet-recent-item p,
+html[data-theme="dark"] .vet-recent-item span,
+html[data-theme="dark"] .vet-recent-item small,
+html[data-theme="dark"] .vet-attention-item p,
+html[data-theme="dark"] .vet-attention-item span,
+html[data-theme="dark"] .vet-attention-item small {
+    color: #b7c8ca !important;
 }

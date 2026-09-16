@@ -128,109 +128,68 @@ def patient_options(organization_id: str = "", location_id: str = "") -> list[di
     ]
 
 def find_patient_duplicate(
-    organization_id,
-    location_id,
-    display_name,
-    owner_name="",
-    document_number="",
-    microchip="",
-    phone="",
-    species="",
-    birth_date="",
-    exclude_patient_id=None,
-):
-    connection = get_connection()
+    organization_id: int,
+    location_id: int,
+    display_name: str,
+    owner_name: str = "",
+    document_number: str = "",
+    microchip: str = "",
+    species: str = "",
+    birth_date: str = "",
+    exclude_patient_id: int | None = None,
+) -> dict | None:
+    """Return a probable duplicate only when there is a reliable identifier."""
+    conditions = ["organization_id = ?"]
+    params: list[object] = [organization_id]
 
-    conditions = [
-        "organization_id = :organization_id",
-    ]
-
-    params = {
-        "organization_id": organization_id,
-    }
-
-    # El microchip identifica de forma única a una mascota
     if microchip.strip():
-        conditions.append("LOWER(TRIM(microchip)) = LOWER(TRIM(:microchip))")
-        params["microchip"] = microchip.strip()
-
-    # Documento del tutor
+        conditions.append("LOWER(TRIM(microchip)) = LOWER(TRIM(?))")
+        params.append(microchip.strip())
     elif document_number.strip():
-        conditions.append(
-            "LOWER(TRIM(document_number)) = LOWER(TRIM(:document_number))"
-        )
-        params["document_number"] = document_number.strip()
-
-    # Si no hay microchip ni documento, usamos una combinación
-    # para detectar posibles duplicados
-    else:
+        conditions.append("LOWER(TRIM(document_number)) = LOWER(TRIM(?))")
+        params.append(document_number.strip())
+    elif owner_name.strip() and display_name.strip() and species.strip():
         conditions.extend(
             [
-                "LOWER(TRIM(display_name)) = LOWER(TRIM(:display_name))",
-                "LOWER(TRIM(owner_name)) = LOWER(TRIM(:owner_name))",
-                "LOWER(TRIM(species)) = LOWER(TRIM(:species))",
+                "LOWER(TRIM(display_name)) = LOWER(TRIM(?))",
+                "LOWER(TRIM(owner_name)) = LOWER(TRIM(?))",
+                "LOWER(TRIM(species)) = LOWER(TRIM(?))",
             ]
         )
-
-        params["display_name"] = display_name.strip()
-        params["owner_name"] = owner_name.strip()
-        params["species"] = species.strip()
-
+        params.extend([display_name.strip(), owner_name.strip(), species.strip()])
         if birth_date.strip():
-            conditions.append("birth_date = :birth_date")
-            params["birth_date"] = birth_date.strip()
+            conditions.append("birth_date = ?")
+            params.append(birth_date.strip())
+    else:
+        return None
 
     if location_id:
-        conditions.append("location_id = :location_id")
-        params["location_id"] = location_id
-
+        conditions.append("location_id = ?")
+        params.append(location_id)
     if exclude_patient_id is not None:
-        conditions.append("id != :exclude_patient_id")
-        params["exclude_patient_id"] = exclude_patient_id
+        conditions.append("id != ?")
+        params.append(exclude_patient_id)
 
-    query = f"""
-        SELECT *
-        FROM patients
-        WHERE {" AND ".join(conditions)}
-        LIMIT 1
-    """
+    query = f"SELECT * FROM patients WHERE {' AND '.join(conditions)} LIMIT 1"
+    with get_connection() as connection:
+        row = connection.execute(query, tuple(params)).fetchone()
+    return dict(row) if row is not None else None
 
-    row = connection.execute(query, params).fetchone()
 
-    connection.close()
-
+def get_patient(patient_id: int) -> dict | None:
+    with get_connection() as connection:
+        row = connection.execute("SELECT * FROM patients WHERE id = ?", (patient_id,)).fetchone()
     if row is None:
         return None
-
-    return dict(row)
-def get_patient(patient_id):
-    connection = get_connection()
-
-    row = connection.execute(
-        """
-        SELECT *
-        FROM patients
-        WHERE id = ?
-        """,
-        (patient_id,),
-    ).fetchone()
-
-    connection.close()
-
-    if row is None:
-        return None
-
     patient = dict(row)
-
     patient["sterilized"] = bool(patient.get("sterilized"))
-
     return patient
 
-def update_patient(patient_id, payload):
-    connection = get_connection()
 
-    connection.execute(
-        """
+def update_patient(patient_id: int, payload: dict) -> None:
+    with get_connection() as connection:
+        connection.execute(
+            """
         UPDATE patients
         SET
             display_name = :display_name,
@@ -267,16 +226,36 @@ def update_patient(patient_id, payload):
             updated_by_user_id = :updated_by_user_id
         WHERE id = :patient_id
         """,
-        {
-            **payload,
-            "patient_id": patient_id,
-        },
-    )
-
-    connection.commit()
-    connection.close()
+            {
+                **payload,
+                "patient_id": patient_id,
+            },
+        )
+        connection.commit()
 
 def create_patient(payload: dict) -> None:
+    payload = {
+        "color": "",
+        "microchip": "",
+        "tutor_email": "",
+        "tutor_address": "",
+        "emergency_contact_name": "",
+        "emergency_contact_phone": "",
+        "emergency_contact_relationship": "",
+        "reproductive_status": "",
+        "sterilized": 0,
+        "sterilization_date": "",
+        "allergies": "",
+        "preexisting_conditions": "",
+        "medical_history": "",
+        "deworming_status": "",
+        "deworming_date": "",
+        "clinical_alert": "",
+        "patient_status": "active",
+        "updated_at": "",
+        "updated_by_user_id": None,
+        **payload,
+    }
     with get_connection() as connection:
         connection.execute(
         """
@@ -358,8 +337,7 @@ def create_patient(payload: dict) -> None:
         payload,
     )
 
-    connection.commit()
-    connection.close()
+        connection.commit()
 
 def delete_patient(patient_id: int) -> None:
     with get_connection() as connection:

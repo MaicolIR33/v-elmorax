@@ -842,62 +842,6 @@ def seed_db() -> None:
                 ("Bodega Principal", "inventario@velmorax.local", DEMO_PASSWORD_HASH, "inventory", 1, 1, "Insumos"),
             ],
         )
-                # Historial de peso
-        connection.executemany("""
-            CREATE TABLE IF NOT EXISTS patient_weight_history (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                patient_id INTEGER NOT NULL,
-                weight_kg REAL NOT NULL,
-                recorded_at TEXT NOT NULL,
-                recorded_by_user_id INTEGER,
-                notes TEXT,
-                FOREIGN KEY (patient_id)
-                    REFERENCES patients(id)
-                    ON DELETE CASCADE,
-                FOREIGN KEY (recorded_by_user_id)
-                    REFERENCES users(id)
-            )
-        """)
-
-        # Vacunas
-        connection.executemany("""
-            CREATE TABLE IF NOT EXISTS patient_vaccines (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                patient_id INTEGER NOT NULL,
-                vaccine_name TEXT NOT NULL,
-                application_date TEXT,
-                next_date TEXT,
-                lot_number TEXT,
-                veterinarian TEXT,
-                notes TEXT,
-                created_at TEXT NOT NULL,
-                created_by_user_id INTEGER,
-                FOREIGN KEY (patient_id)
-                    REFERENCES patients(id)
-                    ON DELETE CASCADE,
-                FOREIGN KEY (created_by_user_id)
-                    REFERENCES users(id)
-            )
-        """)
-
-        # Archivos adjuntos
-        connection.executemany("""
-            CREATE TABLE IF NOT EXISTS patient_attachments (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                patient_id INTEGER NOT NULL,
-                file_name TEXT NOT NULL,
-                file_path TEXT NOT NULL,
-                file_type TEXT,
-                description TEXT,
-                uploaded_at TEXT NOT NULL,
-                uploaded_by_user_id INTEGER,
-                FOREIGN KEY (patient_id)
-                    REFERENCES patients(id)
-                    ON DELETE CASCADE,
-                FOREIGN KEY (uploaded_by_user_id)
-                    REFERENCES users(id)
-            )
-        """)
         connection.commit()
 
 
