@@ -11,9 +11,9 @@
             document.documentElement.dataset.theme = savedTheme === "dark" ? "dark" : "light";
         }());
     </script>
-    <link rel="stylesheet" href="{{ url_for('static', path='/css/styles.css') }}?v=theme-4">
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/styles.css') }}?v=theme-brand-svg-1">
     {% if is_veterinary_flow %}
-    <link rel="stylesheet" href="{{ url_for('static', path='/css/veterinary-dashboard.css') }}?v=theme-4">
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/veterinary-dashboard.css') }}?v=theme-2">
     {% endif %}
 </head>
 <body{% if is_veterinary_flow %} class="veterinary-dashboard-page"{% endif %}>
