@@ -20,13 +20,14 @@ from app.main import app
 from app.core.database import get_connection
 from app.services.appointments import available_slots, create_appointment, list_appointments
 from app.services.alerts import acknowledge_alert, list_alerts
-from app.services.clinical import create_patient, get_patient
+from app.services.clinical import create_patient, find_patient_duplicate, get_patient
 from app.services.auth import effective_permissions, get_user_by_id, list_users
 from app.services.inventory import create_inventory_movement
 from app.services.commercial import assert_capacity, organization_subscription
 from app.services.client_migration import migrate_client_bundle
 from app.services.integrations import enqueue_integration_event, integration_outbox_summary, integration_readiness
 from app.services.pilot import evaluate_pilot
+from app.routers.web import _build_patient_directory
 
 
 class VelmoraxWebTests(unittest.TestCase):
@@ -43,13 +44,100 @@ class VelmoraxWebTests(unittest.TestCase):
         if TEST_DB.exists():
             TEST_DB.unlink()
 
-    def test_login_page_renders_clean_credentials_form(self):
+    def test_login_page_starts_with_flow_selection_without_credentials_form(self):
         self.client.post("/logout")
         response = self.client.get("/login")
         self.assertEqual(response.status_code, 200)
-        self.assertIn("Correo", response.text)
-        self.assertIn("Clave", response.text)
+        self.assertIn("Elige tu flujo.", response.text)
+        self.assertIn('href="/veterinaria"', response.text)
+        self.assertNotIn('name="email"', response.text)
+        self.assertNotIn('name="password"', response.text)
         self.assertNotIn("Sede / ubicacion", response.text)
+
+    def test_remember_me_controls_session_cookie_lifetime(self):
+        self.client.post("/logout")
+        self.client.post(
+            "/login",
+            data={
+                "intent": "veterinaria",
+                "email": "admin@velmorax.local",
+                "password": "velmorax123",
+                "remember_me": "1",
+            },
+        )
+        remembered = self.client.post("/login/push-approval", data={"approve": "1"})
+        self.assertIn("Max-Age=1209600", remembered.headers["set-cookie"])
+
+        self.client.post("/logout")
+        self.client.post(
+            "/login",
+            data={
+                "intent": "veterinaria",
+                "email": "admin@velmorax.local",
+                "password": "velmorax123",
+            },
+        )
+        standard = self.client.post("/login/push-approval", data={"approve": "1"})
+        self.assertNotIn("Max-Age=", standard.headers["set-cookie"])
+
+    def test_veterinary_dashboard_supports_periods_trends_and_summary_exports(self):
+        self.client.post("/logout")
+        self.client.post(
+            "/login",
+            data={"intent": "veterinaria", "email": "admin@velmorax.local", "password": "velmorax123"},
+        )
+        self.client.post("/login/push-approval", data={"approve": "1"})
+        dashboard = self.client.get("/?period=week")
+        self.assertEqual(dashboard.status_code, 200)
+        self.assertIn("Tendencias del periodo", dashboard.text)
+        self.assertIn("Crear o administrar pendientes", dashboard.text)
+        self.assertIn("Pacientes atendidos", dashboard.text)
+        self.assertIn("Descargar CSV", dashboard.text)
+        exported = self.client.get("/dashboard/resumen/export?period=week")
+        self.assertEqual(exported.status_code, 200)
+        self.assertIn("text/csv", exported.headers["content-type"])
+        self.assertIn("Resumen diario Velmorax", exported.text)
+        printable = self.client.get("/dashboard/resumen/imprimir?period=week")
+        self.assertEqual(printable.status_code, 200)
+        self.assertIn("Resumen operativo", printable.text)
+
+    def test_dashboard_preferences_tasks_history_and_responsive_contract(self):
+        self.client.post("/logout")
+        self.client.post("/login", data={"intent": "veterinaria", "email": "admin@velmorax.local", "password": "velmorax123"})
+        self.client.post("/login/push-approval", data={"approve": "1"})
+        saved_view = self.client.post("/dashboard/preferences", data={
+            "selected_view": "analysis", "visible_cards": ["operations", "signals", "agenda", "tasks", "analytics", "resources", "continuity"],
+        }, follow_redirects=False)
+        self.assertEqual(saved_view.status_code, 303)
+        dashboard = self.client.get("/?history_span=month")
+        self.assertIn('data-dashboard-view="analysis"', dashboard.text)
+        self.assertIn("Evolución mensual", dashboard.text)
+        created = self.client.post("/dashboard/tasks", data={
+            "organization_id": 1, "location_id": 2, "title": "Pendiente QA de tablero",
+            "assigned_user_id": 0, "priority": "important", "due_at": "2026-10-04T10:00", "message": "Verificar desde el tablero",
+        }, follow_redirects=False)
+        self.assertEqual(created.status_code, 303)
+        with get_connection() as connection:
+            task = connection.execute("SELECT id, status FROM alerts WHERE title='Pendiente QA de tablero' ORDER BY id DESC").fetchone()
+            snapshots = connection.execute("SELECT COUNT(*) AS total FROM dashboard_snapshots WHERE organization_id=1 AND location_id=2").fetchone()
+        self.assertIsNotNone(task)
+        self.assertGreaterEqual(snapshots["total"], 1)
+        updated = self.client.post(f"/dashboard/tasks/{task['id']}", data={
+            "organization_id": 1, "location_id": 2, "title": "Pendiente QA actualizado",
+            "assigned_user_id": 0, "priority": "urgent", "due_at": "2026-10-04T11:00", "message": "Actualizado",
+        }, follow_redirects=False)
+        self.assertEqual(updated.status_code, 303)
+        closed = self.client.post(f"/dashboard/tasks/{task['id']}/close", data={"organization_id": 1, "location_id": 2}, follow_redirects=False)
+        self.assertEqual(closed.status_code, 303)
+        with get_connection() as connection:
+            status = connection.execute("SELECT status FROM alerts WHERE id=?", (task["id"],)).fetchone()["status"]
+            audits = connection.execute("SELECT COUNT(*) AS total FROM audit_events WHERE action IN ('Exportó resumen', 'Imprimió resumen', 'Cerró pendiente')").fetchone()["total"]
+        self.assertEqual(status, "resolved")
+        self.assertGreaterEqual(audits, 1)
+        self.assertFalse(effective_permissions({"role": "reception"})["export_dashboard"])
+        css = Path("app/static/css/veterinary-dashboard.css").read_text()
+        self.assertIn("@media (max-width: 760px)", css)
+        self.assertIn("vet-card-hidden", css)
 
     def test_veterinary_flow_opens_public_landing_and_preserves_login_intent(self):
         self.client.post("/logout")
@@ -68,6 +156,8 @@ class VelmoraxWebTests(unittest.TestCase):
         selected_login = self.client.get("/login?intent=veterinaria")
         self.assertEqual(selected_login.status_code, 200)
         self.assertIn('data-selected-intent="veterinaria"', selected_login.text)
+        self.assertIn('name="email"', selected_login.text)
+        self.assertIn("Cambiar de flujo", selected_login.text)
 
     def test_unavailable_entry_flows_are_disabled_on_client_and_server(self):
         self.client.post("/logout")
@@ -273,6 +363,10 @@ class VelmoraxWebTests(unittest.TestCase):
             "microchip": microchip,
             "color": "Canela",
             "allergies": "Sin alergias conocidas",
+            "clinical_alert": "Vigilar reacción QA",
+            "deworming_status": "Aplicada · control QA",
+            "deworming_date": date.today().isoformat(),
+            "next_deworming_due": (date.today() + timedelta(days=14)).isoformat(),
             "patient_status": "active",
         }
         created = self.client.post("/patients", data=patient_payload, follow_redirects=False)
@@ -288,6 +382,29 @@ class VelmoraxWebTests(unittest.TestCase):
         stored = get_patient(patient_id)
         self.assertEqual(stored["color"], "Canela")
         self.assertEqual(stored["allergies"], "Sin alergias conocidas")
+        self.assertEqual(stored["next_deworming_due"], patient_payload["next_deworming_due"])
+        patient_list = self.client.get(f"/clinica?organization_id=1&location_id=2&q={patient_name}")
+        self.assertEqual(patient_list.status_code, 200)
+        self.assertIn(f'data-record-patient-id="{patient_id}"', patient_list.text)
+        self.assertIn("Crear cita", patient_list.text)
+        self.assertIn(f"/pacientes/{patient_id}/historial", patient_list.text)
+        self.assertIn("Próxima desparasitación", patient_list.text)
+        appointment_form = self.client.get(
+            f"/agenda?organization_id=1&location_id=2&patient_id={patient_id}&new=1"
+        )
+        self.assertEqual(appointment_form.status_code, 200)
+        self.assertIn(f'data-preselected-patient="{patient_id}"', appointment_form.text)
+        self.assertIn('data-open-on-load="1"', appointment_form.text)
+        alert_filter = self.client.get(f"/clinica?organization_id=1&location_id=2&q={patient_name}&alerts=1")
+        self.assertIn("Vigilar reacción QA", alert_filter.text)
+        self.assertIsNone(
+            find_patient_duplicate(
+                organization_id=1,
+                location_id=2,
+                display_name="Sin identificador",
+                microchip=None,
+            )
+        )
 
         updated_payload = {
             **patient_payload,
@@ -320,6 +437,12 @@ class VelmoraxWebTests(unittest.TestCase):
             "note": "Paciente estable",
             "status": "Cerrada",
             "professional": "Dra. QA",
+            "diagnosis": "Paciente sano para control QA",
+            "treatment_plan": "Continuar plan preventivo QA",
+            "vital_signs": "FC 90 lpm; temperatura 38.5 C",
+            "prescription": "Refuerzo según esquema QA",
+            "discharge_notes": "Observar apetito durante 24 horas",
+            "next_vaccine_due": "2027-09-16",
             "current_weight_kg": "12.8",
             "payment_amount": "0",
             "payment_method": "Sin definir",
@@ -344,6 +467,107 @@ class VelmoraxWebTests(unittest.TestCase):
         self.assertEqual(created_record.status_code, 303)
         self.assertIn("record_saved=1", created_record.headers["location"])
         self.assertEqual(get_patient(patient_id)["last_visit"], "2026-09-16")
+
+        # Un historial real suele reunir controles de distintos meses. Verificamos
+        # que varias atenciones extensas se mantengan en la misma vista sin modales.
+        for index, encounter_date in enumerate(
+            (
+                "2026-08-12",
+                "2026-07-03",
+                "2026-05-19",
+                "2026-03-25",
+                "2025-12-10",
+                "2025-09-22",
+                "2025-06-14",
+            ),
+            start=1,
+        ):
+            response = self.client.post(
+                "/clinical-records",
+                data={
+                    **record_payload,
+                    "encounter_date": encounter_date,
+                    "reason": f"Control clínico periódico QA {index}",
+                    "note": (
+                        "Paciente con evolución favorable. Se revisaron hábitos, "
+                        "estado corporal y calendario preventivo; el tutor recibió "
+                        "indicaciones claras para el siguiente control."
+                    ),
+                    "diagnosis": f"Seguimiento preventivo sin hallazgos de alarma {index}",
+                    "treatment_plan": "Mantener alimentación, ejercicio y esquema preventivo vigente.",
+                    "discharge_notes": "Consultar antes si presenta cambios de apetito, ánimo o movilidad.",
+                },
+                follow_redirects=False,
+            )
+            self.assertEqual(response.status_code, 303)
+
+        history = self.client.get(
+            f"/pacientes/{patient_id}/historial?organization_id=1&location_id=2"
+        )
+        self.assertEqual(history.status_code, 200)
+        self.assertIn(f"Historial de Nala QA editada {suffix}", history.text)
+        self.assertIn("Control preventivo QA", history.text)
+        self.assertIn("Volver a pacientes", history.text)
+        self.assertIn("Descargar PDF", history.text)
+        self.assertIn("Seguimiento clínico", history.text)
+        self.assertIn("Control clínico periódico QA 7", history.text)
+        self.assertEqual(history.text.count("vet-history-record\""), 8)
+        self.assertNotIn("🩺", history.text)
+        self.assertNotIn("vet-record-details-modal", history.text)
+        self.assertNotIn("Seguimiento ↗", history.text)
+
+        with get_connection() as connection:
+            record_to_delete = connection.execute(
+                "SELECT id FROM clinical_records WHERE patient_id = ? ORDER BY id DESC LIMIT 1",
+                (patient_id,),
+            ).fetchone()["id"]
+
+        deleted_record = self.client.post(
+            f"/clinical-records/{record_to_delete}/delete",
+            data={"organization_id": "1", "location_id": "2", "patient_id": str(patient_id)},
+            follow_redirects=False,
+        )
+        self.assertEqual(deleted_record.status_code, 303)
+        self.assertIn(f"/pacientes/{patient_id}/historial", deleted_record.headers["location"])
+        self.assertIsNotNone(get_patient(patient_id))
+        with get_connection() as connection:
+            remaining_records = connection.execute(
+                "SELECT COUNT(*) AS total FROM clinical_records WHERE patient_id = ?",
+                (patient_id,),
+            ).fetchone()["total"]
+        self.assertEqual(remaining_records, 7)
+
+        rejected_record_delete = self.client.post(
+            "/clinical-records/999999/delete",
+            data={"organization_id": "1", "location_id": "2", "patient_id": str(patient_id)},
+            follow_redirects=False,
+        )
+        self.assertEqual(rejected_record_delete.status_code, 303)
+        self.assertIn("permission_error=", rejected_record_delete.headers["location"])
+
+        pdf = self.client.get(
+            f"/pacientes/{patient_id}/historial/descargar?organization_id=1&location_id=2"
+        )
+        self.assertEqual(pdf.status_code, 200)
+        self.assertEqual(pdf.headers["content-type"], "application/pdf")
+        self.assertIn("attachment; filename=", pdf.headers["content-disposition"])
+        self.assertTrue(pdf.content.startswith(b"%PDF-1.4"))
+        self.assertIn(b"Control preventivo QA", pdf.content)
+
+        deleted_history = self.client.post(
+            f"/pacientes/{patient_id}/historial/delete",
+            data={"organization_id": "1", "location_id": "2"},
+            follow_redirects=False,
+        )
+        self.assertEqual(deleted_history.status_code, 303)
+        self.assertIn(f"/pacientes/{patient_id}/historial", deleted_history.headers["location"])
+        self.assertIsNotNone(get_patient(patient_id))
+        with get_connection() as connection:
+            history_after_delete = connection.execute(
+                "SELECT COUNT(*) AS total FROM clinical_records WHERE patient_id = ?",
+                (patient_id,),
+            ).fetchone()["total"]
+        self.assertEqual(history_after_delete, 0)
 
         deleted = self.client.post(
             f"/patients/{patient_id}/delete",
@@ -765,6 +989,44 @@ class VelmoraxWebTests(unittest.TestCase):
                 connection.execute("DELETE FROM alerts WHERE id = ?", (alert_id,))
                 connection.commit()
 
+    def test_patient_directory_filters_and_pagination(self):
+        today = date.today()
+        patients = []
+        for index in range(25):
+            patients.append({
+                "id": index + 1,
+                "display_name": f"Paciente QA {index + 1}",
+                "species": "Canino" if index % 2 == 0 else "Felino",
+                "breed": "Mestizo",
+                "owner_name": "Tutor QA",
+                "phone": f"30000000{index:02d}",
+                "microchip": "",
+                "birth_date": "2023-01-15",
+                "patient_status": "inactive" if index == 2 else "active",
+                "allergies": "Alergia QA" if index == 0 else "Sin alergias conocidas",
+                "clinical_alert": "Revisar QA" if index == 0 else "",
+                "preexisting_conditions": "",
+                "vaccine_status": "Al día",
+                "deworming_status": "Aplicada" if index == 1 else "",
+                "deworming_date": "",
+                "next_deworming_due": (today + timedelta(days=14)).isoformat() if index == 1 else "",
+            })
+        preventive = {1: (today - timedelta(days=1)).isoformat()}
+
+        inactive = _build_patient_directory(patients, preventive, status_filter="inactive")
+        feline = _build_patient_directory(patients, preventive, species_filter="Felino")
+        alerts = _build_patient_directory(patients, preventive, alerts_only=True)
+        vaccine = _build_patient_directory(patients, preventive, prevention_filter="vaccine")
+        deworming = _build_patient_directory(patients, preventive, prevention_filter="deworming")
+        second_page = _build_patient_directory(patients, preventive, page=2)
+
+        self.assertEqual([item["id"] for item in inactive["items"]], [3])
+        self.assertTrue(all(item["species"] == "Felino" for item in feline["items"]))
+        self.assertEqual([item["id"] for item in alerts["items"]], [1])
+        self.assertEqual([item["id"] for item in vaccine["items"]], [1])
+        self.assertEqual([item["id"] for item in deworming["items"]], [2])
+        self.assertEqual((second_page["page"], second_page["pages"], len(second_page["items"])), (2, 2, 5))
+
     def test_veterinary_agenda_rejects_overlaps_and_tracks_cancellation(self):
         self.client.post("/logout")
         self.client.post("/login", data={"intent": "veterinaria", "email": "admin@velmorax.local", "password": "velmorax123"})
@@ -806,6 +1068,95 @@ class VelmoraxWebTests(unittest.TestCase):
             cancelled = connection.execute("SELECT status, cancellation_reason FROM appointments WHERE id = ?", (appointment["id"],)).fetchone()
         self.assertEqual(cancelled["status"], "Cancelada")
         self.assertEqual(cancelled["cancellation_reason"], "Tutor no puede asistir")
+
+    def test_veterinary_agenda_complete_appointment_lifecycle(self):
+        """Exercise the primary appointment journey and its cancellation branch."""
+        self.client.post("/logout")
+        self.client.post("/login", data={"intent": "veterinaria", "email": "admin@velmorax.local", "password": "velmorax123"})
+        self.client.post("/login/push-approval", data={"approve": "1"})
+        with get_connection() as connection:
+            patient = connection.execute("SELECT id FROM patients WHERE location_id=2 ORDER BY id LIMIT 1").fetchone()
+            provider = connection.execute("SELECT id FROM users WHERE role='admin' LIMIT 1").fetchone()
+        self.assertIsNotNone(patient, "La prueba requiere un paciente de la sede QA.")
+
+        appointment_day = date.today() + timedelta(days=1)
+        while appointment_day.weekday() >= 5:
+            appointment_day += timedelta(days=1)
+        appointment_day_text = appointment_day.isoformat()
+        later_day_text = (appointment_day + timedelta(days=7)).isoformat()
+        marker = f"QA ciclo agenda {uuid4().hex[:8]}"
+        base = {
+            "organization_id": 1, "location_id": 2, "appointment_date": appointment_day_text,
+            "appointment_time": "09:00", "service": marker, "channel": "Presencial",
+            "status": "Pendiente", "specialty": "Veterinaria", "note": "Prueba de flujo integral",
+            "duration_minutes": 30, "veterinarian_user_id": provider["id"], "priority": "Normal",
+        }
+        created_ids: list[int] = []
+        try:
+            created = self.client.post("/appointments", data={**base, "patient_id": patient["id"]}, follow_redirects=False)
+            self.assertIn("appointment_saved=1", created.headers["location"])
+            with get_connection() as connection:
+                appointment = connection.execute("SELECT id, status FROM appointments WHERE service=? ORDER BY id DESC LIMIT 1", (marker,)).fetchone()
+            self.assertIsNotNone(appointment)
+            appointment_id = int(appointment["id"])
+            created_ids.append(appointment_id)
+            self.assertEqual(appointment["status"], "Pendiente")
+
+            confirmed = self.client.post(
+                f"/appointments/{appointment_id}/status",
+                data={"status": "Confirmada", "day": appointment_day_text, "organization_id": 1, "location_id": 2},
+                follow_redirects=False,
+            )
+            self.assertEqual(confirmed.status_code, 303)
+
+            moved = self.client.post(
+                f"/appointments/{appointment_id}/reschedule",
+                data={"appointment_date": later_day_text, "appointment_time": "10:30", "organization_id": 1, "location_id": 2},
+                follow_redirects=False,
+            )
+            self.assertIn("appointment_updated=1", moved.headers["location"])
+            with get_connection() as connection:
+                rescheduled = connection.execute("SELECT appointment_date, appointment_time, status FROM appointments WHERE id=?", (appointment_id,)).fetchone()
+            self.assertEqual((rescheduled["appointment_date"], rescheduled["appointment_time"], rescheduled["status"]), (later_day_text, "10:30", "Confirmada"))
+
+            for next_status in ("En espera", "En consulta", "Atendida"):
+                response = self.client.post(
+                    f"/appointments/{appointment_id}/status",
+                    data={"status": next_status, "day": later_day_text, "organization_id": 1, "location_id": 2},
+                    follow_redirects=False,
+                )
+                self.assertEqual(response.status_code, 303)
+            with get_connection() as connection:
+                attended = connection.execute("SELECT status, arrival_at FROM appointments WHERE id=?", (appointment_id,)).fetchone()
+            self.assertEqual(attended["status"], "Atendida")
+            self.assertTrue(attended["arrival_at"], "El registro de llegada debe persistir.")
+
+            # Cancellation is an alternate terminal path, so it gets a separate appointment.
+            cancelled_create = self.client.post(
+                "/appointments",
+                data={**base, "patient_id": patient["id"], "appointment_time": "15:00"},
+                follow_redirects=False,
+            )
+            self.assertIn("appointment_saved=1", cancelled_create.headers["location"])
+            with get_connection() as connection:
+                cancellation = connection.execute("SELECT id FROM appointments WHERE service=? AND patient_id=? AND appointment_date=? ORDER BY id DESC LIMIT 1", (marker, patient["id"], appointment_day_text)).fetchone()
+            cancellation_id = int(cancellation["id"])
+            created_ids.append(cancellation_id)
+            cancelled = self.client.post(
+                f"/appointments/{cancellation_id}/status",
+                data={"status": "Cancelada", "cancellation_reason": "Prueba QA: tutor solicita cancelar", "day": appointment_day_text, "organization_id": 1, "location_id": 2},
+                follow_redirects=False,
+            )
+            self.assertEqual(cancelled.status_code, 303)
+            with get_connection() as connection:
+                final_cancelled = connection.execute("SELECT status, cancellation_reason FROM appointments WHERE id=?", (cancellation_id,)).fetchone()
+            self.assertEqual(final_cancelled["status"], "Cancelada")
+            self.assertEqual(final_cancelled["cancellation_reason"], "Prueba QA: tutor solicita cancelar")
+        finally:
+            if created_ids:
+                with get_connection() as connection:
+                    connection.executemany("DELETE FROM appointments WHERE id=?", [(appointment_id,) for appointment_id in created_ids])
+                    connection.commit()
 
     def test_veterinary_agenda_supports_emergency_intake_and_scope_security(self):
         self.client.post("/logout")

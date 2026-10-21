@@ -11,22 +11,30 @@
             document.documentElement.dataset.theme = savedTheme === "dark" ? "dark" : "light";
         }());
     </script>
-    <link rel="stylesheet" href="{{ url_for('static', path='/css/styles.css') }}?v=theme-brand-svg-1">
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/styles.css') }}?v=patient-layout-30">
     {% if is_veterinary_flow %}
-    <link rel="stylesheet" href="{{ url_for('static', path='/css/veterinary-dashboard.css') }}?v=theme-2">
+<link rel="stylesheet" href="{{ url_for('static', path='/css/veterinary-dashboard.css') }}?v=vet-patients-1">
     {% endif %}
 </head>
-<body{% if is_veterinary_flow %} class="veterinary-dashboard-page"{% endif %}>
+<body{% if is_veterinary_flow %} class="veterinary-dashboard-page veterinary-shared-shell{% if active_path in ['/', '/agenda', '/inventario', '/alertas'] %} veterinary-workspace{% endif %}{% if active_path == '/clinica' %} veterinary-clinical-shell{% endif %}{% if is_veterinary_dashboard %} veterinary-dashboard-home{% endif %}{% if patient_history_view %} veterinary-patient-history-view{% endif %}"{% endif %}>
     <div class="page-shell">
         {% if current_user %}
         {% include "partials/sidebar.html" %}
         {% endif %}
         <div class="main-shell">
+            {% if is_veterinary_flow and not is_veterinary_dashboard %}
+            <header class="vet-workspace-topbar vet-workspace-topbar-compact">
+                <div class="vet-dashboard-user">
+                    <span class="vet-dashboard-avatar" aria-hidden="true">{{ current_user.full_name[:1] }}</span>
+                    <span><strong>{{ current_user.full_name }}</strong><small>{{ current_user.role_label }}</small></span>
+                </div>
+            </header>
+            {% endif %}
             {% include "partials/header.html" %}
             <main>
                 {% block content %}{% endblock %}
             </main>
-            <footer class="app-legal-footer"><a href="/ayuda">Ayuda</a><a href="/planes">Planes</a><a href="/privacidad">Privacidad</a><a href="/tratamiento-de-datos">Tratamiento de datos</a><a href="/terminos">Términos</a></footer>
+            {% if not is_veterinary_flow %}<footer class="app-legal-footer"><a href="/ayuda">Ayuda</a><a href="/planes">Planes</a><a href="/privacidad">Privacidad</a><a href="/tratamiento-de-datos">Tratamiento de datos</a><a href="/terminos">Términos</a></footer>{% endif %}
         </div>
     </div>
     {% if is_veterinary_flow and active_path != '/alertas' and veterinary_dashboard.alerts %}

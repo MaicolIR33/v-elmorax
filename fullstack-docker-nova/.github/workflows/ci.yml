@@ -1,0 +1,34 @@
+name: Full Stack Docker CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
+      - name: Probar backend
+        run: npm ci && npm test
+        working-directory: backend
+      - name: Construir frontend
+        run: npm ci && npm run build
+        working-directory: frontend
+      - name: Construir e iniciar servicios
+        run: docker compose up --build -d --wait
+      - name: Verificar API
+        run: curl --fail http://localhost:8180/api/health
+      - name: Mostrar registros al fallar
+        if: failure()
+        run: docker compose logs
+      - name: Detener servicios
+        if: always()
+        run: docker compose down -v

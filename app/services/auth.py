@@ -452,6 +452,7 @@ def role_label(role: str) -> str:
         "admin": "Administrador",
         "clinical": "Equipo clinico",
         "inventory": "Inventario",
+        "reception": "Recepción",
     }
     return labels.get(role, role.title())
 
@@ -468,6 +469,8 @@ def role_permissions(role: str) -> dict:
             "view_clinical": True,
             "manage_clinical": True,
             "manage_admin": True,
+            "manage_dashboard_tasks": True,
+            "export_dashboard": True,
         },
         "admin": {
             "view_inventory": True,
@@ -479,6 +482,8 @@ def role_permissions(role: str) -> dict:
             "view_clinical": True,
             "manage_clinical": True,
             "manage_admin": True,
+            "manage_dashboard_tasks": True,
+            "export_dashboard": True,
         },
         "clinical": {
             "view_inventory": True,
@@ -490,6 +495,8 @@ def role_permissions(role: str) -> dict:
             "view_clinical": True,
             "manage_clinical": True,
             "manage_admin": False,
+            "manage_dashboard_tasks": True,
+            "export_dashboard": True,
         },
         "inventory": {
             "view_inventory": True,
@@ -501,6 +508,14 @@ def role_permissions(role: str) -> dict:
             "view_clinical": False,
             "manage_clinical": False,
             "manage_admin": False,
+            "manage_dashboard_tasks": False,
+            "export_dashboard": False,
+        },
+        "reception": {
+            "view_inventory": False, "manage_inventory": False, "consume_inventory": False,
+            "approve_inventory": False, "view_agenda": True, "manage_agenda": True,
+            "view_clinical": True, "manage_clinical": False, "manage_admin": False,
+            "manage_dashboard_tasks": True, "export_dashboard": False,
         },
     }
     return matrix.get(
@@ -515,6 +530,8 @@ def role_permissions(role: str) -> dict:
             "view_clinical": False,
             "manage_clinical": False,
             "manage_admin": False,
+            "manage_dashboard_tasks": False,
+            "export_dashboard": False,
         },
     )
 

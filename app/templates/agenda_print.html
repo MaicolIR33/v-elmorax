@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>Agenda diaria · Velmorax</title>
+  <style>
+    @page { margin: 16mm; }
+    * { box-sizing: border-box; }
+    body { color: #173440; font: 12px/1.45 Arial, sans-serif; margin: 0; }
+    header { border-bottom: 2px solid #159d95; display: flex; justify-content: space-between; padding-bottom: 14px; }
+    h1 { font-size: 25px; margin: 0; } h2 { color: #267971; font-size: 15px; margin: 4px 0 0; }
+    .meta { color: #52707c; text-align: right; } table { border-collapse: collapse; margin-top: 22px; width: 100%; }
+    th { background: #e5f5f2; color: #1d615e; text-align: left; } th, td { border-bottom: 1px solid #c9dce0; padding: 9px 8px; vertical-align: top; }
+    .urgent { color: #a7373d; font-weight: bold; } footer { color: #6b8089; font-size: 10px; margin-top: 20px; }
+    @media print { button { display: none; } }
+  </style>
+</head>
+<body onload="window.print()">
+  <header><div><h1>Velmorax · Agenda diaria</h1><h2>{{ day }} · {{ professional }}</h2></div><div class="meta">Generado {{ generated_at }}<br>Documento interno de coordinación clínica</div></header>
+  <table><thead><tr><th>Hora</th><th>Paciente</th><th>Servicio</th><th>Veterinario</th><th>Estado</th><th>Recurso</th><th>Llegada / espera</th></tr></thead><tbody>
+  {% for item in items %}<tr><td>{{ item.time }}</td><td><strong>{{ item.patient }}</strong></td><td>{{ item.service }}{% if item.priority == 'Urgente' %}<br><span class="urgent">Urgente</span>{% endif %}</td><td>{{ item.veterinarian }}</td><td>{{ item.status }}</td><td>{{ item.resource_name or '—' }}</td><td>{% if item.arrival_at %}{{ item.arrival_at[11:] }} · {{ item.wait_minutes }} min{% else %}—{% endif %}</td></tr>{% else %}<tr><td colspan="7">No hay citas para este filtro.</td></tr>{% endfor %}
+  </tbody></table><footer>Velmorax · Agenda diaria · Esta impresión deja registro de auditoría.</footer>
+</body></html>

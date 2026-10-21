@@ -1,0 +1,470 @@
+{"kind":"deck","id":"pr/t7ad3s","name":"Deck"}
+{"kind":"layout","layoutId":"fce95f29-0580-48e8-bba6-897c5a5ebd5a","name":"Master","type":"master"}
+{"kind":"layout","layoutId":"9cc0762d-2527-42c8-84df-37684b6cb984","name":"Title Slide","type":"title"}
+{"kind":"slide","id":"sl/mvbdw9","slide":1,"title":"VELMORAX","textShapes":7}
+{"kind":"shape","id":"sh/xor6xwnm","slide":1,"bbox":[0,0,18,720]}
+{"kind":"shape","id":"sh/alg721ob","slide":1,"bbox":[780,0,500,720]}
+{"kind":"textbox","id":"sh/bmpov65g","slide":1,"text":"VELMORAX","textPreview":"VELMORAX","textChars":8,"textLines":1,"bbox":[78,96,250,27]}
+{"kind":"textbox","id":"sh/krip8b6d","slide":1,"text":"Tecnología que\norganiza la veterinaria","textPreview":"Tecnología que | organiza la veterinaria","textChars":38,"textLines":2,"bbox":[78,156,655,122]}
+{"kind":"textbox","id":"sh/lsrq1gny","slide":1,"text":"Una explicación clara de lo que hace Velmorax y de la tecnología que permite que funcione.","textPreview":"Una explicación clara de lo que hace Velmorax y de la tecnología que permite que funcione.","textChars":90,"textLines":1,"bbox":[78,314,615,62]}
+{"kind":"shape","id":"sh/yp0761o7","slide":1,"bbox":[78,448,245,40]}
+{"kind":"textbox","id":"sh/zq9oz65s","slide":1,"text":"PROYECTO DE SOFTWARE","textPreview":"PROYECTO DE SOFTWARE","textChars":20,"textLines":1,"bbox":[101,459,200,16]}
+{"kind":"textbox","id":"sh/0vepwr6t","slide":1,"text":"Alcance: atención clínica, inventario y administración\nCapturas de la aplicación local con datos de demostración","textPreview":"Alcance: atención clínica, inventario y administración | Capturas de la aplicación local con datos de demostración","textChars":112,"textLines":2,"bbox":[78,565,620,48]}
+{"kind":"textbox","id":"sh/1w76pc7e","slide":1,"text":"GESTIÓN VETERINARIA\nEN UNA SOLA PLATAFORMA","textPreview":"GESTIÓN VETERINARIA | EN UNA SOLA PLATAFORMA","textChars":42,"textLines":2,"bbox":[830,80,350,52]}
+{"kind":"shape","id":"sh/k7idonix","slide":1,"bbox":[818,180,385,344]}
+{"kind":"textbox","id":"sh/z6pwv21c","slide":1,"text":"CLÍNICA · INVENTARIO · CONTROL","textPreview":"CLÍNICA · INVENTARIO · CONTROL","textChars":30,"textLines":1,"bbox":[818,580,385,20]}
+{"kind":"image","id":"im/mpgj6h8b","slide":1,"name":"","geometry":"roundRect","alt":"Vista completa del tablero local de Velmorax","bbox":[818,180,385,344]}
+{"kind":"notes","id":"nt/mvbdw9","slide":1,"text":"Guion sugerido: Velmorax ayuda a una clínica veterinaria a organizar pacientes, agenda e insumos desde una sola pantalla. Fuente: aplicación Velmorax ejecutada localmente el 16/09/2026."}
+{"kind":"slide","id":"sl/4n6s31","slide":2,"title":"QUÉ HACE","textShapes":17}
+{"kind":"shape","id":"sh/dsve9sfe","slide":2,"bbox":[0,0,1280,16]}
+{"kind":"textbox","id":"sh/qp4vydg3","slide":2,"text":"QUÉ HACE","textPreview":"QUÉ HACE","textChars":8,"textLines":1,"bbox":[64,44,640,22]}
+{"kind":"textbox","id":"sh/rqdw7ixo","slide":2,"text":"VELMORAX · FLUJO VETERINARIO","textPreview":"VELMORAX · FLUJO VETERINARIO","textChars":28,"textLines":1,"bbox":[64,682,340,18]}
+{"kind":"textbox","id":"sh/0v6d4ny5","slide":2,"text":"2","textPreview":"2","textChars":1,"textLines":1,"bbox":[1168,682,48,18]}
+{"kind":"textbox","id":"sh/1wfedsfq","slide":2,"text":"¿Qué hace Velmorax?","textPreview":"¿Qué hace Velmorax?","textChars":19,"textLines":1,"bbox":[64,90,1130,62]}
+{"kind":"shape","id":"sh/et4v2xgz","slide":2,"bbox":[64,163,138,5]}
+{"kind":"textbox","id":"sh/zuxwb2xk","slide":2,"text":"Reúne en un solo lugar la información que una clínica necesita para trabajar cada día.","textPreview":"Reúne en un solo lugar la información que una clínica necesita para trabajar cada día.","textChars":86,"textLines":1,"bbox":[64,181,1110,27]}
+{"kind":"shape","id":"sh/oz6x87y1","slide":2,"bbox":[68,230,38,38]}
+{"kind":"textbox","id":"sh/9kfehcfm","slide":2,"text":"•","textPreview":"•","textChars":1,"textLines":1,"bbox":[68,227,38,38]}
+{"kind":"textbox","id":"sh/p8jqdofy","slide":2,"text":"Atención veterinaria","textPreview":"Atención veterinaria","textChars":20,"textLines":1,"bbox":[126,226,370,26]}
+{"kind":"textbox","id":"sh/o7ap4jyd","slide":2,"text":"Guarda datos de la mascota, vacunas, controles, consultas y pagos.","textPreview":"Guarda datos de la mascota, vacunas, controles, consultas y pagos.","textChars":66,"textLines":1,"bbox":[126,256,400,54]}
+{"kind":"shape","id":"sh/n618bexs","slide":2,"bbox":[68,338,38,38]}
+{"kind":"textbox","id":"sh/25s72tgn","slide":2,"text":"•","textPreview":"•","textChars":1,"textLines":1,"bbox":[68,335,38,38]}
+{"kind":"textbox","id":"sh/xc3qh8fa","slide":2,"text":"Insumos","textPreview":"Insumos","textChars":7,"textLines":1,"bbox":[126,334,370,26]}
+{"kind":"textbox","id":"sh/cbup83yp","slide":2,"text":"Controla productos, cantidades, fechas de vencimiento y productos con poco stock.","textPreview":"Controla productos, cantidades, fechas de vencimiento y productos con poco stock.","textChars":81,"textLines":1,"bbox":[126,364,400,54]}
+{"kind":"shape","id":"sh/ba18fyx4","slide":2,"bbox":[68,446,38,38]}
+{"kind":"textbox","id":"sh/a9s76tgj","slide":2,"text":"•","textPreview":"•","textChars":1,"textLines":1,"bbox":[68,443,38,38]}
+{"kind":"textbox","id":"sh/dgzq54fq","slide":2,"text":"Administración","textPreview":"Administración","textChars":14,"textLines":1,"bbox":[126,442,370,26]}
+{"kind":"textbox","id":"sh/sfqpwzy5","slide":2,"text":"Permite organizar sedes, usuarios y las acciones que realiza el equipo.","textPreview":"Permite organizar sedes, usuarios y las acciones que realiza el equipo.","textChars":71,"textLines":1,"bbox":[126,472,400,54]}
+{"kind":"textbox","id":"sh/4veh83ad","slide":2,"text":"La idea principal","textPreview":"La idea principal","textChars":17,"textLines":1,"bbox":[620,228,430,28]}
+{"kind":"textbox","id":"sh/5wny18ry","slide":2,"text":"El equipo encuentra la información de su sede sin depender de mensajes o papeles separados.","textPreview":"El equipo encuentra la información de su sede sin depender de mensajes o papeles separados.","textChars":91,"textLines":1,"bbox":[620,267,470,72]}
+{"kind":"shape","id":"sh/itcz6ts7","slide":2,"bbox":[620,376,480,0]}
+{"kind":"textbox","id":"sh/3u5gzy9s","slide":2,"text":"En pocas palabras: cuando alguien registra una atención o un producto, el sistema deja ese dato disponible para el resto del equipo autorizado.","textPreview":"En pocas palabras: cuando alguien registra una atención o un producto, el sistema deja ese dato disponible para el resto del equipo autor...","textChars":143,"textLines":1,"bbox":[620,402,470,86]}
+{"kind":"notes","id":"nt/4n6s31","slide":2,"text":"Guion sugerido: antes se puede buscar la información en varios lugares. Velmorax la concentra para que el equipo trabaje con el mismo dato. Fuente: README.md y pantallas locales."}
+{"kind":"slide","id":"sl/lf7gya","slide":3,"title":"CÓMO FUNCIONA","textShapes":11}
+{"kind":"shape","id":"sh/oja1gb6p","slide":3,"bbox":[0,0,1280,16]}
+{"kind":"textbox","id":"sh/ni107654","slide":3,"text":"CÓMO FUNCIONA","textPreview":"CÓMO FUNCIONA","textChars":13,"textLines":1,"bbox":[64,44,640,22]}
+{"kind":"textbox","id":"sh/2h8jeloj","slide":3,"text":"VELMORAX · FLUJO VETERINARIO","textPreview":"VELMORAX · FLUJO VETERINARIO","textChars":28,"textLines":1,"bbox":[64,682,340,18]}
+{"kind":"textbox","id":"sh/1gzi5gne","slide":3,"text":"3","textPreview":"3","textChars":1,"textLines":1,"bbox":[1168,682,48,18]}
+{"kind":"textbox","id":"sh/0vq1cb6t","slide":3,"text":"Cómo funciona por dentro","textPreview":"Cómo funciona por dentro","textChars":24,"textLines":1,"bbox":[64,90,1130,62]}
+{"kind":"shape","id":"sh/fuh03658","slide":3,"bbox":[64,163,138,5]}
+{"kind":"textbox","id":"sh/et8ja1on","slide":3,"text":"La tecnología se divide en pasos simples para llevar una acción de la pantalla hasta la información guardada.","textPreview":"La tecnología se divide en pasos simples para llevar una acción de la pantalla hasta la información guardada.","textChars":109,"textLines":1,"bbox":[64,181,1110,27]}
+{"kind":"shape","id":"sh/lc32h0ni","slide":3,"bbox":[78,250,235,120]}
+{"kind":"textbox","id":"sh/kru1ov6x","slide":3,"text":"Pantalla web\nLo que ve el equipo","textPreview":"Pantalla web | Lo que ve el equipo","textChars":32,"textLines":2,"bbox":[94,279,203,61]}
+{"kind":"shape","id":"sh/ixwfex4z","slide":3,"bbox":[366,250,220,120]}
+{"kind":"textbox","id":"sh/jy5wn2lk","slide":3,"text":"Aplicación\nRecibe cada acción","textPreview":"Aplicación | Recibe cada acción","textChars":29,"textLines":2,"bbox":[382,279,188,61]}
+{"kind":"shape","id":"sh/4zexg7m5","slide":3,"bbox":[638,250,240,120]}
+{"kind":"textbox","id":"sh/5knepc3q","slide":3,"text":"Reglas de trabajo\nEvitan errores","textPreview":"Reglas de trabajo | Evitan errores","textChars":32,"textLines":2,"bbox":[654,279,208,61]}
+{"kind":"shape","id":"sh/utcfax43","slide":3,"bbox":[930,250,245,120]}
+{"kind":"textbox","id":"sh/vulwjilo","slide":3,"text":"Información guardada\nDatos de la clínica","textPreview":"Información guardada | Datos de la clínica","textChars":40,"textLines":2,"bbox":[946,279,213,61]}
+{"kind":"shape","id":"sh/wvexcnmt","slide":3,"bbox":[313,310,47,0]}
+{"kind":"shape","id":"sh/hwnels3e","slide":3,"bbox":[586,310,47,0]}
+{"kind":"shape","id":"sh/epgfmh47","slide":3,"bbox":[888,310,47,0]}
+{"kind":"textbox","id":"sh/fqpwvmls","slide":3,"text":"Ejemplo: al guardar una consulta, Velmorax revisa que los datos sean válidos y luego los guarda para consultarlos más adelante.","textPreview":"Ejemplo: al guardar una consulta, Velmorax revisa que los datos sean válidos y luego los guarda para consultarlos más adelante.","textChars":127,"textLines":1,"bbox":[86,448,1080,64]}
+{"kind":"textbox","id":"sh/byxkruxs","slide":3,"text":"Tecnologías reales: Python, FastAPI, Jinja2, Uvicorn y una base de datos SQLite o PostgreSQL.","textPreview":"Tecnologías reales: Python, FastAPI, Jinja2, Uvicorn y una base de datos SQLite o PostgreSQL.","textChars":93,"textLines":1,"bbox":[115,574,1040,30]}
+{"kind":"notes","id":"nt/lf7gya","slide":3,"text":"Guion sugerido: no hace falta explicar los nombres técnicos. Basta decir que la pantalla recibe lo que el usuario registra, Velmorax lo revisa y lo guarda de forma organizada. Fuente: pyproject.toml y app/."}
+{"kind":"slide","id":"sl/2m2lll","slide":4,"title":"TECNOLOGÍA","textShapes":17}
+{"kind":"shape","id":"sh/j2hkril0","slide":4,"bbox":[0,0,1280,16]}
+{"kind":"textbox","id":"sh/k3ql032l","slide":4,"text":"TECNOLOGÍA","textPreview":"TECNOLOGÍA","textChars":10,"textLines":1,"bbox":[64,44,640,22]}
+{"kind":"textbox","id":"sh/54zmt836","slide":4,"text":"VELMORAX · FLUJO VETERINARIO","textPreview":"VELMORAX · FLUJO VETERINARIO","textChars":28,"textLines":1,"bbox":[64,682,340,18]}
+{"kind":"textbox","id":"sh/65832dkr","slide":4,"text":"4","textPreview":"4","textChars":1,"textLines":1,"bbox":[1168,682,48,18]}
+{"kind":"textbox","id":"sh/7614vilw","slide":4,"text":"Tecnología en palabras simples","textPreview":"Tecnología en palabras simples","textChars":30,"textLines":1,"bbox":[64,90,1130,62]}
+{"kind":"shape","id":"sh/sral4n2h","slide":4,"bbox":[64,163,138,5]}
+{"kind":"textbox","id":"sh/tsjmxs32","slide":4,"text":"Cada herramienta tiene una tarea concreta dentro de Velmorax.","textPreview":"Cada herramienta tiene una tarea concreta dentro de Velmorax.","textChars":61,"textLines":1,"bbox":[64,181,1110,27]}
+{"kind":"shape","id":"sh/uts36xkn","slide":4,"bbox":[68,210,13,40]}
+{"kind":"textbox","id":"sh/fu14z2l8","slide":4,"text":"Python","textPreview":"Python","textChars":6,"textLines":1,"bbox":[101,210,280,28]}
+{"kind":"textbox","id":"sh/ja90bu54","slide":4,"text":"Es el lenguaje base con el que se programan las reglas de trabajo de Velmorax.","textPreview":"Es el lenguaje base con el que se programan las reglas de trabajo de Velmorax.","textChars":78,"textLines":1,"bbox":[405,210,736,42]}
+{"kind":"shape","id":"sh/y90jip4j","slide":4,"bbox":[68,272,13,40]}
+{"kind":"textbox","id":"sh/lcbid4nu","slide":4,"text":"FastAPI + Uvicorn","textPreview":"FastAPI + Uvicorn","textChars":17,"textLines":1,"bbox":[101,272,280,28]}
+{"kind":"textbox","id":"sh/kb21kzm9","slide":4,"text":"Reciben una acción, como guardar un paciente, y entregan una respuesta al navegador.","textPreview":"Reciben una acción, como guardar un paciente, y entregan una respuesta al navegador.","textChars":84,"textLines":1,"bbox":[405,272,736,42]}
+{"kind":"shape","id":"sh/b6907a5s","slide":4,"bbox":[68,334,13,40]}
+{"kind":"textbox","id":"sh/al0je547","slide":4,"text":"Jinja2 + CSS/JS","textPreview":"Jinja2 + CSS/JS","textChars":15,"textLines":1,"bbox":[101,334,280,28]}
+{"kind":"textbox","id":"sh/x8ri9kny","slide":4,"text":"Construyen las pantallas que usa el personal de la clínica.","textPreview":"Construyen las pantallas que usa el personal de la clínica.","textChars":59,"textLines":1,"bbox":[405,334,736,42]}
+{"kind":"shape","id":"sh/w7i1gfmd","slide":4,"bbox":[68,396,13,40]}
+{"kind":"textbox","id":"sh/v2dkje5c","slide":4,"text":"SQLite / PostgreSQL","textPreview":"SQLite / PostgreSQL","textChars":19,"textLines":1,"bbox":[101,396,280,28]}
+{"kind":"textbox","id":"sh/uhkjq94r","slide":4,"text":"Guardan pacientes, consultas, inventario, usuarios y movimientos.","textPreview":"Guardan pacientes, consultas, inventario, usuarios y movimientos.","textChars":65,"textLines":1,"bbox":[405,396,736,42]}
+{"kind":"shape","id":"sh/qxo3idoz","slide":4,"bbox":[68,458,13,40]}
+{"kind":"textbox","id":"sh/ryx4bipk","slide":4,"text":"Docker + Caddy","textPreview":"Docker + Caddy","textChars":14,"textLines":1,"bbox":[101,458,280,28]}
+{"kind":"textbox","id":"sh/cz6lkn6p","slide":4,"text":"Ayudan a instalar Velmorax en un servidor y a ofrecer una conexión segura por internet.","textPreview":"Ayudan a instalar Velmorax en un servidor y a ofrecer una conexión segura por internet.","textChars":87,"textLines":1,"bbox":[405,458,736,42]}
+{"kind":"shape","id":"sh/d0fmds7a","slide":4,"bbox":[68,520,13,40]}
+{"kind":"textbox","id":"sh/e1onmdov","slide":4,"text":"Prometheus + Grafana + Loki","textPreview":"Prometheus + Grafana + Loki","textChars":27,"textLines":1,"bbox":[101,520,280,28]}
+{"kind":"textbox","id":"sh/z2h4fipg","slide":4,"text":"Permiten revisar el estado de la aplicación y detectar fallas a tiempo.","textPreview":"Permiten revisar el estado de la aplicación y detectar fallas a tiempo.","textChars":71,"textLines":1,"bbox":[405,520,736,42]}
+{"kind":"notes","id":"nt/2m2lll","slide":4,"text":"Guion sugerido: presenta la columna de la izquierda como el nombre de la herramienta y la derecha como su utilidad. No es necesario definir cada tecnología. Fuente: pyproject.toml y archivos de despliegue."}
+{"kind":"slide","id":"sl/8me2ll","slide":5,"title":"VISTA REAL","textShapes":16}
+{"kind":"shape","id":"sh/mlc3apor","slide":5,"bbox":[0,0,1280,16]}
+{"kind":"textbox","id":"sh/9on2l4ni","slide":5,"text":"VISTA REAL","textPreview":"VISTA REAL","textChars":10,"textLines":1,"bbox":[64,44,640,22]}
+{"kind":"textbox","id":"sh/8nelcz6x","slide":5,"text":"VELMORAX · FLUJO VETERINARIO","textPreview":"VELMORAX · FLUJO VETERINARIO","textChars":28,"textLines":1,"bbox":[64,682,340,18]}
+{"kind":"textbox","id":"sh/zilkfu5g","slide":5,"text":"5","textPreview":"5","textChars":1,"textLines":1,"bbox":[1168,682,48,18]}
+{"kind":"textbox","id":"sh/yhc36pov","slide":5,"text":"Tablero principal","textPreview":"Tablero principal","textChars":17,"textLines":1,"bbox":[64,90,1130,62]}
+{"kind":"shape","id":"sh/lk32hkn6","slide":5,"bbox":[64,163,138,5]}
+{"kind":"textbox","id":"sh/kjul8z61","slide":5,"text":"Muestra en un solo lugar lo que está pasando en la clínica durante el día.","textPreview":"Muestra en un solo lugar lo que está pasando en la clínica durante el día.","textChars":74,"textLines":1,"bbox":[64,181,1110,27]}
+{"kind":"shape","id":"sh/atsj25oj","slide":5,"bbox":[66,205,534,450]}
+{"kind":"textbox","id":"sh/gbqx4vip","slide":5,"text":"Lo que permite ver","textPreview":"Lo que permite ver","textChars":18,"textLines":1,"bbox":[670,232,410,27]}
+{"kind":"shape","id":"sh/1cjyd0za","slide":5,"bbox":[670,286,38,38]}
+{"kind":"textbox","id":"sh/e98f2l0z","slide":5,"text":"•","textPreview":"•","textChars":1,"textLines":1,"bbox":[670,283,38,38]}
+{"kind":"textbox","id":"sh/fahgbqhk","slide":5,"text":"Citas del día","textPreview":"Citas del día","textChars":13,"textLines":1,"bbox":[726,282,370,26]}
+{"kind":"textbox","id":"sh/snqx0vit","slide":5,"text":"Cuántas personas esperan o están siendo atendidas.","textPreview":"Cuántas personas esperan o están siendo atendidas.","textChars":50,"textLines":1,"bbox":[726,312,400,54]}
+{"kind":"shape","id":"sh/t8zy90je","slide":5,"bbox":[670,386,38,38]}
+{"kind":"textbox","id":"sh/6l8fyl0n","slide":5,"text":"•","textPreview":"•","textChars":1,"textLines":1,"bbox":[670,383,38,38]}
+{"kind":"textbox","id":"sh/rmhg7q18","slide":5,"text":"Alertas de productos","textPreview":"Alertas de productos","textChars":20,"textLines":1,"bbox":[726,382,370,26]}
+{"kind":"textbox","id":"sh/cjuhcfix","slide":5,"text":"Qué insumos necesitan atención porque quedan pocos o están por vencerse.","textPreview":"Qué insumos necesitan atención porque quedan pocos o están por vencerse.","textChars":72,"textLines":1,"bbox":[726,412,400,54]}
+{"kind":"shape","id":"sh/d43ylkzi","slide":5,"bbox":[670,486,38,38]}
+{"kind":"textbox","id":"sh/l0zy5krm","slide":5,"text":"•","textPreview":"•","textChars":1,"textLines":1,"bbox":[670,483,38,38]}
+{"kind":"textbox","id":"sh/kzqxwfa1","slide":5,"text":"Entrega de turno","textPreview":"Entrega de turno","textChars":16,"textLines":1,"bbox":[726,482,370,26]}
+{"kind":"textbox","id":"sh/zyhg3a9w","slide":5,"text":"Información breve para que el siguiente turno continúe el trabajo.","textPreview":"Información breve para que el siguiente turno continúe el trabajo.","textChars":66,"textLines":1,"bbox":[726,512,400,54]}
+{"kind":"textbox","id":"sh/yxofu5sb","slide":5,"text":"Evidencia: ejecución local el 16/09/2026. Los valores visibles corresponden a datos de demostración.","textPreview":"Evidencia: ejecución local el 16/09/2026. Los valores visibles corresponden a datos de demostración.","textChars":100,"textLines":1,"bbox":[654,610,490,28]}
+{"kind":"image","id":"im/e5w3u9gb","slide":5,"name":"","geometry":"roundRect","alt":"Captura real del tablero operativo local","bbox":[66,205,534,450]}
+{"kind":"notes","id":"nt/8me2ll","slide":5,"text":"Evidencia primaria: captura creada desde http://127.0.0.1:8000/?organization_id=1&location_id=2 el 16/09/2026. Datos de demostración locales."}
+{"kind":"slide","id":"sl/sn6ovl","slide":6,"title":"VISTA REAL","textShapes":16}
+{"kind":"shape","id":"sh/u98rydwb","slide":6,"bbox":[0,0,1280,16]}
+{"kind":"textbox","id":"sh/hcjq98f2","slide":6,"text":"VISTA REAL","textPreview":"VISTA REAL","textChars":10,"textLines":1,"bbox":[64,44,640,22]}
+{"kind":"textbox","id":"sh/gba90neh","slide":6,"text":"VELMORAX · FLUJO VETERINARIO","textPreview":"VELMORAX · FLUJO VETERINARIO","textChars":28,"textLines":1,"bbox":[64,682,340,18]}
+{"kind":"textbox","id":"sh/3y18bix8","slide":6,"text":"6","textPreview":"6","textChars":1,"textLines":1,"bbox":[1168,682,48,18]}
+{"kind":"textbox","id":"sh/ixsr2dwn","slide":6,"text":"Historia de cada paciente","textPreview":"Historia de cada paciente","textChars":25,"textLines":1,"bbox":[64,90,1130,62]}
+{"kind":"shape","id":"sh/50jqdsfy","slide":6,"bbox":[64,163,138,5]}
+{"kind":"textbox","id":"sh/4za94net","slide":6,"text":"La clínica puede registrar los datos y la atención de cada mascota en un solo lugar.","textPreview":"La clínica puede registrar los datos y la atención de cada mascota en un solo lugar.","textChars":84,"textLines":1,"bbox":[64,181,1110,27]}
+{"kind":"shape","id":"sh/q1sr6xwj","slide":6,"bbox":[66,205,534,450]}
+{"kind":"textbox","id":"sh/g7excnmd","slide":6,"text":"Qué se puede registrar","textPreview":"Qué se puede registrar","textChars":22,"textLines":1,"bbox":[670,228,420,27]}
+{"kind":"shape","id":"sh/h8nyl83y","slide":6,"bbox":[670,282,38,38]}
+{"kind":"textbox","id":"sh/ulwfad47","slide":6,"text":"•","textPreview":"•","textChars":1,"textLines":1,"bbox":[670,279,38,38]}
+{"kind":"textbox","id":"sh/fm5gjils","slide":6,"text":"Datos de la mascota","textPreview":"Datos de la mascota","textChars":19,"textLines":1,"bbox":[726,278,370,26]}
+{"kind":"textbox","id":"sh/4byxgnmp","slide":6,"text":"Especie, raza, peso, vacunas y datos de contacto del responsable.","textPreview":"Especie, raza, peso, vacunas y datos de contacto del responsable.","textChars":65,"textLines":1,"bbox":[726,308,400,54]}
+{"kind":"shape","id":"sh/pc7yps3u","slide":6,"bbox":[670,386,38,38]}
+{"kind":"textbox","id":"sh/29gfed4j","slide":6,"text":"•","textPreview":"•","textChars":1,"textLines":1,"bbox":[670,383,38,38]}
+{"kind":"textbox","id":"sh/3apgnil4","slide":6,"text":"Atención realizada","textPreview":"Atención realizada","textChars":18,"textLines":1,"bbox":[726,382,370,26]}
+{"kind":"textbox","id":"sh/cfyxk7ml","slide":6,"text":"Motivo de consulta, diagnóstico, indicaciones y próximo control.","textPreview":"Motivo de consulta, diagnóstico, indicaciones y próximo control.","textChars":64,"textLines":1,"bbox":[726,412,400,54]}
+{"kind":"shape","id":"sh/dgryts36","slide":6,"bbox":[670,490,38,38]}
+{"kind":"textbox","id":"sh/lwnydsva","slide":6,"text":"•","textPreview":"•","textChars":1,"textLines":1,"bbox":[670,487,38,38]}
+{"kind":"textbox","id":"sh/0vex4nep","slide":6,"text":"Resumen del día","textPreview":"Resumen del día","textChars":15,"textLines":1,"bbox":[726,486,370,26]}
+{"kind":"textbox","id":"sh/zulgb2d4","slide":6,"text":"Estado de la atención, forma de pago y opción de sacar reportes.","textPreview":"Estado de la atención, forma de pago y opción de sacar reportes.","textChars":64,"textLines":1,"bbox":[726,516,400,54]}
+{"kind":"textbox","id":"sh/ytcf2xwj","slide":6,"text":"La consulta de Max ilustra datos de prueba de la instalación local.","textPreview":"La consulta de Max ilustra datos de prueba de la instalación local.","textChars":67,"textLines":1,"bbox":[654,610,480,28]}
+{"kind":"image","id":"im/y98bi18v","slide":6,"name":"","geometry":"roundRect","alt":"Captura real de pacientes y consultas local","bbox":[66,205,534,450]}
+{"kind":"notes","id":"nt/sn6ovl","slide":6,"text":"Evidencia primaria: captura creada desde http://127.0.0.1:8000/clinica?organization_id=1&location_id=2 el 16/09/2026. Datos de demostración locales."}
+{"kind":"slide","id":"sl/7egesc","slide":7,"title":"VISTA REAL","textShapes":15}
+{"kind":"shape","id":"sh/0r610va1","slide":7,"bbox":[0,0,1280,16]}
+{"kind":"textbox","id":"sh/zqx07qtg","slide":7,"text":"VISTA REAL","textPreview":"VISTA REAL","textChars":10,"textLines":1,"bbox":[64,44,640,22]}
+{"kind":"textbox","id":"sh/e5ojylsv","slide":7,"text":"VELMORAX · FLUJO VETERINARIO","textPreview":"VELMORAX · FLUJO VETERINARIO","textChars":28,"textLines":1,"bbox":[64,682,340,18]}
+{"kind":"textbox","id":"sh/9wzid0ri","slide":7,"text":"7","textPreview":"7","textChars":1,"textLines":1,"bbox":[1168,682,48,18]}
+{"kind":"textbox","id":"sh/ov614vad","slide":7,"text":"Control de insumos","textPreview":"Control de insumos","textChars":18,"textLines":1,"bbox":[64,90,1130,62]}
+{"kind":"shape","id":"sh/nux0bqts","slide":7,"bbox":[64,163,138,5]}
+{"kind":"textbox","id":"sh/mtoj2ls7","slide":7,"text":"Cada producto se registra con la información necesaria para saber qué hay disponible y qué requiere atención.","textPreview":"Cada producto se registra con la información necesaria para saber qué hay disponible y qué requiere atención.","textChars":109,"textLines":1,"bbox":[64,181,1110,27]}
+{"kind":"shape","id":"sh/wzq18fa9","slide":7,"bbox":[66,205,534,450]}
+{"kind":"textbox","id":"sh/mls7q1wv","slide":7,"text":"Cómo ayuda al equipo","textPreview":"Cómo ayuda al equipo","textChars":20,"textLines":1,"bbox":[670,227,420,27]}
+{"kind":"shape","id":"sh/nm18j6xg","slide":7,"bbox":[670,280,38,38]}
+{"kind":"textbox","id":"sh/onapsbe1","slide":7,"text":"•","textPreview":"•","textChars":1,"textLines":1,"bbox":[670,277,38,38]}
+{"kind":"textbox","id":"sh/9ojqlgfm","slide":7,"text":"Datos del producto","textPreview":"Datos del producto","textChars":18,"textLines":1,"bbox":[726,276,370,26]}
+{"kind":"textbox","id":"sh/aps7u1w7","slide":7,"text":"Nombre, lote, cantidad disponible y fecha de vencimiento.","textPreview":"Nombre, lote, cantidad disponible y fecha de vencimiento.","textChars":57,"textLines":1,"bbox":[726,306,400,54]}
+{"kind":"shape","id":"sh/bq18n6xs","slide":7,"bbox":[670,384,38,38]}
+{"kind":"textbox","id":"sh/wrupwbex","slide":7,"text":"•","textPreview":"•","textChars":1,"textLines":1,"bbox":[670,381,38,38]}
+{"kind":"textbox","id":"sh/xs3qpgfi","slide":7,"text":"Prevención de errores","textPreview":"Prevención de errores","textChars":21,"textLines":1,"bbox":[726,380,370,26]}
+{"kind":"textbox","id":"sh/qt87ihwn","slide":7,"text":"Evita registrar cantidades negativas o usar productos vencidos o bloqueados.","textPreview":"Evita registrar cantidades negativas o usar productos vencidos o bloqueados.","textChars":76,"textLines":1,"bbox":[726,410,400,54]}
+{"kind":"shape","id":"sh/ruhobmx8","slide":7,"bbox":[670,502,38,38]}
+{"kind":"textbox","id":"sh/vyd4jid0","slide":7,"text":"•","textPreview":"•","textChars":1,"textLines":1,"bbox":[670,499,38,38]}
+{"kind":"textbox","id":"sh/ux43adcf","slide":7,"text":"Reposición y traslados","textPreview":"Reposición y traslados","textChars":22,"textLines":1,"bbox":[726,498,370,26]}
+{"kind":"textbox","id":"sh/h0fmlsv6","slide":7,"text":"Permite pedir productos y moverlos entre sedes cuando la clínica lo necesita.","textPreview":"Permite pedir productos y moverlos entre sedes cuando la clínica lo necesita.","textChars":77,"textLines":1,"bbox":[726,528,400,54]}
+{"kind":"image","id":"im/czqlknq9","slide":7,"name":"","geometry":"roundRect","alt":"Captura real de inventario local por lotes","bbox":[66,205,534,450]}
+{"kind":"notes","id":"nt/7egesc","slide":7,"text":"Evidencia primaria: captura creada desde http://127.0.0.1:8000/inventario?organization_id=1&location_id=2 el 16/09/2026. Reglas funcionales documentadas en README.md y app/services/inventory.py."}
+{"kind":"slide","id":"sl/3z9kbt","slide":8,"title":"PROTECCIÓN","textShapes":14}
+{"kind":"shape","id":"sh/zyx0ruxo","slide":8,"bbox":[0,0,1280,16]}
+{"kind":"textbox","id":"sh/0zq10zy9","slide":8,"text":"PROTECCIÓN","textPreview":"PROTECCIÓN","textChars":10,"textLines":1,"bbox":[64,44,640,22]}
+{"kind":"textbox","id":"sh/10z2t4fu","slide":8,"text":"VELMORAX · FLUJO VETERINARIO","textPreview":"VELMORAX · FLUJO VETERINARIO","textChars":28,"textLines":1,"bbox":[64,682,340,18]}
+{"kind":"textbox","id":"sh/ml8j29gf","slide":8,"text":"8","textPreview":"8","textChars":1,"textLines":1,"bbox":[1168,682,48,18]}
+{"kind":"textbox","id":"sh/nmhkvexk","slide":8,"text":"Seguridad de los datos","textPreview":"Seguridad de los datos","textChars":22,"textLines":1,"bbox":[64,90,1130,62]}
+{"kind":"shape","id":"sh/onq14jy5","slide":8,"bbox":[64,163,138,5]}
+{"kind":"textbox","id":"sh/9oz2xofq","slide":8,"text":"Velmorax limita quién entra, qué puede ver cada persona y registra las acciones importantes.","textPreview":"Velmorax limita quién entra, qué puede ver cada persona y registra las acciones importantes.","textChars":92,"textLines":1,"bbox":[64,181,1110,27]}
+{"kind":"shape","id":"sh/ap8j6twb","slide":8,"bbox":[65,237,245,9]}
+{"kind":"textbox","id":"sh/bq1kzexw","slide":8,"text":"Clave protegida","textPreview":"Clave protegida","textChars":15,"textLines":1,"bbox":[65,270,225,30]}
+{"kind":"textbox","id":"sh/3qt0r2do","slide":8,"text":"Las contraseñas se guardan de forma protegida y la clave temporal se debe cambiar.","textPreview":"Las contraseñas se guardan de forma protegida y la clave temporal se debe cambiar.","textChars":82,"textLines":1,"bbox":[65,318,230,170]}
+{"kind":"shape","id":"sh/25kjyxcj","slide":8,"bbox":[350,237,245,9]}
+{"kind":"textbox","id":"sh/psb2tcvu","slide":8,"text":"Cierre automático","textPreview":"Cierre automático","textChars":17,"textLines":1,"bbox":[350,270,225,30]}
+{"kind":"textbox","id":"sh/or2107u9","slide":8,"text":"Si una persona deja de usar el sistema, la sesión puede cerrarse para cuidar su acceso.","textPreview":"Si una persona deja de usar el sistema, la sesión puede cerrarse para cuidar su acceso.","textChars":87,"textLines":1,"bbox":[350,318,230,170]}
+{"kind":"shape","id":"sh/f290n2ds","slide":8,"bbox":[635,237,245,9]}
+{"kind":"textbox","id":"sh/e10juxc7","slide":8,"text":"Permisos","textPreview":"Permisos","textChars":8,"textLines":1,"bbox":[635,270,225,30]}
+{"kind":"textbox","id":"sh/14bipcvy","slide":8,"text":"Cada rol ve solo los módulos y la sede que le corresponden.","textPreview":"Cada rol ve solo los módulos y la sede que le corresponden.","textChars":59,"textLines":1,"bbox":[635,318,230,170]}
+{"kind":"shape","id":"sh/g3i1w7ud","slide":8,"bbox":[920,237,245,9]}
+{"kind":"textbox","id":"sh/zydkzmdw","slide":8,"text":"Conexión segura","textPreview":"Conexión segura","textChars":15,"textLines":1,"bbox":[920,270,225,30]}
+{"kind":"textbox","id":"sh/yx4j6hcb","slide":8,"text":"En producción se usa HTTPS para proteger la comunicación entre el navegador y Velmorax.","textPreview":"En producción se usa HTTPS para proteger la comunicación entre el navegador y Velmorax.","textChars":87,"textLines":1,"bbox":[920,318,230,170]}
+{"kind":"shape","id":"sh/u58vep0v","slide":8,"bbox":[65,560,1070,0]}
+{"kind":"textbox","id":"sh/v6hcnu1g","slide":8,"text":"Para una instalación real se configuran una clave propia, HTTPS, la base de datos y respaldos periódicos.","textPreview":"Para una instalación real se configuran una clave propia, HTTPS, la base de datos y respaldos periódicos.","textChars":105,"textLines":1,"bbox":[88,590,1040,34]}
+{"kind":"notes","id":"nt/3z9kbt","slide":8,"text":"Guion sugerido: no se trata de memorizar siglas. Lo importante es explicar que Velmorax protege las claves, limita los permisos y usa conexión segura. Fuente: app/core/security.py y configuración de producción."}
+{"kind":"slide","id":"sl/8z5kow","slide":9,"title":"INSTALACIÓN","textShapes":12}
+{"kind":"shape","id":"sh/ylsvudc3","slide":9,"bbox":[0,0,1280,16]}
+{"kind":"textbox","id":"sh/loje5sbu","slide":9,"text":"INSTALACIÓN","textPreview":"INSTALACIÓN","textChars":11,"textLines":1,"bbox":[64,44,640,22]}
+{"kind":"textbox","id":"sh/knadwnu9","slide":9,"text":"VELMORAX · FLUJO VETERINARIO","textPreview":"VELMORAX · FLUJO VETERINARIO","textChars":28,"textLines":1,"bbox":[64,682,340,18]}
+{"kind":"textbox","id":"sh/bihwzids","slide":9,"text":"9","textPreview":"9","textChars":1,"textLines":1,"bbox":[1168,682,48,18]}
+{"kind":"textbox","id":"sh/ax8vqdc7","slide":9,"text":"Cómo llega Velmorax a Internet","textPreview":"Cómo llega Velmorax a Internet","textChars":30,"textLines":1,"bbox":[64,90,1130,62]}
+{"kind":"shape","id":"sh/xkje18vi","slide":9,"bbox":[64,163,138,5]}
+{"kind":"textbox","id":"sh/wjqdsnud","slide":9,"text":"La aplicación se publica de forma segura sin exponer directamente la base de datos.","textPreview":"La aplicación se publica de forma segura sin exponer directamente la base de datos.","textChars":83,"textLines":1,"bbox":[64,181,1110,27]}
+{"kind":"shape","id":"sh/nuhwvydg","slide":9,"bbox":[74,258,170,112]}
+{"kind":"textbox","id":"sh/mt8vmtcv","slide":9,"text":"Internet\nConexión segura","textPreview":"Internet | Conexión segura","textChars":24,"textLines":2,"bbox":[86,289,146,50]}
+{"kind":"shape","id":"sh/cr2p0zed","slide":9,"bbox":[307,258,190,112]}
+{"kind":"textbox","id":"sh/dsbq94fy","slide":9,"text":"Caddy\nProtege la entrada","textPreview":"Caddy | Protege la entrada","textChars":24,"textLines":2,"bbox":[319,289,166,50]}
+{"kind":"shape","id":"sh/qpk7ypw7","slide":9,"bbox":[560,258,190,112]}
+{"kind":"textbox","id":"sh/bqto7uxs","slide":9,"text":"Velmorax\nProcesa la información","textPreview":"Velmorax | Procesa la información","textChars":31,"textLines":2,"bbox":[572,289,166,50]}
+{"kind":"shape","id":"sh/onipwze1","slide":9,"bbox":[813,258,190,112]}
+{"kind":"textbox","id":"sh/pob654fm","slide":9,"text":"PostgreSQL\nGuarda los datos","textPreview":"PostgreSQL | Guarda los datos","textChars":27,"textLines":2,"bbox":[825,289,166,50]}
+{"kind":"shape","id":"sh/2107upwb","slide":9,"bbox":[1066,258,145,112]}
+{"kind":"textbox","id":"sh/3m9o3uxw","slide":9,"text":"Respaldo\nCopia periódica","textPreview":"Respaldo | Copia periódica","textChars":24,"textLines":2,"bbox":[1078,289,121,50]}
+{"kind":"shape","id":"sh/8jmp8jel","slide":9,"bbox":[244,314,60,0]}
+{"kind":"shape","id":"sh/9kvqhov6","slide":9,"bbox":[497,314,60,0]}
+{"kind":"shape","id":"sh/hgr61ona","slide":9,"bbox":[750,314,60,0]}
+{"kind":"shape","id":"sh/wfipsj6p","slide":9,"bbox":[1003,314,60,0]}
+{"kind":"textbox","id":"sh/ve9oze54","slide":9,"text":"El sistema revisa que la aplicación y la base de datos estén funcionando. También crea copias para poder recuperar la información si ocurre un problema.","textPreview":"El sistema revisa que la aplicación y la base de datos estén funcionando. También crea copias para poder recuperar la información si ocur...","textChars":152,"textLines":1,"bbox":[114,445,1045,52]}
+{"kind":"textbox","id":"sh/ud07q9oj","slide":9,"text":"El equipo técnico puede revisar alertas y registros para detectar problemas antes de que afecten a los usuarios.","textPreview":"El equipo técnico puede revisar alertas y registros para detectar problemas antes de que afecten a los usuarios.","textChars":112,"textLines":1,"bbox":[130,548,1010,34]}
+{"kind":"notes","id":"nt/8z5kow","slide":9,"text":"Guion sugerido: la aplicación no se conecta a internet de cualquier forma. Primero pasa por una capa de seguridad, guarda los datos y crea respaldos. Fuente: docker-compose.production.yml y deploy/."}
+{"kind":"slide","id":"sl/3lwzc8","slide":10,"title":"ADMINISTRACIÓN","textShapes":16}
+{"kind":"shape","id":"sh/10v61kb6","slide":10,"bbox":[0,0,1280,16]}
+{"kind":"textbox","id":"sh/ex4n65cf","slide":10,"text":"ADMINISTRACIÓN","textPreview":"ADMINISTRACIÓN","textChars":14,"textLines":1,"bbox":[64,44,640,22]}
+{"kind":"textbox","id":"sh/fyd4zat0","slide":10,"text":"VELMORAX · FLUJO VETERINARIO","textPreview":"VELMORAX · FLUJO VETERINARIO","textChars":28,"textLines":1,"bbox":[64,682,340,18]}
+{"kind":"textbox","id":"sh/o365cfux","slide":10,"text":"10","textPreview":"10","textChars":2,"textLines":1,"bbox":[1168,682,48,18]}
+{"kind":"textbox","id":"sh/p4f65kb2","slide":10,"text":"Administración de la clínica","textPreview":"Administración de la clínica","textChars":28,"textLines":1,"bbox":[64,90,1130,62]}
+{"kind":"shape","id":"sh/21ona5cr","slide":10,"bbox":[64,163,138,5]}
+{"kind":"textbox","id":"sh/n2xo3atc","slide":10,"text":"Esta sección permite organizar el equipo, revisar movimientos importantes y preparar conexiones externas.","textPreview":"Esta sección permite organizar el equipo, revisar movimientos importantes y preparar conexiones externas.","textChars":105,"textLines":1,"bbox":[64,181,1110,27]}
+{"kind":"shape","id":"sh/xsf694be","slide":10,"bbox":[66,205,534,450]}
+{"kind":"textbox","id":"sh/50bah0ba","slide":10,"text":"Lo que puede administrar","textPreview":"Lo que puede administrar","textChars":24,"textLines":1,"bbox":[670,230,420,28]}
+{"kind":"shape","id":"sh/kz298vup","slide":10,"bbox":[670,282,38,38]}
+{"kind":"textbox","id":"sh/jytsfat4","slide":10,"text":"•","textPreview":"•","textChars":1,"textLines":1,"bbox":[670,279,38,38]}
+{"kind":"textbox","id":"sh/ixkr65cj","slide":10,"text":"Equipo y sedes","textPreview":"Equipo y sedes","textChars":14,"textLines":1,"bbox":[726,278,370,26]}
+{"kind":"textbox","id":"sh/t4valkb6","slide":10,"text":"Usuarios, roles y sedes que forman parte de la clínica.","textPreview":"Usuarios, roles y sedes que forman parte de la clínica.","textChars":55,"textLines":1,"bbox":[726,308,400,54]}
+{"kind":"shape","id":"sh/s3mtcful","slide":10,"bbox":[670,384,38,38]}
+{"kind":"textbox","id":"sh/72tsjat0","slide":10,"text":"•","textPreview":"•","textChars":1,"textLines":1,"bbox":[670,381,38,38]}
+{"kind":"textbox","id":"sh/61kba5cv","slide":10,"text":"Registro de acciones","textPreview":"Registro de acciones","textChars":20,"textLines":1,"bbox":[726,380,370,26]}
+{"kind":"textbox","id":"sh/98ra9gv2","slide":10,"text":"Historial de acciones importantes en agenda, productos y alertas.","textPreview":"Historial de acciones importantes en agenda, productos y alertas.","textChars":65,"textLines":1,"bbox":[726,410,400,54]}
+{"kind":"shape","id":"sh/o7i90buh","slide":10,"bbox":[670,490,38,38]}
+{"kind":"textbox","id":"sh/0rmtgv2d","slide":10,"text":"•","textPreview":"•","textChars":1,"textLines":1,"bbox":[670,487,38,38]}
+{"kind":"textbox","id":"sh/1cvap03y","slide":10,"text":"Conexiones externas","textPreview":"Conexiones externas","textChars":19,"textLines":1,"bbox":[726,486,370,26]}
+{"kind":"textbox","id":"sh/ep4relk7","slide":10,"text":"Facturación, laboratorio, correo o WhatsApp se activan cuando la clínica las configura.","textPreview":"Facturación, laboratorio, correo o WhatsApp se activan cuando la clínica las configura.","textChars":87,"textLines":1,"bbox":[726,516,400,54]}
+{"kind":"textbox","id":"sh/fqdsnqls","slide":10,"text":"Idea final: Velmorax combina funciones clínicas con una base técnica que permite proteger, ordenar y respaldar la información.","textPreview":"Idea final: Velmorax combina funciones clínicas con una base técnica que permite proteger, ordenar y respaldar la información.","textChars":126,"textLines":1,"bbox":[659,610,500,42]}
+{"kind":"image","id":"im/5gry9k7e","slide":10,"name":"","geometry":"roundRect","alt":"Captura real de administración y auditoría local","bbox":[66,205,534,450]}
+{"kind":"notes","id":"nt/3lwzc8","slide":10,"text":"Guion sugerido: esta pantalla sirve para organizar la clínica y tener control de lo que ocurre. Las conexiones externas se activan solo si el cliente las necesita. Fuente: captura local del 16/09/2026."}
+{"kind":"slide","id":"sl/lewnhb","slide":11,"title":"PLANIFICACIÓN","textShapes":6}
+{"kind":"shape","id":"sh/up43ux8v","slide":11,"bbox":[0,0,1280,16]}
+{"kind":"textbox","id":"sh/hsf2pc7m","slide":11,"text":"PLANIFICACIÓN","textPreview":"PLANIFICACIÓN","textChars":13,"textLines":1,"bbox":[64,44,640,22]}
+{"kind":"textbox","id":"sh/wr6lw7q1","slide":11,"text":"VELMORAX · FLUJO VETERINARIO","textPreview":"VELMORAX · FLUJO VETERINARIO","textChars":28,"textLines":1,"bbox":[64,682,340,18]}
+{"kind":"textbox","id":"sh/juxkr2pc","slide":11,"text":"11","textPreview":"11","textChars":2,"textLines":1,"bbox":[1168,682,48,18]}
+{"kind":"textbox","id":"sh/ito3yh8r","slide":11,"text":"Backlog priorizado","textPreview":"Backlog priorizado","textChars":18,"textLines":1,"bbox":[64,90,1130,62]}
+{"kind":"shape","id":"sh/5gf2tc7i","slide":11,"bbox":[64,163,138,5]}
+{"kind":"textbox","id":"sh/4f6l07qx","slide":11,"text":"El backlog organiza el trabajo por historias de usuario, prioridad y puntos de historia.","textPreview":"El backlog organiza el trabajo por historias de usuario, prioridad y puntos de historia.","textChars":88,"textLines":1,"bbox":[64,181,1110,27]}
+{"kind":"textbox","id":"sh/6ho32ho3","slide":11,"text":"Primero se priorizan acceso, clínica, agenda e inventario. Las tareas HT-01 y HT-02 sostienen la persistencia y las pruebas de seguridad.","textPreview":"Primero se priorizan acceso, clínica, agenda e inventario. Las tareas HT-01 y HT-02 sostienen la persistencia y las pruebas de seguridad.","textChars":137,"textLines":1,"bbox":[72,616,1120,32]}
+{"kind":"table","id":"tb/2lkv29w3","slide":11,"name":"","rows":11,"cols":5,"preview":"ID | Módulo | Historia o tarea | Prioridad | Puntos","bbox":[64,222,1152,362]}
+{"kind":"notes","id":"nt/lewnhb","slide":11,"text":"Guion sugerido: backlog significa la lista ordenada de trabajo. Cada fila define qué se va a construir, su importancia y un tamaño estimado. Fuente: Grupo_Velmorax_BacklogHistorias_Entregado.pdf, página 3."}
+{"kind":"slide","id":"sl/7pc7yy","slide":12,"title":"REQUISITOS","textShapes":21}
+{"kind":"shape","id":"sh/vepg36tk","slide":12,"bbox":[0,0,1280,16]}
+{"kind":"textbox","id":"sh/wfyhcba5","slide":12,"text":"REQUISITOS","textPreview":"REQUISITOS","textChars":10,"textLines":1,"bbox":[64,44,640,22]}
+{"kind":"textbox","id":"sh/hgry5wbq","slide":12,"text":"VELMORAX · FLUJO VETERINARIO","textPreview":"VELMORAX · FLUJO VETERINARIO","textChars":28,"textLines":1,"bbox":[64,682,340,18]}
+{"kind":"textbox","id":"sh/m9gf6hs3","slide":12,"text":"12","textPreview":"12","textChars":2,"textLines":1,"bbox":[1168,682,48,18]}
+{"kind":"textbox","id":"sh/napgzmt8","slide":12,"text":"Historias de usuario y aceptación","textPreview":"Historias de usuario y aceptación","textChars":33,"textLines":1,"bbox":[64,90,1130,62]}
+{"kind":"shape","id":"sh/8byh8rat","slide":12,"bbox":[64,163,138,5]}
+{"kind":"textbox","id":"sh/9c7y1wbe","slide":12,"text":"Cada historia describe quién necesita algo, qué necesita y cómo se comprueba que funciona.","textPreview":"Cada historia describe quién necesita algo, qué necesita y cómo se comprueba que funciona.","textChars":90,"textLines":1,"bbox":[64,181,1110,27]}
+{"kind":"textbox","id":"sh/650zils7","slide":12,"text":"Estructura","textPreview":"Estructura","textChars":10,"textLines":1,"bbox":[74,230,190,28]}
+{"kind":"textbox","id":"sh/r69gbqts","slide":12,"text":"Como [actor], quiero [acción] para [resultado].","textPreview":"Como [actor], quiero [acción] para [resultado].","textChars":47,"textLines":1,"bbox":[74,272,500,42]}
+{"kind":"shape","id":"sh/buxgjm94","slide":12,"bbox":[74,342,500,220]}
+{"kind":"textbox","id":"sh/a9ofa18j","slide":12,"text":"HU-04 · Recepción de insumos por lote","textPreview":"HU-04 · Recepción de insumos por lote","textChars":37,"textLines":1,"bbox":[103,370,430,28]}
+{"kind":"textbox","id":"sh/xwfylwru","slide":12,"text":"Como responsable de inventario, quiero registrar insumos por lote y vencimiento para conocer las existencias que se pueden usar.","textPreview":"Como responsable de inventario, quiero registrar insumos por lote y vencimiento para conocer las existencias que se pueden usar.","textChars":128,"textLines":1,"bbox":[103,414,425,54]}
+{"kind":"textbox","id":"sh/wv6xcrqp","slide":12,"text":"Se acepta cuando registra producto, proveedor, lote, cantidad, vencimiento y responsable; crea el movimiento inicial; y evita datos incompletos.","textPreview":"Se acepta cuando registra producto, proveedor, lote, cantidad, vencimiento y responsable; crea el movimiento inicial; y evita datos incom...","textChars":144,"textLines":1,"bbox":[103,488,425,53]}
+{"kind":"textbox","id":"sh/jyxgn690","slide":12,"text":"Tres ejemplos que se validan","textPreview":"Tres ejemplos que se validan","textChars":28,"textLines":1,"bbox":[659,230,430,28]}
+{"kind":"shape","id":"sh/yxofe18f","slide":12,"bbox":[659,286,12,75]}
+{"kind":"textbox","id":"sh/l0zypgr6","slide":12,"text":"HU-01","textPreview":"HU-01","textChars":5,"textLines":1,"bbox":[692,288,80,24]}
+{"kind":"textbox","id":"sh/kzqxgbql","slide":12,"text":"Acceso seguro","textPreview":"Acceso seguro","textChars":13,"textLines":1,"bbox":[773,286,310,25]}
+{"kind":"textbox","id":"sh/72hgr69c","slide":12,"text":"Solo muestra las funciones del rol y la sede autorizada.","textPreview":"Solo muestra las funciones del rol y la sede autorizada.","textChars":56,"textLines":1,"bbox":[692,317,425,43]}
+{"kind":"shape","id":"sh/618fil8r","slide":12,"bbox":[659,389,12,75]}
+{"kind":"textbox","id":"sh/ixsja5sz","slide":12,"text":"HU-05","textPreview":"HU-05","textChars":5,"textLines":1,"bbox":[692,391,80,24]}
+{"kind":"textbox","id":"sh/3y10jatk","slide":12,"text":"Consumo trazable","textPreview":"Consumo trazable","textChars":16,"textLines":1,"bbox":[773,389,310,25]}
+{"kind":"textbox","id":"sh/4ju1cfap","slide":12,"text":"Descuenta el saldo y registra el responsable y el lote usado.","textPreview":"Descuenta el saldo y registra el responsable y el lote usado.","textChars":61,"textLines":1,"bbox":[692,420,425,43]}
+{"kind":"shape","id":"sh/5k3ilkba","slide":12,"bbox":[659,492,12,75]}
+{"kind":"textbox","id":"sh/utsz65sn","slide":12,"text":"HU-06","textPreview":"HU-06","textChars":5,"textLines":1,"bbox":[692,494,80,24]}
+{"kind":"textbox","id":"sh/vu10fat8","slide":12,"text":"Cuarentena","textPreview":"Cuarentena","textChars":10,"textLines":1,"bbox":[773,492,310,25]}
+{"kind":"textbox","id":"sh/gva18fat","slide":12,"text":"Bloquea el consumo o traslado de lotes vencidos o no conformes.","textPreview":"Bloquea el consumo o traslado de lotes vencidos o no conformes.","textChars":63,"textLines":1,"bbox":[692,523,425,43]}
+{"kind":"textbox","id":"sh/hwjihkbe","slide":12,"text":"Criterio de aceptación: una condición visible que demuestra que la historia funciona y que se puede probar.","textPreview":"Criterio de aceptación: una condición visible que demuestra que la historia funciona y que se puede probar.","textChars":107,"textLines":1,"bbox":[95,616,1090,30]}
+{"kind":"notes","id":"nt/7pc7yy","slide":12,"text":"Guion sugerido: no basta con decir que una función existe. Cada historia incluye criterios de aceptación para saber cómo probarla. Fuente: Grupo_Velmorax_BacklogHistorias_Entregado.pdf, páginas 4 a 6."}
+{"kind":"slide","id":"sl/ntrpme","slide":13,"title":"ROLES","textShapes":25}
+{"kind":"shape","id":"sh/4retoja9","slide":13,"bbox":[0,0,1280,16]}
+{"kind":"textbox","id":"sh/jq5sfe9o","slide":13,"text":"ROLES","textPreview":"ROLES","textChars":5,"textLines":1,"bbox":[64,44,640,22]}
+{"kind":"textbox","id":"sh/ipwbm9s3","slide":13,"text":"VELMORAX · FLUJO VETERINARIO","textPreview":"VELMORAX · FLUJO VETERINARIO","textChars":28,"textLines":1,"bbox":[64,682,340,18]}
+{"kind":"textbox","id":"sh/dg7alorq","slide":13,"text":"13","textPreview":"13","textChars":2,"textLines":1,"bbox":[1168,682,48,18]}
+{"kind":"textbox","id":"sh/sfytsja5","slide":13,"text":"Roles del sistema","textPreview":"Roles del sistema","textChars":17,"textLines":1,"bbox":[64,90,1130,62]}
+{"kind":"shape","id":"sh/repsje9k","slide":13,"bbox":[64,163,138,5]}
+{"kind":"textbox","id":"sh/6dgbq9sz","slide":13,"text":"Cada rol trabaja con funciones relacionadas con su responsabilidad y su sede autorizada.","textPreview":"Cada rol trabaja con funciones relacionadas con su responsabilidad y su sede autorizada.","textChars":88,"textLines":1,"bbox":[64,181,1110,27]}
+{"kind":"shape","id":"sh/1krap8r2","slide":13,"bbox":[64,228,536,108]}
+{"kind":"shape","id":"sh/0jytw3ah","slide":13,"bbox":[84,250,42,42]}
+{"kind":"textbox","id":"sh/i5gnils7","slide":13,"text":"01","textPreview":"01","textChars":2,"textLines":1,"bbox":[84,259,42,20]}
+{"kind":"textbox","id":"sh/36porqtc","slide":13,"text":"Administrador de red","textPreview":"Administrador de red","textChars":20,"textLines":1,"bbox":[146,246,434,25]}
+{"kind":"textbox","id":"sh/47y5kvax","slide":13,"text":"Configura el acceso y conserva el control operativo.","textPreview":"Configura el acceso y conserva el control operativo.","textChars":52,"textLines":1,"bbox":[146,275,434,25]}
+{"kind":"textbox","id":"sh/5s76t0bi","slide":13,"text":"Funciones: sedes, usuarios y permisos","textPreview":"Funciones: sedes, usuarios y permisos","textChars":37,"textLines":1,"bbox":[146,302,434,18]}
+{"kind":"shape","id":"sh/qtgnm5s3","slide":13,"bbox":[680,228,536,108]}
+{"kind":"shape","id":"sh/ru9ovato","slide":13,"bbox":[700,250,42,42]}
+{"kind":"textbox","id":"sh/svipofa9","slide":13,"text":"02","textPreview":"02","textChars":2,"textLines":1,"bbox":[700,259,42,20]}
+{"kind":"textbox","id":"sh/dwr6x0bu","slide":13,"text":"Profesional clínico","textPreview":"Profesional clínico","textChars":19,"textLines":1,"bbox":[762,246,434,25]}
+{"kind":"textbox","id":"sh/mxwna1cz","slide":13,"text":"Registra y consulta información de la atención.","textPreview":"Registra y consulta información de la atención.","textChars":47,"textLines":1,"bbox":[762,275,434,25]}
+{"kind":"textbox","id":"sh/7y5oj6tk","slide":13,"text":"Funciones: historia, diagnóstico y consumo","textPreview":"Funciones: historia, diagnóstico y consumo","textChars":42,"textLines":1,"bbox":[762,302,434,18]}
+{"kind":"shape","id":"sh/b21kr29c","slide":13,"bbox":[64,362,536,108]}
+{"kind":"shape","id":"sh/ahs3ix8r","slide":13,"bbox":[84,384,42,42]}
+{"kind":"textbox","id":"sh/x432tcr2","slide":13,"text":"03","textPreview":"03","textChars":2,"textLines":1,"bbox":[84,393,42,20]}
+{"kind":"textbox","id":"sh/c3ulk7qh","slide":13,"text":"Responsable de inventario","textPreview":"Responsable de inventario","textChars":25,"textLines":1,"bbox":[146,380,434,25]}
+{"kind":"textbox","id":"sh/ne1kn290","slide":13,"text":"Controla lo que entra, se vence, se mueve o se repone.","textPreview":"Controla lo que entra, se vence, se mueve o se repone.","textChars":54,"textLines":1,"bbox":[146,409,434,25]}
+{"kind":"textbox","id":"sh/2ds3exsf","slide":13,"text":"Funciones: lotes, vencimientos y abastecimiento","textPreview":"Funciones: lotes, vencimientos y abastecimiento","textChars":47,"textLines":1,"bbox":[146,436,434,18]}
+{"kind":"shape","id":"sh/pgj2psr6","slide":13,"bbox":[680,362,536,108]}
+{"kind":"shape","id":"sh/ofalg7al","slide":13,"bbox":[700,384,42,42]}
+{"kind":"textbox","id":"sh/7a54zm94","slide":13,"text":"04","textPreview":"04","textChars":2,"textLines":1,"bbox":[700,393,42,20]}
+{"kind":"textbox","id":"sh/m9c3qh8z","slide":13,"text":"Personal de recepción","textPreview":"Personal de recepción","textChars":21,"textLines":1,"bbox":[762,380,434,25]}
+{"kind":"textbox","id":"sh/43m94zm5","slide":13,"text":"Agenda atenciones sin cruces de horario.","textPreview":"Agenda atenciones sin cruces de horario.","textChars":40,"textLines":1,"bbox":[762,409,434,25]}
+{"kind":"textbox","id":"sh/54vqxk3q","slide":13,"text":"Funciones: pacientes, propietarios y citas","textPreview":"Funciones: pacientes, propietarios y citas","textChars":42,"textLines":1,"bbox":[762,436,434,18]}
+{"kind":"shape","id":"sh/i14r2p4z","slide":13,"bbox":[64,496,1152,108]}
+{"kind":"shape","id":"sh/j2d8vulk","slide":13,"bbox":[84,518,42,42]}
+{"kind":"textbox","id":"sh/s7698z21","slide":13,"text":"05","textPreview":"05","textChars":2,"textLines":1,"bbox":[84,527,42,20]}
+{"kind":"textbox","id":"sh/t8fa143m","slide":13,"text":"Dirección o coordinación","textPreview":"Dirección o coordinación","textChars":24,"textLines":1,"bbox":[146,514,1050,25]}
+{"kind":"textbox","id":"sh/654r6pkv","slide":13,"text":"Revisa cierres y decisiones con datos verificables.","textPreview":"Revisa cierres y decisiones con datos verificables.","textChars":51,"textLines":1,"bbox":[146,543,1050,25]}
+{"kind":"textbox","id":"sh/r6x8zulg","slide":13,"text":"Funciones: reportes, exportaciones y auditoría","textPreview":"Funciones: reportes, exportaciones y auditoría","textChars":46,"textLines":1,"bbox":[146,570,1050,18]}
+{"kind":"notes","id":"nt/ntrpme","slide":13,"text":"Guion sugerido: cada actor tiene un objetivo distinto. Velmorax asigna permisos para que vea las funciones necesarias y no modifique información fuera de su responsabilidad. Fuente: Grupo_Velmorax_BacklogHistorias_Entregado.pdf, página 2."}
+{"kind":"slide","id":"sl/zcjopv","slide":14,"title":"CASOS DE USO","textShapes":24}
+{"kind":"shape","id":"sh/kb2d0rql","slide":14,"bbox":[0,0,1280,16]}
+{"kind":"textbox","id":"sh/jatc7m90","slide":14,"text":"CASOS DE USO","textPreview":"CASOS DE USO","textChars":12,"textLines":1,"bbox":[64,44,640,22]}
+{"kind":"textbox","id":"sh/y9kvyh8f","slide":14,"text":"VELMORAX · FLUJO VETERINARIO","textPreview":"VELMORAX · FLUJO VETERINARIO","textChars":28,"textLines":1,"bbox":[64,682,340,18]}
+{"kind":"textbox","id":"sh/x8ru5cra","slide":14,"text":"14","textPreview":"14","textChars":2,"textLines":1,"bbox":[1168,682,48,18]}
+{"kind":"textbox","id":"sh/w7itw7qp","slide":14,"text":"Casos de uso principales","textPreview":"Casos de uso principales","textChars":24,"textLines":1,"bbox":[64,90,1130,62]}
+{"kind":"shape","id":"sh/b69c3294","slide":14,"bbox":[64,163,138,5]}
+{"kind":"textbox","id":"sh/a50bux8j","slide":14,"text":"Un caso de uso describe cómo una persona usa Velmorax para completar una tarea concreta.","textPreview":"Un caso de uso describe cómo una persona usa Velmorax para completar una tarea concreta.","textChars":88,"textLines":1,"bbox":[64,181,1110,27]}
+{"kind":"shape","id":"sh/h4vuhgre","slide":14,"bbox":[64,232,542,94]}
+{"kind":"shape","id":"sh/g3md8bqt","slide":14,"bbox":[64,232,10,94]}
+{"kind":"textbox","id":"sh/21cz2hcb","slide":14,"text":"Usuario autorizado","textPreview":"Usuario autorizado","textChars":18,"textLines":1,"bbox":[94,247,175,18]}
+{"kind":"textbox","id":"sh/n2l0vmdw","slide":14,"text":"Acceso y permisos","textPreview":"Acceso y permisos","textChars":17,"textLines":1,"bbox":[94,269,180,44]}
+{"kind":"textbox","id":"sh/o3uh4ruh","slide":14,"text":"Inicia sesión y Velmorax muestra el rol y la sede que le corresponden.","textPreview":"Inicia sesión y Velmorax muestra el rol y la sede que le corresponden.","textChars":70,"textLines":1,"bbox":[294,258,282,48]}
+{"kind":"shape","id":"sh/ponixwv2","slide":14,"bbox":[674,232,542,94]}
+{"kind":"shape","id":"sh/exczyxcf","slide":14,"bbox":[674,232,10,94]}
+{"kind":"textbox","id":"sh/fyl0r2d0","slide":14,"text":"Profesional clínico","textPreview":"Profesional clínico","textChars":19,"textLines":1,"bbox":[704,247,175,18]}
+{"kind":"textbox","id":"sh/0zuh07u5","slide":14,"text":"Historia clínica","textPreview":"Historia clínica","textChars":16,"textLines":1,"bbox":[704,269,180,44]}
+{"kind":"textbox","id":"sh/103itcvq","slide":14,"text":"Registra y consulta una historia por especialidad.","textPreview":"Registra y consulta una historia por especialidad.","textChars":50,"textLines":1,"bbox":[904,258,282,48]}
+{"kind":"shape","id":"sh/ytwja1cj","slide":14,"bbox":[64,352,542,94]}
+{"kind":"shape","id":"sh/zu5036d4","slide":14,"bbox":[64,352,10,94]}
+{"kind":"textbox","id":"sh/vyhwvytg","slide":14,"text":"Personal de recepción","textPreview":"Personal de recepción","textChars":21,"textLines":1,"bbox":[94,367,175,18]}
+{"kind":"textbox","id":"sh/ud8f2tsv","slide":14,"text":"Agendar cita","textPreview":"Agendar cita","textChars":12,"textLines":1,"bbox":[94,389,180,44]}
+{"kind":"textbox","id":"sh/h0zex8bm","slide":14,"text":"Valida disponibilidad del profesional y evita cruces de horario.","textPreview":"Valida disponibilidad del profesional y evita cruces de horario.","textChars":64,"textLines":1,"bbox":[294,378,282,48]}
+{"kind":"shape","id":"sh/wzqx43a1","slide":14,"bbox":[674,352,542,94]}
+{"kind":"shape","id":"sh/j2hgzyts","slide":14,"bbox":[674,352,10,94]}
+{"kind":"textbox","id":"sh/i18f6ts7","slide":14,"text":"Inventario","textPreview":"Inventario","textChars":10,"textLines":1,"bbox":[704,367,175,18]}
+{"kind":"textbox","id":"sh/54jy18bi","slide":14,"text":"Recepción por lote","textPreview":"Recepción por lote","textChars":18,"textLines":1,"bbox":[704,389,180,44]}
+{"kind":"textbox","id":"sh/43qx83ax","slide":14,"text":"Registra producto, lote, vencimiento, cantidad y responsable.","textPreview":"Registra producto, lote, vencimiento, cantidad y responsable.","textChars":61,"textLines":1,"bbox":[904,378,282,48]}
+{"kind":"shape","id":"sh/r61g3ito","slide":14,"bbox":[64,472,542,94]}
+{"kind":"shape","id":"sh/65sfads3","slide":14,"bbox":[64,472,10,94]}
+{"kind":"textbox","id":"sh/obax0nqh","slide":14,"text":"Profesional clínico","textPreview":"Profesional clínico","textChars":19,"textLines":1,"bbox":[94,487,175,18]}
+{"kind":"textbox","id":"sh/pw3ets7m","slide":14,"text":"Registrar consumo","textPreview":"Registrar consumo","textChars":17,"textLines":1,"bbox":[94,509,180,44]}
+{"kind":"textbox","id":"sh/29svyd8b","slide":14,"text":"Selecciona un lote válido y actualiza existencias con auditoría.","textPreview":"Selecciona un lote válido y actualiza existencias con auditoría.","textChars":64,"textLines":1,"bbox":[294,498,282,48]}
+{"kind":"shape","id":"sh/na1wripw","slide":14,"bbox":[674,472,542,94]}
+{"kind":"shape","id":"sh/07adw3q5","slide":14,"bbox":[674,472,10,94]}
+{"kind":"textbox","id":"sh/18jep87q","slide":14,"text":"Dirección","textPreview":"Dirección","textChars":9,"textLines":1,"bbox":[704,487,175,18]}
+{"kind":"textbox","id":"sh/e5svud8z","slide":14,"text":"Reportes y auditoría","textPreview":"Reportes y auditoría","textChars":20,"textLines":1,"bbox":[704,509,180,44]}
+{"kind":"textbox","id":"sh/f61wnypk","slide":14,"text":"Consulta cierres y reportes del ámbito permitido.","textPreview":"Consulta cierres y reportes del ámbito permitido.","textChars":49,"textLines":1,"bbox":[904,498,282,48]}
+{"kind":"textbox","id":"sh/s3qds3q9","slide":14,"text":"El caso CU-01, consumo clínico, se detalla a continuación porque combina atención, inventario, permisos y trazabilidad.","textPreview":"El caso CU-01, consumo clínico, se detalla a continuación porque combina atención, inventario, permisos y trazabilidad.","textChars":119,"textLines":1,"bbox":[92,607,1090,30]}
+{"kind":"notes","id":"nt/zcjopv","slide":14,"text":"Guion sugerido: los casos de uso unen un rol con una tarea dentro del sistema. El listado se basa en RF-01 a RF-08 y en las historias del backlog. Fuente: Grupo_Velmorax_BacklogHistorias_Entregado.pdf, páginas 2, 3 y 7."}
+{"kind":"slide","id":"sl/97ai7z","slide":15,"title":"CASO DE USO","textShapes":24}
+{"kind":"shape","id":"sh/nats3u5w","slide":15,"bbox":[0,0,1280,16]}
+{"kind":"textbox","id":"sh/8bmtwz6h","slide":15,"text":"CASO DE USO","textPreview":"CASO DE USO","textChars":11,"textLines":1,"bbox":[64,44,640,22]}
+{"kind":"textbox","id":"sh/9cva54n2","slide":15,"text":"VELMORAX · FLUJO VETERINARIO","textPreview":"VELMORAX · FLUJO VETERINARIO","textChars":28,"textLines":1,"bbox":[64,682,340,18]}
+{"kind":"textbox","id":"sh/ad4by9on","slide":15,"text":"15","textPreview":"15","textChars":2,"textLines":1,"bbox":[1168,682,48,18]}
+{"kind":"textbox","id":"sh/vyds7e5s","slide":15,"text":"Consumo clínico de un lote","textPreview":"Consumo clínico de un lote","textChars":26,"textLines":1,"bbox":[64,90,1130,62]}
+{"kind":"shape","id":"sh/wzmt0j6d","slide":15,"bbox":[64,163,138,5]}
+{"kind":"textbox","id":"sh/x0vu94ny","slide":15,"text":"Este es el flujo crítico que conecta la atención del paciente con el inventario disponible.","textPreview":"Este es el flujo crítico que conecta la atención del paciente con el inventario disponible.","textChars":91,"textLines":1,"bbox":[64,181,1110,27]}
+{"kind":"shape","id":"sh/i14b29oj","slide":15,"bbox":[82,235,290,128]}
+{"kind":"shape","id":"sh/j2xcbe54","slide":15,"bbox":[100,253,38,38]}
+{"kind":"textbox","id":"sh/je583qxo","slide":15,"text":"1","textPreview":"1","textChars":1,"textLines":1,"bbox":[100,257,38,29]}
+{"kind":"textbox","id":"sh/idw7u5w3","slide":15,"text":"Abrir atención","textPreview":"Abrir atención","textChars":14,"textLines":1,"bbox":[156,253,190,26]}
+{"kind":"textbox","id":"sh/5gnq50fu","slide":15,"text":"El profesional inicia la atención y solicita registrar consumo.","textPreview":"El profesional inicia la atención y solicita registrar consumo.","textChars":63,"textLines":1,"bbox":[104,300,245,45]}
+{"kind":"shape","id":"sh/4fepwve9","slide":15,"bbox":[448,235,290,128]}
+{"kind":"shape","id":"sh/vq58zqxs","slide":15,"bbox":[466,253,38,38]}
+{"kind":"textbox","id":"sh/apc7qlw7","slide":15,"text":"2","textPreview":"2","textChars":1,"textLines":1,"bbox":[466,257,38,29]}
+{"kind":"textbox","id":"sh/hcnq10fi","slide":15,"text":"Mostrar lotes","textPreview":"Mostrar lotes","textChars":13,"textLines":1,"bbox":[522,253,190,26]}
+{"kind":"textbox","id":"sh/wrepsved","slide":15,"text":"Velmorax muestra solo lotes de la sede con saldo disponible.","textPreview":"Velmorax muestra solo lotes de la sede con saldo disponible.","textChars":60,"textLines":1,"bbox":[470,300,245,45]}
+{"kind":"shape","id":"sh/fmp8buxw","slide":15,"bbox":[814,235,290,128]}
+{"kind":"shape","id":"sh/elgr2pwb","slide":15,"bbox":[832,253,38,38]}
+{"kind":"textbox","id":"sh/qhkbutgj","slide":15,"text":"3","textPreview":"3","textChars":1,"textLines":1,"bbox":[832,257,38,29]}
+{"kind":"textbox","id":"sh/b2ts3eh4","slide":15,"text":"Elegir cantidad","textPreview":"Elegir cantidad","textChars":15,"textLines":1,"bbox":[888,253,190,26]}
+{"kind":"textbox","id":"sh/c32twjyp","slide":15,"text":"El profesional selecciona el lote e ingresa lo utilizado.","textPreview":"El profesional selecciona el lote e ingresa lo utilizado.","textChars":57,"textLines":1,"bbox":[836,300,245,45]}
+{"kind":"shape","id":"sh/d4ba5oza","slide":15,"bbox":[814,435,290,128]}
+{"kind":"shape","id":"sh/y5kbytgv","slide":15,"bbox":[832,453,38,38]}
+{"kind":"textbox","id":"sh/z6ts7yh0","slide":15,"text":"4","textPreview":"4","textChars":1,"textLines":1,"bbox":[832,457,38,29]}
+{"kind":"textbox","id":"sh/072t03yl","slide":15,"text":"Validar reglas","textPreview":"Validar reglas","textChars":14,"textLines":1,"bbox":[888,453,190,26]}
+{"kind":"textbox","id":"sh/l8vu98z6","slide":15,"text":"Revisa permiso, estado, vencimiento y saldo.","textPreview":"Revisa permiso, estado, vencimiento y saldo.","textChars":44,"textLines":1,"bbox":[836,500,245,45]}
+{"kind":"shape","id":"sh/e90bm9gb","slide":15,"bbox":[448,435,290,128]}
+{"kind":"shape","id":"sh/fa9svuhw","slide":15,"bbox":[466,453,38,38]}
+{"kind":"textbox","id":"sh/x4fe1cje","slide":15,"text":"5","textPreview":"5","textChars":1,"textLines":1,"bbox":[466,457,38,29]}
+{"kind":"textbox","id":"sh/w36d87it","slide":15,"text":"Registrar movimiento","textPreview":"Registrar movimiento","textChars":20,"textLines":1,"bbox":[522,453,190,26]}
+{"kind":"textbox","id":"sh/v2xwz21o","slide":15,"text":"Descuenta existencias y crea evidencia de auditoría.","textPreview":"Descuenta existencias y crea evidencia de auditoría.","textChars":52,"textLines":1,"bbox":[470,500,245,45]}
+{"kind":"shape","id":"sh/a1ov6x03","slide":15,"bbox":[82,435,290,128]}
+{"kind":"shape","id":"sh/5sze5cjq","slide":15,"bbox":[100,453,38,38]}
+{"kind":"textbox","id":"sh/krqdc7i5","slide":15,"text":"6","textPreview":"6","textChars":1,"textLines":1,"bbox":[100,457,38,29]}
+{"kind":"textbox","id":"sh/j6xw321k","slide":15,"text":"Confirmar saldo","textPreview":"Confirmar saldo","textChars":15,"textLines":1,"bbox":[156,453,190,26]}
+{"kind":"textbox","id":"sh/i5ovax0z","slide":15,"text":"Muestra el resultado y el saldo actualizado.","textPreview":"Muestra el resultado y el saldo actualizado.","textChars":44,"textLines":1,"bbox":[104,500,245,45]}
+{"kind":"shape","id":"sh/lwvetsj6","slide":15,"bbox":[372,299,53,0]}
+{"kind":"shape","id":"sh/0bmd0nil","slide":15,"bbox":[738,299,53,0]}
+{"kind":"shape","id":"sh/o3upof6l","slide":15,"bbox":[959,363,0,47]}
+{"kind":"shape","id":"sh/p4nqxk76","slide":15,"bbox":[661,499,53,0]}
+{"kind":"shape","id":"sh/21c7m5of","slide":15,"bbox":[295,499,53,0]}
+{"kind":"textbox","id":"sh/n2l8vap0","slide":15,"text":"Reglas clave: no permite saldo negativo, lotes vencidos o en cuarentena, ni consumo fuera de la sede autorizada.","textPreview":"Reglas clave: no permite saldo negativo, lotes vencidos o en cuarentena, ni consumo fuera de la sede autorizada.","textChars":112,"textLines":1,"bbox":[92,612,1090,31]}
+{"kind":"notes","id":"nt/97ai7z","slide":15,"text":"Guion sugerido: este caso de uso muestra por qué el inventario no es solo contar productos. Cada consumo se valida, se registra y queda relacionado con la atención. Fuente: Grupo_Velmorax_BacklogHistorias_Entregado.pdf, página 7."}
+{"kind":"slide","id":"sl/i94wfn","slide":16,"title":"INVENTARIO","textShapes":17}
+{"kind":"shape","id":"sh/j6hg3yto","slide":16,"bbox":[0,0,1280,16]}
+{"kind":"textbox","id":"sh/47qxw3u9","slide":16,"text":"INVENTARIO","textPreview":"INVENTARIO","textChars":10,"textLines":1,"bbox":[64,44,640,22]}
+{"kind":"textbox","id":"sh/58zyp8bu","slide":16,"text":"VELMORAX · FLUJO VETERINARIO","textPreview":"VELMORAX · FLUJO VETERINARIO","textChars":28,"textLines":1,"bbox":[64,682,340,18]}
+{"kind":"textbox","id":"sh/uhofq9c7","slide":16,"text":"16","textPreview":"16","textChars":2,"textLines":1,"bbox":[1168,682,48,18]}
+{"kind":"textbox","id":"sh/vixgzeds","slide":16,"text":"Proceso de inventario","textPreview":"Proceso de inventario","textChars":21,"textLines":1,"bbox":[64,90,1130,62]}
+{"kind":"shape","id":"sh/wj6xsjud","slide":16,"bbox":[64,163,138,5]}
+{"kind":"textbox","id":"sh/hkfy1obi","slide":16,"text":"Proceso manual frente al proceso validado y trazable con Velmorax.","textPreview":"Proceso manual frente al proceso validado y trazable con Velmorax.","textChars":66,"textLines":1,"bbox":[64,181,1110,27]}
+{"kind":"textbox","id":"sh/md4fm9cv","slide":16,"text":"AS-IS · Control manual","textPreview":"AS-IS · Control manual","textChars":22,"textLines":1,"bbox":[76,230,410,30]}
+{"kind":"shape","id":"sh/7edgvedg","slide":16,"bbox":[76,275,500,274]}
+{"kind":"shape","id":"sh/n2hkbmxg","slide":16,"bbox":[105,313,26,5]}
+{"kind":"textbox","id":"sh/21o32hwv","slide":16,"text":"Se recibe el insumo y se anota en una hoja de cálculo.","textPreview":"Se recibe el insumo y se anota en una hoja de cálculo.","textChars":54,"textLines":1,"bbox":[153,306,370,38]}
+{"kind":"shape","id":"sh/poz2dwf6","slide":16,"bbox":[105,370,26,5]}
+{"kind":"textbox","id":"sh/onql4rel","slide":16,"text":"El profesional solicita o toma el producto para la atención.","textPreview":"El profesional solicita o toma el producto para la atención.","textChars":60,"textLines":1,"bbox":[153,363,370,38]}
+{"kind":"shape","id":"sh/bqhkf6xc","slide":16,"bbox":[105,427,26,5]}
+{"kind":"textbox","id":"sh/ap8361wr","slide":16,"text":"El consumo se actualiza después, cuando alguien lo recuerda.","textPreview":"El consumo se actualiza después, cuando alguien lo recuerda.","textChars":60,"textLines":1,"bbox":[153,420,370,38]}
+{"kind":"shape","id":"sh/xszmhgfi","slide":16,"bbox":[105,484,26,5]}
+{"kind":"textbox","id":"sh/crql8bex","slide":16,"text":"Coordinación consolida archivos y responde consultas.","textPreview":"Coordinación consolida archivos y responde consultas.","textChars":53,"textLines":1,"bbox":[153,477,370,38]}
+{"kind":"textbox","id":"sh/rudk32x8","slide":16,"text":"Riesgos: versiones distintas, saldo desactualizado y falta de bloqueo de lotes no utilizables.","textPreview":"Riesgos: versiones distintas, saldo desactualizado y falta de bloqueo de lotes no utilizables.","textChars":94,"textLines":1,"bbox":[101,566,448,45]}
+{"kind":"textbox","id":"sh/qt43axwn","slide":16,"text":"TO-BE · Con Velmorax","textPreview":"TO-BE · Con Velmorax","textChars":20,"textLines":1,"bbox":[694,230,420,30]}
+{"kind":"shape","id":"sh/upcni5gb","slide":16,"bbox":[694,275,500,274]}
+{"kind":"shape","id":"sh/vqlobahg","slide":16,"bbox":[723,313,26,5]}
+{"kind":"textbox","id":"sh/gru5kfy1","slide":16,"text":"Se registra producto, lote, vencimiento, cantidad y proveedor.","textPreview":"Se registra producto, lote, vencimiento, cantidad y proveedor.","textChars":62,"textLines":1,"bbox":[771,306,385,38]}
+{"kind":"shape","id":"sh/hs36dkzm","slide":16,"bbox":[723,370,26,5]}
+{"kind":"textbox","id":"sh/6lsne5gz","slide":16,"text":"El sistema crea el movimiento inicial y calcula la existencia.","textPreview":"El sistema crea el movimiento inicial y calcula la existencia.","textChars":62,"textLines":1,"bbox":[771,363,385,38]}
+{"kind":"shape","id":"sh/7mlo7ahk","slide":16,"bbox":[723,427,26,5]}
+{"kind":"textbox","id":"sh/8nu5gfy5","slide":16,"text":"El profesional registra consumo desde la atención.","textPreview":"El profesional registra consumo desde la atención.","textChars":50,"textLines":1,"bbox":[771,420,385,38]}
+{"kind":"shape","id":"sh/to3690zq","slide":16,"bbox":[723,484,26,5]}
+{"kind":"textbox","id":"sh/yhsnalg3","slide":16,"text":"Velmorax valida saldo, sede, vencimiento y cuarentena antes de descontar.","textPreview":"Velmorax valida saldo, sede, vencimiento y cuarentena antes de descontar.","textChars":73,"textLines":1,"bbox":[771,477,385,38]}
+{"kind":"textbox","id":"sh/ji1o3qho","slide":16,"text":"Resultado: una fuente actualizada, alertas y un historial que permite rastrear cada movimiento.","textPreview":"Resultado: una fuente actualizada, alertas y un historial que permite rastrear cada movimiento.","textChars":95,"textLines":1,"bbox":[719,566,448,45]}
+{"kind":"notes","id":"nt/i94wfn","slide":16,"text":"Guion sugerido: AS-IS explica cómo era el proceso manual. TO-BE describe el proceso propuesto con Velmorax. Fuente: Grupo_Velmorax_BacklogHistorias_Entregado.pdf, página 8."}
+{"kind":"slide","id":"sl/b3loyj","slide":17,"title":"CALIDAD","textShapes":24}
+{"kind":"shape","id":"sh/tw765s3y","slide":17,"bbox":[0,0,1280,16]}
+{"kind":"textbox","id":"sh/6tgnudk7","slide":17,"text":"CALIDAD","textPreview":"CALIDAD","textChars":7,"textLines":1,"bbox":[64,44,640,22]}
+{"kind":"textbox","id":"sh/rupo3ils","slide":17,"text":"VELMORAX · FLUJO VETERINARIO","textPreview":"VELMORAX · FLUJO VETERINARIO","textChars":28,"textLines":1,"bbox":[64,682,340,18]}
+{"kind":"textbox","id":"sh/4re5sn2h","slide":17,"text":"17","textPreview":"17","textChars":2,"textLines":1,"bbox":[1168,682,48,18]}
+{"kind":"textbox","id":"sh/5sn61s32","slide":17,"text":"Calidad, dependencias y cierre","textPreview":"Calidad, dependencias y cierre","textChars":30,"textLines":1,"bbox":[64,90,1130,62]}
+{"kind":"shape","id":"sh/ipwnqdkb","slide":17,"bbox":[64,163,138,5]}
+{"kind":"textbox","id":"sh/jq5ozilw","slide":17,"text":"El proyecto no se considera terminado solo porque una pantalla abre: debe cumplir criterios y pruebas.","textPreview":"El proyecto no se considera terminado solo porque una pantalla abre: debe cumplir criterios y pruebas.","textChars":102,"textLines":1,"bbox":[64,181,1110,27]}
+{"kind":"textbox","id":"sh/oni5472l","slide":17,"text":"Definition of Done","textPreview":"Definition of Done","textChars":18,"textLines":1,"bbox":[78,230,430,30]}
+{"kind":"shape","id":"sh/por6dc36","slide":17,"bbox":[78,285,28,28]}
+{"kind":"textbox","id":"sh/tczu5k3q","slide":17,"text":"✓","textPreview":"✓","textChars":1,"textLines":1,"bbox":[78,288,28,20]}
+{"kind":"textbox","id":"sh/sb6tcfm5","slide":17,"text":"La función está implementada y revisada por el equipo.","textPreview":"La función está implementada y revisada por el equipo.","textChars":54,"textLines":1,"bbox":[126,283,430,38]}
+{"kind":"shape","id":"sh/raxs3alk","slide":17,"bbox":[78,346,28,28]}
+{"kind":"textbox","id":"sh/69oba54z","slide":17,"text":"✓","textPreview":"✓","textChars":1,"textLines":1,"bbox":[78,349,28,20]}
+{"kind":"textbox","id":"sh/58fa103u","slide":17,"text":"Los criterios de aceptación, incluso errores, pasan las pruebas.","textPreview":"Los criterios de aceptación, incluso errores, pasan las pruebas.","textChars":64,"textLines":1,"bbox":[126,344,430,38]}
+{"kind":"shape","id":"sh/476t8vm9","slide":17,"bbox":[78,407,28,28]}
+{"kind":"textbox","id":"sh/j6xszqlo","slide":17,"text":"✓","textPreview":"✓","textChars":1,"textLines":1,"bbox":[78,410,28,20]}
+{"kind":"textbox","id":"sh/i5ob6543","slide":17,"text":"Se verifican permisos, seguridad y trazabilidad.","textPreview":"Se verifican permisos, seguridad y trazabilidad.","textChars":48,"textLines":1,"bbox":[126,405,430,38]}
+{"kind":"shape","id":"sh/p4jud43y","slide":17,"bbox":[78,468,28,28]}
+{"kind":"textbox","id":"sh/o3qtkzmd","slide":17,"text":"✓","textPreview":"✓","textChars":1,"textLines":1,"bbox":[78,471,28,20]}
+{"kind":"textbox","id":"sh/8ji5w7yl","slide":17,"text":"La evidencia de prueba y la documentación están actualizadas.","textPreview":"La evidencia de prueba y la documentación están actualizadas.","textChars":61,"textLines":1,"bbox":[126,466,430,38]}
+{"kind":"textbox","id":"sh/9krm5sf6","slide":17,"text":"Dependencias principales","textPreview":"Dependencias principales","textChars":24,"textLines":1,"bbox":[671,230,430,30]}
+{"kind":"shape","id":"sh/mh0nuxgv","slide":17,"bbox":[671,284,84,31]}
+{"kind":"textbox","id":"sh/7i9432xg","slide":17,"text":"HU-01","textPreview":"HU-01","textChars":5,"textLines":1,"bbox":[681,292,64,16]}
+{"kind":"textbox","id":"sh/0fi5snyp","slide":17,"text":"Permite acceso y habilita clínica, agenda, inventario y administración.","textPreview":"Permite acceso y habilita clínica, agenda, inventario y administración.","textChars":71,"textLines":1,"bbox":[779,282,372,39]}
+{"kind":"shape","id":"sh/lgrm1sfa","slide":17,"bbox":[671,345,84,31]}
+{"kind":"textbox","id":"sh/ytg3qdgj","slide":17,"text":"HU-04","textPreview":"HU-04","textChars":5,"textLines":1,"bbox":[681,353,64,16]}
+{"kind":"textbox","id":"sh/zu94zix4","slide":17,"text":"Debe existir antes de consumir o poner en cuarentena un lote.","textPreview":"Debe existir antes de consumir o poner en cuarentena un lote.","textChars":61,"textLines":1,"bbox":[779,343,372,39]}
+{"kind":"shape","id":"sh/crylonyt","slide":17,"bbox":[671,406,84,31]}
+{"kind":"textbox","id":"sh/ds7mx8fy","slide":17,"text":"HU-05","textPreview":"HU-05","textChars":5,"textLines":1,"bbox":[681,414,64,16]}
+{"kind":"textbox","id":"sh/fm5o7i10","slide":17,"text":"Relaciona el consumo con la atención y alimenta reportes.","textPreview":"Relaciona el consumo con la atención y alimenta reportes.","textChars":57,"textLines":1,"bbox":[779,404,372,39]}
+{"kind":"shape","id":"sh/elwned0f","slide":17,"bbox":[671,467,84,31]}
+{"kind":"textbox","id":"sh/1o7698j6","slide":17,"text":"HU-08","textPreview":"HU-08","textChars":5,"textLines":1,"bbox":[681,475,64,16]}
+{"kind":"textbox","id":"sh/gny5g3il","slide":17,"text":"Usa movimientos ya registrados para cierres y auditoría.","textPreview":"Usa movimientos ya registrados para cierres y auditoría.","textChars":56,"textLines":1,"bbox":[779,465,372,39]}
+{"kind":"shape","id":"sh/3qpobihw","slide":17,"bbox":[78,560,1070,78]}
+{"kind":"textbox","id":"sh/2pgnid0r","slide":17,"text":"Velmorax conecta operación clínica, inventario y control técnico con requisitos verificables, permisos y trazabilidad.","textPreview":"Velmorax conecta operación clínica, inventario y control técnico con requisitos verificables, permisos y trazabilidad.","textChars":118,"textLines":1,"bbox":[118,584,990,31]}
+{"kind":"notes","id":"nt/b3loyj","slide":17,"text":"Guion sugerido: Definition of Done significa que una funcionalidad está realmente lista cuando se revisa, se prueba y queda documentada. Las dependencias ayudan a construir en orden. Fuente: Grupo_Velmorax_BacklogHistorias_Entregado.pdf, página 9."}

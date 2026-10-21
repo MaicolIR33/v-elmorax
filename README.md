@@ -36,7 +36,6 @@ Abre `http://127.0.0.1:8000/login`.
 ## Clonar y arrancar
 
 El repositorio esta preparado para clonar sin archivos sensibles ni bases locales.
-
 ```powershell
 git clone https://github.com/MaicolIR33/v-elmorax.git
 cd v-elmorax

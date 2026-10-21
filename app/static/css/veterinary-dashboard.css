@@ -12,23 +12,26 @@
 }
 
 body.veterinary-dashboard-page {
-    --surface: rgba(22, 34, 36, 0.92);
-    --surface-strong: #21383a;
-    --surface-deep: #111b1d;
-    --text: #e7f0ec;
-    --muted: #aabbb5;
-    --accent: #5eb6a5;
-    --accent-soft: rgba(94, 182, 165, 0.16);
-    --accent-deep: #a9ded0;
-    --border: rgba(154, 198, 185, 0.18);
-    --shadow: 0 22px 56px rgba(5, 12, 13, 0.32);
+    --surface: #222730;
+    --surface-strong: #2C333E;
+    --surface-deep: #171A1F;
+    --text: #F4F7F9;
+    --muted: #C7CFD8;
+    --primary: #A7B7A0;
+    --primary-hover: #C3D0BA;
+    --secondary: #B6A8C8;
+    --accent: #D7BA83;
+    --accent-soft: rgba(215, 186, 131, 0.14);
+    --accent-deep: #E5CB9C;
+    --border: #78869A;
+    --shadow: 0 22px 56px rgba(2, 6, 23, 0.38);
     min-height: 100vh;
     font-size: 18px;
     color: var(--text);
     background:
-        radial-gradient(circle at 88% 6%, rgba(94, 182, 165, 0.11), transparent 28rem),
-        radial-gradient(circle at 8% 0%, rgba(104, 151, 148, 0.09), transparent 24rem),
-        linear-gradient(160deg, #10191b 0%, #16292b 52%, #1c3537 100%);
+        radial-gradient(circle at 88% 6%, rgba(167, 183, 160, 0.05), transparent 28rem),
+        radial-gradient(circle at 8% 0%, rgba(182, 168, 200, 0.04), transparent 24rem),
+        #171A1F;
 }
 
 body.veterinary-dashboard-page .page-shell {
@@ -139,6 +142,30 @@ body.veterinary-dashboard-page [hidden] {
     height: 21px;
 }
 
+.vet-nav-icon {
+    display: grid;
+    place-items: center;
+    flex: 0 0 28px;
+    width: 28px;
+    height: 28px;
+    border: 1px solid transparent;
+    border-radius: 9px;
+    transition: color 160ms ease, background 160ms ease, border-color 160ms ease;
+}
+
+.vet-nav-icon svg { width: 19px; height: 19px; }
+.vet-nav-icon-dashboard { color: #B7C8A7; }
+.vet-nav-icon-agenda { color: #9FC2DF; }
+.vet-nav-icon-patients { color: #C3AFD0; }
+.vet-nav-icon-supplies { color: #E8C36C; }
+.vet-nav-icon-alerts { color: #E99A8E; }
+.vet-nav-icon-admin { color: #B9C5CF; }
+
+.vet-sidebar-nav a.is-active .vet-nav-icon {
+    border-color: rgba(241, 245, 249, .12);
+    background: rgba(241, 245, 249, .08);
+}
+
 .vet-scope-form {
     display: grid;
     grid-template-columns: 28px minmax(0, 1fr);
@@ -234,6 +261,30 @@ body.veterinary-dashboard-page [hidden] {
     align-items: center;
     padding-top: 15px;
     border-top: 1px solid var(--border);
+}
+
+.vet-sidebar-legal {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 11px;
+    padding: 12px 3px 0;
+    border-top: 1px solid var(--border);
+}
+
+.vet-sidebar-legal a {
+    color: var(--muted);
+    font-size: .65rem;
+    font-weight: 650;
+    line-height: 1.25;
+    text-decoration: none;
+}
+
+.vet-sidebar-legal a:hover { color: var(--primary); }
+
+.vet-sidebar-legal a:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 3px;
+    border-radius: 3px;
 }
 
 .vet-sidebar-user > span:nth-child(2) {
@@ -349,7 +400,7 @@ body.veterinary-dashboard-page [hidden] {
 .vet-board-signals .vet-signal { color: inherit; text-decoration: none; transition: border-color .16s ease, transform .16s ease; }
 .vet-board-signals .vet-signal:hover { transform: translateY(-1px); border-color: rgba(91,218,205,.35); }
 .vet-board-layout { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(270px, .65fr); gap: 14px; align-items: start; }
-.vet-board-next { min-height: 310px; }
+.vet-board-next { min-height: 0; }
 .vet-board-queue { display:grid; }
 .vet-board-queue-row { display:grid; grid-template-columns:58px 38px minmax(0,1fr) auto; align-items:center; gap:11px; min-height:68px; padding:12px 18px; border-bottom:1px solid var(--border); color:inherit; text-decoration:none; transition:background .16s ease; }
 .vet-board-queue-row:last-child { border-bottom:0; }
@@ -910,27 +961,1442 @@ body.veterinary-dashboard-page [hidden] {
     }
 }
 
+/* Final cascade for the shared workspace frame.  This intentionally comes
+   after the module-specific rules so route changes cannot reintroduce a
+   different dark surface. */
+html[data-theme="dark"] body.veterinary-workspace .main-shell {
+    padding: 0 26px 28px;
+    border: 1px solid #344454;
+    border-left: 0;
+    background: #101820;
+}
+
+html[data-theme="dark"] body.veterinary-workspace .vet-sidebar {
+    min-height: calc(100vh - 20px);
+    padding: 26px 24px 20px;
+    border: 1px solid #344454;
+    border-right: 0;
+    border-radius: 0;
+    background: #17232E;
+    box-shadow: none;
+}
+
+html[data-theme="dark"] body.veterinary-workspace .vet-sidebar-nav a.is-active {
+    border-color: transparent;
+    background: rgba(183, 200, 167, .14);
+    box-shadow: inset 4px 0 0 var(--primary);
+}
+
+html[data-theme="dark"] body.veterinary-workspace :is(
+    .panel-card, .vet-panel, .vet-stock-card, .vet-stock-item, .vet-alert-card,
+    .vet-alert-sidebar, .vet-agenda-toolbar, .vet-availability-card,
+    .vet-confirm-card, .vet-history-entry, .vet-inventory-drawer,
+    .vet-next-appointment, .vet-trace-panel, .vet-inventory-signals > div,
+    .vet-supply-request, .timeline-row
+) {
+    border-color: #718197;
+    background: #202C38;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .05), 0 8px 18px rgba(0, 0, 0, .12);
+}
+
+html[data-theme="dark"] body.veterinary-workspace .vet-stock-filter,
+html[data-theme="dark"] body.veterinary-workspace .vet-alert-tabs,
+html[data-theme="dark"] body.veterinary-workspace .vet-panel-heading {
+    border-color: #415163;
+    background: #1C2834;
+}
+
+html[data-theme="dark"] body.veterinary-workspace :is(input, select, textarea) {
+    color: var(--text);
+    border-color: #56677A;
+    background: #1C2834;
+}
+
+/* Keep the profile rail compact after all route-specific header rules. */
+html[data-theme="dark"] body.veterinary-workspace .vet-dashboard-topbar-compact,
+html[data-theme="dark"] body.veterinary-workspace .vet-workspace-topbar-compact {
+    min-height: 64px;
+    margin-bottom: 16px;
+    padding-top: 0;
+    padding-bottom: 0;
+}
+
+html[data-theme="light"] body.veterinary-workspace .vet-workspace-topbar-compact {
+    min-height: 64px;
+    margin-bottom: 16px;
+}
+
+@media (max-width: 700px) {
+    html[data-theme="dark"] body.veterinary-workspace .vet-dashboard-topbar-compact,
+    html[data-theme="dark"] body.veterinary-workspace .vet-workspace-topbar-compact,
+html[data-theme="light"] body.veterinary-workspace .vet-workspace-topbar-compact {
+        min-height: 56px;
+        margin-bottom: 12px;
+    }
+}
+
+/* Patient directory: compact filters, clear clinical signals and real pagination. */
+.vet-patient-search-card { display:block; }
+.vet-patient-search-card .vet-search-copy { margin-bottom:12px; }
+.vet-patient-search-card .vet-patient-search { display:grid !important; grid-template-columns:repeat(5,minmax(0,1fr)); gap:9px; align-items:end; width:100%; margin:0; padding:0; border:0 !important; border-radius:0; background:transparent !important; box-shadow:none !important; }
+.vet-patient-search-card .vet-patient-search > label:first-child { grid-column:span 2; min-width:0; }
+.vet-patient-filter { display:grid; gap:5px; color:var(--muted); font-size:.7rem; font-weight:800; }
+.vet-patient-filter select { width:100%; min-height:39px; padding:7px 10px; border:1px solid var(--border); border-radius:10px; color:var(--text); background:var(--panel); font:inherit; }
+.vet-patient-search-card .vet-patient-alert-filter { display:flex !important; grid-column:1 / 4; align-items:center; gap:8px; min-height:36px; margin:0; color:var(--muted); font-size:.77rem; font-weight:700; }
+.vet-patient-search-card .vet-patient-alert-filter input { flex:0 0 17px; width:17px; height:17px; min-height:17px; margin:0; padding:0; accent-color:var(--accent); }
+.vet-patient-search-card .vet-patient-search .filter-actions { grid-column:4 / 6; justify-content:flex-end; margin:0; }
+.vet-patient-count { margin:10px 0 2px; color:var(--muted); font-size:.74rem; }
+.vet-patient-item { display:grid; grid-template-columns:minmax(0,1fr) minmax(230px,.75fr); gap:14px 20px; padding:16px 18px; border-bottom:1px solid var(--border); }
+.vet-patient-main { min-width:0; }
+.vet-patient-info { display:grid; align-content:center; justify-items:end; gap:8px; min-width:0; }
+.vet-patient-status { display:flex; flex-wrap:wrap; justify-content:flex-end; align-items:center; gap:7px; }
+.vet-patient-alerts,.vet-patient-prevention { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+.vet-patient-alert-chip,.vet-patient-prevention > span,.vet-patient-state { display:inline-flex; align-items:center; max-width:100%; padding:4px 8px; border:1px solid rgba(230,168,77,.3); border-radius:999px; color:#ffdaa0; background:rgba(230,168,77,.11); font-size:.69rem; font-weight:750; overflow-wrap:anywhere; }
+.vet-patient-alert-chip.is-critical,.vet-patient-prevention > .is-overdue { border-color:rgba(224,104,115,.36); color:#ffabb2; background:rgba(224,104,115,.12); }
+.vet-patient-prevention > .is-upcoming { border-color:rgba(230,168,77,.32); color:#ffdaa0; background:rgba(230,168,77,.1); }
+.vet-patient-state { border-color:rgba(71,184,132,.28); color:#a7e5c2; background:rgba(71,184,132,.1); }
+.vet-patient-state.is-inactive { border-color:var(--border); color:var(--muted); background:transparent; }
+.vet-patient-row-actions { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:6px; }
+.vet-patient-row-actions .action-button { white-space:nowrap; }
+.vet-patient-pagination { display:flex; justify-content:space-between; align-items:center; gap:10px; padding:13px 16px 4px; color:var(--muted); font-size:.78rem; }
+.vet-patient-pagination a { color:var(--accent-deep); font-weight:800; text-decoration:none; }
+.vet-patient-pagination .is-disabled { opacity:.45; }
+.vet-patient-weight-chart { margin:12px 0 18px; padding:14px 16px 10px; border:1px solid var(--border); border-radius:14px; background:var(--panel); }
+.vet-patient-weight-chart > div:first-child { display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; }
+.vet-patient-weight-chart .eyebrow { margin:0; }
+.vet-patient-weight-chart h4 { margin:0; color:var(--text); font-size:.92rem; }
+.vet-patient-weight-chart > div:first-child > span { margin-left:auto; color:var(--accent-deep); font-size:.78rem; font-weight:800; }
+.vet-patient-weight-chart svg { display:block; width:100%; height:132px; overflow:visible; }
+.vet-patient-weight-chart .vet-weight-gridline { fill:none; stroke:var(--border); stroke-width:1; stroke-dasharray:4 5; }
+.vet-patient-weight-chart polyline { fill:none; stroke:var(--accent); stroke-width:3; stroke-linecap:round; stroke-linejoin:round; }
+.vet-patient-weight-chart circle { fill:var(--panel); stroke:var(--accent); stroke-width:3; }
+.vet-patient-weight-labels { display:flex; justify-content:space-between; color:var(--muted); font-size:.68rem; }
+.vet-recent-card.is-patient-history .vet-recent-item.vet-history-record { position:relative; margin-left:10px; padding-left:20px; border-left:2px solid var(--border); }
+.vet-recent-card.is-patient-history .vet-recent-item.vet-history-record::before { position:absolute; top:24px; left:-6px; width:10px; height:10px; border:2px solid var(--accent); border-radius:50%; background:var(--panel); content:""; }
+@media (max-width: 900px) {
+  .vet-patient-search-card .vet-patient-search { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .vet-patient-search-card .vet-patient-search > label:first-child { grid-column:1 / -1; }
+  .vet-patient-search-card .vet-patient-alert-filter { grid-column:1; }
+  .vet-patient-search-card .vet-patient-search .filter-actions { grid-column:2; }
+}
+@media (max-width: 620px) {
+  .vet-patient-search-card .vet-patient-search { grid-template-columns:1fr; }
+  .vet-patient-search-card .vet-patient-search > label:first-child,.vet-patient-search-card .vet-patient-alert-filter,.vet-patient-search-card .vet-patient-search .filter-actions { grid-column:1; }
+  .vet-patient-item { grid-template-columns:1fr; padding:14px 12px; }
+  .vet-patient-info { justify-items:start; }
+  .vet-patient-status,.vet-patient-row-actions { justify-content:flex-start; }
+  .vet-patient-row-actions .action-button { flex:1 1 auto; text-align:center; }
+  .vet-patient-pagination { padding-inline:8px; font-size:.72rem; }
+  .vet-patient-weight-chart { padding:12px 10px 8px; }
+}
+
+/* Definitive dark palette: kept last to make every veterinary workspace
+   route feel like one product. Patients and administration are not targeted. */
+html[data-theme="dark"] body.veterinary-workspace {
+    --surface: #1A2734;
+    --surface-strong: #202E3C;
+    --surface-deep: #0E1620;
+    --text: #EEF3F7;
+    --muted: #B7C4D0;
+    --primary: #B6CDAF;
+    --primary-hover: #D2E0CC;
+    --secondary: #C4B5D4;
+    --accent: #E3C47E;
+    --accent-soft: rgba(227, 196, 126, .14);
+    --accent-deep: #F0D89A;
+    --border: #61758A;
+    --shadow: 0 10px 24px rgba(3, 10, 18, .2);
+    background: #0E1620;
+}
+
+html[data-theme="dark"] body.veterinary-workspace .main-shell {
+    border-color: #304357;
+    background: #0E1620;
+}
+
+html[data-theme="dark"] body.veterinary-workspace .vet-sidebar {
+    border-color: #304357;
+    background: #141F2A;
+}
+
+html[data-theme="dark"] body.veterinary-workspace .vet-sidebar-nav a { color: #C7D1DB; }
+html[data-theme="dark"] body.veterinary-workspace .vet-sidebar-nav a:hover { background: #202E3C; }
+html[data-theme="dark"] body.veterinary-workspace .vet-sidebar-nav a.is-active {
+    color: #F4F8FA;
+    background: rgba(182, 205, 175, .16);
+    box-shadow: inset 4px 0 0 #B6CDAF;
+}
+
+html[data-theme="dark"] body.veterinary-workspace :is(
+    .vet-signal, .vet-panel, .panel-card, .vet-stock-card, .vet-stock-item,
+    .vet-alert-card, .vet-alert-sidebar, .vet-agenda-toolbar,
+    .vet-availability-card, .vet-confirm-card, .vet-history-entry,
+    .vet-inventory-drawer, .vet-next-appointment, .vet-trace-panel,
+    .vet-inventory-signals > div, .vet-supply-request, .timeline-row
+) {
+    border-color: #61758A;
+    background: #1A2734;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .045), 0 8px 18px rgba(3, 10, 18, .14);
+}
+
+html[data-theme="dark"] body.veterinary-workspace :is(
+    .vet-stock-filter, .vet-alert-tabs, .vet-panel-heading
+) {
+    border-color: #40566B;
+    background: #17232F;
+}
+
+html[data-theme="dark"] body.veterinary-workspace .vet-board-queue-row,
+html[data-theme="dark"] body.veterinary-workspace .vet-team-load > div,
+html[data-theme="dark"] body.veterinary-workspace .vet-signal-details { border-color: #40566B; }
+html[data-theme="dark"] body.veterinary-workspace .vet-board-queue-row:hover,
+html[data-theme="dark"] body.veterinary-workspace .vet-signal:hover { background: #202E3C; }
+
+html[data-theme="dark"] body.veterinary-workspace :is(input, select, textarea) {
+    color: var(--text);
+    border-color: #556B80;
+    background: #17232F;
+}
+
+html[data-theme="dark"] body.veterinary-workspace :is(a, button, input, select, textarea):focus-visible {
+    outline: 3px solid rgba(143, 214, 199, .7);
+    outline-offset: 3px;
+}
+
+/* The effective dark layer lives last so older route rules cannot alter the
+   visual system after navigation. Patient and administration modules remain
+   intentionally out of scope. */
+html[data-theme="dark"] body.veterinary-workspace {
+    --surface: #1A2734;
+    --surface-strong: #202E3C;
+    --surface-deep: #0E1620;
+    --text: #EEF3F7;
+    --muted: #B7C4D0;
+    --primary: #B6CDAF;
+    --primary-hover: #D2E0CC;
+    --secondary: #C4B5D4;
+    --accent: #E3C47E;
+    --accent-soft: rgba(227, 196, 126, .14);
+    --accent-deep: #F0D89A;
+    --border: #61758A;
+    --shadow: 0 10px 24px rgba(3, 10, 18, .2);
+    background: #0E1620;
+}
+
+html[data-theme="dark"] body.veterinary-workspace .main-shell {
+    border-color: #304357;
+    background: #0E1620;
+}
+
+html[data-theme="dark"] body.veterinary-workspace .vet-sidebar {
+    border-color: #304357;
+    background: #141F2A;
+}
+
+html[data-theme="dark"] body.veterinary-workspace .vet-sidebar-nav a { color: #C7D1DB; }
+html[data-theme="dark"] body.veterinary-workspace .vet-sidebar-nav a:hover { background: #202E3C; }
+
+html[data-theme="dark"] body.veterinary-workspace .vet-sidebar-nav a.is-active {
+    color: #F4F8FA;
+    background: rgba(182, 205, 175, .16);
+    box-shadow: inset 4px 0 0 #B6CDAF;
+}
+
+html[data-theme="dark"] body.veterinary-workspace :is(
+    .vet-signal, .vet-panel, .panel-card, .vet-stock-card, .vet-stock-item,
+    .vet-alert-card, .vet-alert-sidebar, .vet-agenda-toolbar,
+    .vet-availability-card, .vet-confirm-card, .vet-history-entry,
+    .vet-inventory-drawer, .vet-next-appointment, .vet-trace-panel,
+    .vet-inventory-signals > div, .vet-supply-request, .timeline-row
+) {
+    border-color: #61758A;
+    background: #1A2734;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .045), 0 8px 18px rgba(3, 10, 18, .14);
+}
+
+html[data-theme="dark"] body.veterinary-workspace :is(
+    .vet-stock-filter, .vet-alert-tabs, .vet-panel-heading
+) {
+    border-color: #40566B;
+    background: #17232F;
+}
+
+html[data-theme="dark"] body.veterinary-workspace .vet-board-queue-row,
+html[data-theme="dark"] body.veterinary-workspace .vet-team-load > div,
+html[data-theme="dark"] body.veterinary-workspace .vet-signal-details {
+    border-color: #40566B;
+}
+
+html[data-theme="dark"] body.veterinary-workspace .vet-board-queue-row:hover,
+html[data-theme="dark"] body.veterinary-workspace .vet-signal:hover { background: #202E3C; }
+
+html[data-theme="dark"] body.veterinary-workspace :is(input, select, textarea) {
+    color: var(--text);
+    border-color: #556B80;
+    background: #17232F;
+}
+
+html[data-theme="dark"] body.veterinary-workspace :is(a, button, input, select, textarea):focus-visible {
+    outline: 3px solid rgba(143, 214, 199, .7);
+    outline-offset: 3px;
+}
+
+/* Final dark-workspace system. It deliberately covers the veterinary work
+   areas only, so patient records and administration keep their own modules. */
+/* Higher specificity ensures this calm palette outranks legacy route styles. */
+html[data-theme="dark"] body.veterinary-dashboard-page.veterinary-workspace {
+    --surface: #1A2734;
+    --surface-strong: #202E3C;
+    --surface-deep: #0E1620;
+    --text: #EEF3F7;
+    --muted: #B7C4D0;
+    --primary: #B6CDAF;
+    --primary-hover: #D2E0CC;
+    --secondary: #C4B5D4;
+    --accent: #E3C47E;
+    --accent-soft: rgba(227, 196, 126, .14);
+    --accent-deep: #F0D89A;
+    --border: #61758A;
+    --shadow: 0 10px 24px rgba(3, 10, 18, .2);
+    background: #0E1620;
+}
+
+html[data-theme="dark"] body.veterinary-dashboard-page.veterinary-workspace .main-shell {
+    border-color: #304357;
+    background: #0E1620;
+}
+
+html[data-theme="dark"] body.veterinary-dashboard-page.veterinary-workspace .vet-sidebar {
+    border-color: #304357;
+    background: #141F2A;
+}
+
+html[data-theme="dark"] body.veterinary-dashboard-page.veterinary-workspace .vet-sidebar-nav a { color: #C7D1DB; }
+html[data-theme="dark"] body.veterinary-dashboard-page.veterinary-workspace .vet-sidebar-nav a:hover { background: #202E3C; }
+html[data-theme="dark"] body.veterinary-dashboard-page.veterinary-workspace .vet-sidebar-nav a.is-active {
+    color: #F4F8FA;
+    background: rgba(182, 205, 175, .16);
+    box-shadow: inset 4px 0 0 #B6CDAF;
+}
+
+html[data-theme="dark"] body.veterinary-dashboard-page.veterinary-workspace :is(
+    .vet-signal, .vet-panel, .panel-card, .vet-stock-card, .vet-stock-item,
+    .vet-alert-card, .vet-alert-sidebar, .vet-agenda-toolbar,
+    .vet-availability-card, .vet-confirm-card, .vet-history-entry,
+    .vet-inventory-drawer, .vet-next-appointment, .vet-trace-panel,
+    .vet-inventory-signals > div, .vet-supply-request, .timeline-row
+) {
+    border-color: #61758A;
+    background: #1A2734;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .045), 0 8px 18px rgba(3, 10, 18, .14);
+}
+
+html[data-theme="dark"] body.veterinary-dashboard-page.veterinary-workspace :is(.vet-stock-filter, .vet-alert-tabs, .vet-panel-heading) {
+    border-color: #40566B;
+    background: #17232F;
+}
+
+html[data-theme="dark"] body.veterinary-dashboard-page.veterinary-workspace .vet-board-queue-row,
+html[data-theme="dark"] body.veterinary-dashboard-page.veterinary-workspace .vet-team-load > div,
+html[data-theme="dark"] body.veterinary-dashboard-page.veterinary-workspace .vet-signal-details { border-color: #40566B; }
+html[data-theme="dark"] body.veterinary-dashboard-page.veterinary-workspace .vet-board-queue-row:hover,
+html[data-theme="dark"] body.veterinary-dashboard-page.veterinary-workspace .vet-signal:hover { background: #202E3C; }
+
+html[data-theme="dark"] body.veterinary-dashboard-page.veterinary-workspace :is(input, select, textarea) {
+    color: var(--text);
+    border-color: #556B80;
+    background: #17232F;
+}
+
+html[data-theme="dark"] body.veterinary-dashboard-page.veterinary-workspace :is(a, button, input, select, textarea):focus-visible {
+    outline: 3px solid rgba(143, 214, 199, .7);
+    outline-offset: 3px;
+}
+
+/* Pacientes keeps its own clinical content; only this outer frame is shared
+   with the veterinary workspace to avoid a visual jump during navigation. */
+html[data-theme="dark"] body.veterinary-dashboard-page.veterinary-clinical-shell {
+    --surface: #1A2734;
+    --surface-strong: #202E3C;
+    --surface-deep: #0E1620;
+    --text: #EEF3F7;
+    --muted: #B7C4D0;
+    --primary: #B6CDAF;
+    --primary-hover: #D2E0CC;
+    --border: #61758A;
+    --shadow: 0 10px 24px rgba(3, 10, 18, .2);
+    background: #0E1620;
+}
+
+html[data-theme="dark"] body.veterinary-dashboard-page.veterinary-clinical-shell .page-shell {
+    max-width: none;
+    min-height: 100vh;
+    padding: 10px;
+    gap: 0;
+    grid-template-columns: 280px minmax(0, 1fr);
+}
+
+html[data-theme="dark"] body.veterinary-dashboard-page.veterinary-clinical-shell .main-shell {
+    padding: 0 26px 28px;
+    border: 1px solid #304357;
+    border-left: 0;
+    background: #0E1620;
+}
+
+html[data-theme="dark"] body.veterinary-dashboard-page.veterinary-clinical-shell .vet-sidebar {
+    min-height: calc(100vh - 20px);
+    padding: 26px 24px 20px;
+    border: 1px solid #304357;
+    border-right: 0;
+    border-radius: 0;
+    background: #141F2A;
+    box-shadow: none;
+}
+
+html[data-theme="dark"] body.veterinary-dashboard-page.veterinary-clinical-shell .vet-sidebar-nav a { color: #C7D1DB; }
+html[data-theme="dark"] body.veterinary-dashboard-page.veterinary-clinical-shell .vet-sidebar-nav a:hover { background: #202E3C; }
+html[data-theme="dark"] body.veterinary-dashboard-page.veterinary-clinical-shell .vet-sidebar-nav a.is-active {
+    color: #F4F8FA;
+    background: rgba(182, 205, 175, .16);
+    box-shadow: inset 4px 0 0 #B6CDAF;
+}
+
+/* Shared shell for every veterinary module. Module content remains independent;
+   the frame, account bar and navigation no longer change on route switches. */
+body.veterinary-dashboard-page.veterinary-shared-shell .page-shell {
+    max-width: none;
+    min-height: 100vh;
+    padding: 10px;
+    gap: 0;
+    grid-template-columns: 280px minmax(0, 1fr);
+}
+
+body.veterinary-dashboard-page.veterinary-shared-shell .main-shell {
+    padding: 0 26px 28px;
+    border: 1px solid var(--border);
+    border-left: 0;
+    background: var(--surface-deep);
+}
+
+body.veterinary-dashboard-page.veterinary-shared-shell .vet-sidebar {
+    position: sticky;
+    top: 10px;
+    align-self: start;
+    min-height: calc(100vh - 20px);
+    padding: 26px 24px 20px;
+    border: 1px solid var(--border);
+    border-right: 0;
+    border-radius: 0;
+    background: var(--surface-strong);
+    box-shadow: none;
+}
+
+body.veterinary-dashboard-page.veterinary-shared-shell .vet-workspace-topbar,
+body.veterinary-dashboard-page.veterinary-shared-shell .vet-dashboard-topbar-compact {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    min-height: 64px;
+    margin: 0 -26px 16px;
+    padding: 0 30px;
+    border-bottom: 1px solid var(--border);
+}
+
+body.veterinary-dashboard-page.veterinary-shared-shell .vet-dashboard-user {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+}
+
+body.veterinary-dashboard-page.veterinary-shared-shell .vet-dashboard-user > span:last-child {
+    display: grid;
+    gap: 2px;
+}
+
+body.veterinary-dashboard-page.veterinary-shared-shell .vet-dashboard-user strong { font-size: .84rem; }
+body.veterinary-dashboard-page.veterinary-shared-shell .vet-dashboard-user small { color: var(--muted); font-size: .7rem; }
+
+body.veterinary-dashboard-page.veterinary-shared-shell .vet-dashboard-avatar {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    border: 1px solid var(--border);
+    border-radius: 50%;
+    color: var(--text);
+    background: var(--surface-strong);
+    font-size: .9rem;
+    font-weight: 800;
+}
+
+html[data-theme="dark"] body.veterinary-dashboard-page.veterinary-shared-shell .main-shell,
+html[data-theme="dark"] body.veterinary-dashboard-page.veterinary-shared-shell .vet-sidebar {
+    border-color: #304357;
+}
+
+html[data-theme="dark"] body.veterinary-dashboard-page.veterinary-shared-shell .vet-sidebar { background: #141F2A; }
+html[data-theme="dark"] body.veterinary-dashboard-page.veterinary-shared-shell .main-shell { background: #0E1620; }
+
+@media (max-width: 1040px) {
+    body.veterinary-dashboard-page.veterinary-shared-shell .page-shell { display: block; padding: 12px; }
+    body.veterinary-dashboard-page.veterinary-shared-shell .main-shell { padding: 0 14px 22px; border-left: 1px solid var(--border); }
+    body.veterinary-dashboard-page.veterinary-shared-shell .vet-sidebar { position: static; min-height: 0; border-right: 1px solid var(--border); border-bottom: 0; }
+}
+
+@media (max-width: 700px) {
+    body.veterinary-dashboard-page.veterinary-shared-shell :is(.vet-workspace-topbar, .vet-dashboard-topbar-compact) { min-height: 56px; margin: 0 -14px 12px; padding: 0 16px; }
+    body.veterinary-dashboard-page.veterinary-shared-shell .vet-dashboard-user > span:last-child { display: none; }
+}
+
+@media (max-width: 1040px) {
+    html[data-theme="dark"] body.veterinary-dashboard-page.veterinary-clinical-shell .page-shell {
+        display: block;
+        padding: 12px;
+    }
+
+    html[data-theme="dark"] body.veterinary-dashboard-page.veterinary-clinical-shell .main-shell {
+        padding: 0 14px 22px;
+        border: 1px solid #304357;
+    }
+
+    html[data-theme="dark"] body.veterinary-dashboard-page.veterinary-clinical-shell .vet-sidebar {
+        min-height: 0;
+        border: 1px solid #304357;
+        border-bottom: 0;
+    }
+}
+html[data-theme="dark"] body.veterinary-workspace {
+    --surface: #1A2734;
+    --surface-strong: #202E3C;
+    --surface-deep: #0E1620;
+    --text: #EEF3F7;
+    --muted: #B7C4D0;
+    --primary: #B6CDAF;
+    --primary-hover: #D2E0CC;
+    --secondary: #C4B5D4;
+    --accent: #E3C47E;
+    --accent-soft: rgba(227, 196, 126, .14);
+    --accent-deep: #F0D89A;
+    --border: #61758A;
+    --shadow: 0 10px 24px rgba(3, 10, 18, .2);
+    background: #0E1620;
+}
+
+html[data-theme="dark"] body.veterinary-workspace .main-shell {
+    border-color: #304357;
+    background: #0E1620;
+}
+
+html[data-theme="dark"] body.veterinary-workspace .vet-sidebar {
+    border-color: #304357;
+    background: #141F2A;
+}
+
+html[data-theme="dark"] body.veterinary-workspace .vet-sidebar-nav a {
+    color: #C7D1DB;
+}
+
+html[data-theme="dark"] body.veterinary-workspace .vet-sidebar-nav a:hover {
+    background: #202E3C;
+}
+
+html[data-theme="dark"] body.veterinary-workspace .vet-sidebar-nav a.is-active {
+    color: #F4F8FA;
+    background: rgba(182, 205, 175, .16);
+    box-shadow: inset 4px 0 0 #B6CDAF;
+}
+
+html[data-theme="dark"] body.veterinary-workspace :is(
+    .vet-signal, .vet-panel, .panel-card, .vet-stock-card, .vet-stock-item,
+    .vet-alert-card, .vet-alert-sidebar, .vet-agenda-toolbar,
+    .vet-availability-card, .vet-confirm-card, .vet-history-entry,
+    .vet-inventory-drawer, .vet-next-appointment, .vet-trace-panel,
+    .vet-inventory-signals > div, .vet-supply-request, .timeline-row
+) {
+    border-color: #61758A;
+    background: #1A2734;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .045), 0 8px 18px rgba(3, 10, 18, .14);
+}
+
+html[data-theme="dark"] body.veterinary-workspace :is(
+    .vet-stock-filter, .vet-alert-tabs, .vet-panel-heading
+) {
+    border-color: #40566B;
+    background: #17232F;
+}
+
+html[data-theme="dark"] body.veterinary-workspace .vet-board-queue-row,
+html[data-theme="dark"] body.veterinary-workspace .vet-team-load > div,
+html[data-theme="dark"] body.veterinary-workspace .vet-signal-details {
+    border-color: #40566B;
+}
+
+html[data-theme="dark"] body.veterinary-workspace .vet-board-queue-row:hover,
+html[data-theme="dark"] body.veterinary-workspace .vet-signal:hover {
+    background: #202E3C;
+}
+
+html[data-theme="dark"] body.veterinary-workspace :is(input, select, textarea) {
+    color: var(--text);
+    border-color: #556B80;
+    background: #17232F;
+}
+
+html[data-theme="dark"] body.veterinary-workspace :is(a, button, input, select, textarea):focus-visible {
+    outline: 3px solid rgba(143, 214, 199, .7);
+    outline-offset: 3px;
+}
+
+
+/* Final light-mode accessibility layer. */
+html[data-theme="light"] body.veterinary-workspace .vet-dashboard-topbar-compact {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    min-height: 64px;
+    margin: 0 -26px 16px;
+    padding: 0 30px;
+    border-bottom: 1px solid var(--border);
+}
+
+html[data-theme="light"] body.veterinary-dashboard-page .vet-nav-icon-dashboard { color: #17634F; background: rgba(23, 99, 79, .08); }
+html[data-theme="light"] body.veterinary-dashboard-page .vet-nav-icon-agenda { color: #1D5FA7; background: rgba(29, 95, 167, .08); }
+html[data-theme="light"] body.veterinary-dashboard-page .vet-nav-icon-patients { color: #69479A; background: rgba(105, 71, 154, .08); }
+html[data-theme="light"] body.veterinary-dashboard-page .vet-nav-icon-supplies { color: #965A12; background: rgba(150, 90, 18, .09); }
+html[data-theme="light"] body.veterinary-dashboard-page .vet-nav-icon-alerts { color: #B44A3D; background: rgba(180, 74, 61, .08); }
+html[data-theme="light"] body.veterinary-dashboard-page .vet-nav-icon-admin { color: #45586D; background: rgba(69, 88, 109, .08); }
+
+html[data-theme="light"] body.veterinary-dashboard-page .vet-sidebar-nav a.is-active .vet-nav-icon {
+    border-color: rgba(255, 255, 255, .32);
+    color: #FFFFFF;
+    background: rgba(255, 255, 255, .16);
+}
+
+html[data-theme="light"] body.veterinary-dashboard-page .vet-sidebar-nav a:focus-visible {
+    outline: 3px solid rgba(15, 118, 110, .32);
+    outline-offset: 3px;
+}
+
+@media (max-width: 700px) {
+    html[data-theme="light"] body.veterinary-workspace .vet-dashboard-topbar-compact {
+        min-height: 56px;
+        margin: 0 -14px 12px;
+        padding: 0 16px;
+    }
+}
+
+/* Light mode: icon chips need deeper inks and the same header structure as
+   the other veterinary workspace routes. */
+html[data-theme="light"] body.veterinary-workspace .vet-dashboard-topbar-compact {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    min-height: 64px;
+    margin: 0 -26px 16px;
+    padding: 0 30px;
+    border-bottom: 1px solid var(--border);
+}
+
+html[data-theme="light"] body.veterinary-dashboard-page .vet-nav-icon-dashboard { color: #17634F; background: rgba(23, 99, 79, .08); }
+html[data-theme="light"] body.veterinary-dashboard-page .vet-nav-icon-agenda { color: #1D5FA7; background: rgba(29, 95, 167, .08); }
+html[data-theme="light"] body.veterinary-dashboard-page .vet-nav-icon-patients { color: #69479A; background: rgba(105, 71, 154, .08); }
+html[data-theme="light"] body.veterinary-dashboard-page .vet-nav-icon-supplies { color: #965A12; background: rgba(150, 90, 18, .09); }
+html[data-theme="light"] body.veterinary-dashboard-page .vet-nav-icon-alerts { color: #B44A3D; background: rgba(180, 74, 61, .08); }
+html[data-theme="light"] body.veterinary-dashboard-page .vet-nav-icon-admin { color: #45586D; background: rgba(69, 88, 109, .08); }
+
+html[data-theme="light"] body.veterinary-dashboard-page .vet-sidebar-nav a.is-active .vet-nav-icon {
+    border-color: rgba(255, 255, 255, .32);
+    color: #FFFFFF;
+    background: rgba(255, 255, 255, .16);
+}
+
+html[data-theme="light"] body.veterinary-dashboard-page .vet-sidebar-nav a:focus-visible {
+    outline: 3px solid rgba(15, 118, 110, .32);
+    outline-offset: 3px;
+}
+
+@media (max-width: 700px) {
+    html[data-theme="light"] body.veterinary-workspace .vet-dashboard-topbar-compact {
+        min-height: 56px;
+        margin: 0 -14px 12px;
+        padding: 0 16px;
+    }
+}
+
+/* A short profile rail gives the workspace a deliberate top edge without
+   bringing back the oversized search bar. */
+html[data-theme="dark"] body.veterinary-workspace .vet-dashboard-topbar-compact,
+html[data-theme="dark"] body.veterinary-workspace .vet-workspace-topbar-compact {
+    min-height: 64px;
+    margin-bottom: 16px;
+    padding-top: 0;
+    padding-bottom: 0;
+}
+
+html[data-theme="light"] body.veterinary-workspace .vet-workspace-topbar-compact {
+    min-height: 64px;
+    margin-bottom: 16px;
+}
+
+@media (max-width: 700px) {
+    html[data-theme="dark"] body.veterinary-workspace .vet-dashboard-topbar-compact,
+    html[data-theme="dark"] body.veterinary-workspace .vet-workspace-topbar-compact,
+    html[data-theme="light"] body.veterinary-workspace .vet-workspace-topbar-compact {
+        min-height: 56px;
+        margin-bottom: 12px;
+    }
+}
+
+/* The same structural header in the light appearance, without altering the
+   protected Patients and Administración routes. */
+html[data-theme="light"] body.veterinary-workspace .vet-workspace-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    min-height: 88px;
+    margin: 0 0 24px;
+    padding: 0 2px;
+    border-bottom: 1px solid var(--border);
+}
+
+html[data-theme="light"] body.veterinary-workspace .vet-dashboard-search {
+    display: flex;
+    align-items: center;
+    width: min(100%, 670px);
+    min-height: 50px;
+    gap: 13px;
+    padding: 0 18px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--muted);
+    background: var(--surface);
+    font-size: .94rem;
+}
+
+html[data-theme="light"] body.veterinary-workspace .vet-dashboard-search:hover { border-color: var(--primary); color: var(--text); }
+html[data-theme="light"] body.veterinary-workspace .vet-dashboard-search svg { width: 22px; height: 22px; flex: 0 0 auto; }
+html[data-theme="light"] body.veterinary-workspace .vet-dashboard-user { display: flex; align-items: center; gap: 11px; }
+html[data-theme="light"] body.veterinary-workspace .vet-dashboard-user > span:last-child { display: grid; gap: 2px; }
+html[data-theme="light"] body.veterinary-workspace .vet-dashboard-user strong { font-size: .84rem; }
+html[data-theme="light"] body.veterinary-workspace .vet-dashboard-user small { color: var(--muted); font-size: .7rem; }
+
+html[data-theme="light"] body.veterinary-workspace .vet-dashboard-avatar {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    border: 1px solid var(--border);
+    border-radius: 50%;
+    color: var(--text);
+    background: var(--surface-strong);
+    font-size: .9rem;
+    font-weight: 800;
+}
+
+@media (max-width: 700px) {
+    html[data-theme="light"] body.veterinary-workspace .vet-workspace-topbar { min-height: 70px; margin-bottom: 18px; }
+    html[data-theme="light"] body.veterinary-workspace .vet-dashboard-search { width: auto; flex: 1; min-height: 44px; }
+    html[data-theme="light"] body.veterinary-workspace .vet-dashboard-search span,
+    html[data-theme="light"] body.veterinary-workspace .vet-dashboard-user > span:last-child { display: none; }
+}
+
+/* Dark mode — clinical cards need a shape and a boundary, not just a hue. */
+html[data-theme="dark"] body.veterinary-dashboard-page :is(
+    .vet-panel,
+    .vet-action-card,
+    .vet-stock-card,
+    .vet-stock-item,
+    .vet-alert-card,
+    .vet-alert-sidebar,
+    .vet-signal,
+    .vet-operations-strip,
+    .vet-agenda-toolbar,
+    .vet-availability-card,
+    .vet-confirm-card,
+    .vet-history-entry,
+    .vet-single-site,
+    .vet-scope-form,
+    .vet-inventory-drawer,
+    .vet-next-appointment,
+    .vet-trace-panel,
+    .vet-inventory-signals > div,
+    .vet-supply-request,
+    .timeline-row
+) {
+    border-color: var(--border);
+    background: var(--surface);
+    box-shadow: inset 0 1px 0 rgba(244, 247, 249, .06), 0 8px 20px rgba(0, 0, 0, .18);
+}
+
+html[data-theme="dark"] body.veterinary-dashboard-page :is(
+    .vet-sidebar-nav a:hover,
+    .vet-board-queue-row:hover,
+    .vet-signal:hover,
+    .vet-action-card:hover
+) {
+    background: var(--surface-strong);
+}
+
+html[data-theme="dark"] body.veterinary-dashboard-page .vet-sidebar-nav a.is-active {
+    color: var(--text);
+    border-color: var(--primary);
+    background: #303842;
+    box-shadow: inset 3px 0 0 var(--primary);
+}
+
+html[data-theme="dark"] body.veterinary-dashboard-page :is(input, select, textarea) {
+    color: var(--text);
+    border-color: var(--border);
+    background: #1D222A;
+}
+
+/* Light mode — retain clear clinical card boundaries without bright glare. */
+html[data-theme="light"] body.veterinary-dashboard-page :is(
+    .vet-panel,
+    .vet-action-card,
+    .vet-stock-card,
+    .vet-stock-item,
+    .vet-alert-card,
+    .vet-alert-sidebar,
+    .vet-signal,
+    .vet-operations-strip,
+    .vet-agenda-toolbar,
+    .vet-availability-card,
+    .vet-confirm-card,
+    .vet-history-entry,
+    .vet-single-site,
+    .vet-scope-form,
+    .vet-inventory-drawer,
+    .vet-next-appointment,
+    .vet-trace-panel,
+    .vet-inventory-signals > div,
+    .vet-supply-request,
+    .timeline-row
+) {
+    color: var(--text);
+    border-color: var(--border);
+    background: var(--surface);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .82), 0 7px 18px rgba(25, 33, 43, .07);
+}
+
+html[data-theme="light"] body.veterinary-dashboard-page .vet-sidebar-nav a.is-active {
+    color: var(--text);
+    border-color: var(--primary);
+    background: #E5E9E2;
+    box-shadow: inset 3px 0 0 var(--primary);
+}
+
+html[data-theme="light"] body.veterinary-dashboard-page :is(input, select, textarea) {
+    color: var(--text);
+    border-color: var(--border);
+    background: var(--surface);
+}
+
+/* The reference top bar belongs to the dark veterinary dashboard only. */
+html[data-theme="light"] body.veterinary-dashboard-home .vet-dashboard-topbar { display: none; }
+
+/* Veterinary dashboard home only. This visual layer deliberately excludes the
+   administration and patient modules. */
+html[data-theme="dark"] body.veterinary-dashboard-home {
+    --surface: #1E2935;
+    --surface-strong: #263342;
+    --surface-deep: #101820;
+    --text: #F1F5F9;
+    --muted: #B8C3D0;
+    --primary: #B7C8A7;
+    --primary-hover: #D0DDC4;
+    --secondary: #C3AFD0;
+    --accent: #E8C36C;
+    --accent-soft: rgba(232, 195, 108, .15);
+    --accent-deep: #F0D38C;
+    --border: #64748A;
+    --shadow: 0 12px 28px rgba(4, 10, 18, .28);
+    background: #101820;
+}
+
+html[data-theme="dark"] body.veterinary-dashboard-home .page-shell {
+    max-width: none;
+    min-height: 100vh;
+    padding: 10px;
+    gap: 0;
+    grid-template-columns: 280px minmax(0, 1fr);
+}
+
+html[data-theme="dark"] body.veterinary-dashboard-home .main-shell {
+    padding: 0 26px 28px;
+    border: 1px solid #344454;
+    border-left: 0;
+    background: #101820;
+}
+
+html[data-theme="dark"] body.veterinary-dashboard-home .vet-sidebar {
+    min-height: calc(100vh - 20px);
+    padding: 26px 24px 20px;
+    border: 1px solid #344454;
+    border-right: 0;
+    border-radius: 0;
+    background: #17232E;
+    box-shadow: none;
+}
+
+html[data-theme="dark"] body.veterinary-dashboard-home .vet-sidebar-brand {
+    grid-template-columns: 1fr;
+    align-items: start;
+    gap: 2px;
+    padding: 8px 8px 30px;
+}
+
+html[data-theme="dark"] body.veterinary-dashboard-home .vet-wordmark {
+    align-self: start;
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 2.05rem;
+    font-weight: 700;
+    letter-spacing: -.045em;
+}
+
+html[data-theme="dark"] body.veterinary-dashboard-home .vet-sidebar-brand small {
+    grid-column: 1;
+    margin-top: 0;
+    color: var(--muted);
+    font-size: .64rem;
+}
+
+html[data-theme="dark"] body.veterinary-dashboard-home .vet-sidebar-nav {
+    gap: 8px;
+}
+
+html[data-theme="dark"] body.veterinary-dashboard-home .vet-sidebar-nav a {
+    min-height: 58px;
+    padding: 13px 16px;
+    border-radius: 12px;
+    color: #C8D1DD;
+    font-size: .95rem;
+}
+
+html[data-theme="dark"] body.veterinary-dashboard-home .vet-sidebar-nav a:hover {
+    color: var(--text);
+    background: #263342;
+    transform: none;
+}
+
+html[data-theme="dark"] body.veterinary-dashboard-home .vet-sidebar-nav a.is-active {
+    border-color: transparent;
+    background: rgba(183, 200, 167, .14);
+    box-shadow: inset 4px 0 0 var(--primary);
+}
+
+html[data-theme="dark"] body.veterinary-dashboard-home .vet-single-site,
+html[data-theme="dark"] body.veterinary-dashboard-home .vet-scope-form,
+html[data-theme="dark"] body.veterinary-dashboard-home .theme-switcher {
+    border-color: #415163;
+    background: #1A2632;
+}
+
+html[data-theme="dark"] body.veterinary-dashboard-home .vet-dashboard {
+    gap: 22px;
+}
+
+html[data-theme="dark"] body.veterinary-dashboard-home .vet-dashboard-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    min-height: 102px;
+    margin: 0 -26px 4px;
+    padding: 0 30px;
+    border-bottom: 1px solid #344454;
+}
+
+html[data-theme="dark"] body.veterinary-dashboard-home .vet-dashboard-search {
+    display: flex;
+    align-items: center;
+    width: min(100%, 670px);
+    min-height: 54px;
+    gap: 13px;
+    padding: 0 18px;
+    border: 1px solid #56677A;
+    border-radius: 10px;
+    color: #B8C3D0;
+    background: #1C2834;
+    font-size: .94rem;
+}
+
+html[data-theme="dark"] body.veterinary-dashboard-home .vet-dashboard-search:hover {
+    border-color: var(--primary);
+    color: var(--text);
+}
+
+html[data-theme="dark"] body.veterinary-dashboard-home .vet-dashboard-search svg {
+    width: 22px;
+    height: 22px;
+    flex: 0 0 auto;
+}
+
+html[data-theme="dark"] body.veterinary-dashboard-home .vet-dashboard-user {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+}
+
+html[data-theme="dark"] body.veterinary-dashboard-home .vet-dashboard-user > span:last-child {
+    display: grid;
+    gap: 2px;
+}
+
+html[data-theme="dark"] body.veterinary-dashboard-home .vet-dashboard-user strong { font-size: .84rem; }
+html[data-theme="dark"] body.veterinary-dashboard-home .vet-dashboard-user small { color: var(--muted); font-size: .7rem; }
+
+html[data-theme="dark"] body.veterinary-dashboard-home .vet-dashboard-avatar {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    border: 1px solid #94A3B8;
+    border-radius: 50%;
+    color: var(--text);
+    background: #2A3744;
+    font-size: .9rem;
+    font-weight: 800;
+}
+
+html[data-theme="dark"] body.veterinary-dashboard-home .vet-dashboard-heading {
+    padding: 14px 0 2px;
+}
+
+html[data-theme="dark"] body.veterinary-dashboard-home .vet-dashboard-heading > div:first-child > .vet-flow-mark {
+    display: none;
+}
+
+html[data-theme="dark"] body.veterinary-dashboard-home .vet-dashboard-heading h2 {
+    font-size: clamp(2rem, 3vw, 2.8rem);
+}
+
+html[data-theme="dark"] body.veterinary-dashboard-home .vet-dashboard-heading .vet-overline { display: none; }
+
+html[data-theme="dark"] body.veterinary-dashboard-home .vet-board-freshness {
+    min-width: 255px;
+    padding: 12px 16px;
+    border: 1px solid #56677A;
+    border-radius: 10px;
+    background: #1C2834;
+}
+
+html[data-theme="dark"] body.veterinary-dashboard-home .vet-operations-strip {
+    padding: 14px 18px;
+    border-color: #56677A;
+    border-radius: 12px;
+    background: #1C2834;
+    box-shadow: none;
+}
+
+html[data-theme="dark"] body.veterinary-dashboard-home .vet-operations-strip dl div { border-left-color: #415163; }
+
+html[data-theme="dark"] body.veterinary-dashboard-home .vet-board-signals {
+    gap: 14px;
+}
+
+html[data-theme="dark"] body.veterinary-dashboard-home .vet-board-signals .vet-signal {
+    min-height: 142px;
+    grid-template-columns: 54px minmax(0, 1fr) auto;
+    gap: 15px;
+    padding: 20px;
+    border-color: #718197;
+    border-radius: 12px;
+    background: #202C38;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .05), 0 8px 18px rgba(0, 0, 0, .12);
+}
+
+html[data-theme="dark"] body.veterinary-dashboard-home .vet-board-signals .vet-signal::before {
+    content: "";
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    background: var(--primary);
+}
+
+html[data-theme="dark"] body.veterinary-dashboard-home .vet-board-signals .vet-signal:nth-child(2)::before { background: var(--accent); }
+html[data-theme="dark"] body.veterinary-dashboard-home .vet-board-signals .vet-signal:nth-child(3)::before { background: var(--secondary); }
+html[data-theme="dark"] body.veterinary-dashboard-home .vet-board-signals .vet-signal:nth-child(4)::before { background: #B9C5CF; }
+
+html[data-theme="dark"] body.veterinary-dashboard-home .vet-board-signals .vet-signal-dot { display: none; }
+html[data-theme="dark"] body.veterinary-dashboard-home .vet-board-signals .vet-signal span:nth-child(2) { color: var(--text); font-size: .98rem; }
+html[data-theme="dark"] body.veterinary-dashboard-home .vet-board-signals .vet-signal strong { font-size: 2.15rem; line-height: 1; }
+
+html[data-theme="dark"] body.veterinary-dashboard-home .vet-board-layout { gap: 18px; }
+
+html[data-theme="dark"] body.veterinary-dashboard-home .vet-panel {
+    border-color: #718197;
+    border-radius: 12px;
+    background: #202C38;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .05), 0 8px 18px rgba(0, 0, 0, .12);
+}
+
+html[data-theme="dark"] body.veterinary-dashboard-home .vet-panel-heading {
+    min-height: 76px;
+    border-bottom-color: #415163;
+}
+
+html[data-theme="dark"] body.veterinary-dashboard-home .vet-panel-icon {
+    color: #17232E;
+    background: var(--primary);
+}
+
+html[data-theme="dark"] body.veterinary-dashboard-home .vet-board-inventory .vet-panel-icon { background: var(--accent); }
+html[data-theme="dark"] body.veterinary-dashboard-home .vet-board-team .vet-panel-icon { background: var(--secondary); }
+
+html[data-theme="dark"] body.veterinary-dashboard-home .vet-panel-heading .vet-overline { display: none; }
+
+html[data-theme="dark"] body.veterinary-dashboard-home .vet-panel-heading h3 { font-size: 1.38rem; }
+
+html[data-theme="dark"] body.veterinary-dashboard-home .vet-icon-button-soft {
+    color: #17232E;
+    background: var(--primary);
+}
+
+html[data-theme="dark"] body.veterinary-dashboard-home .vet-board-inventory .vet-icon-button-soft { background: var(--accent); }
+
+html[data-theme="dark"] body.veterinary-dashboard-home .vet-board-queue-row {
+    min-height: 58px;
+    padding: 10px 18px;
+    border-bottom-color: #415163;
+}
+
+html[data-theme="dark"] body.veterinary-dashboard-home .vet-board-queue-row:hover { background: #263342; }
+
+html[data-theme="dark"] body.veterinary-dashboard-home .vet-pet-avatar {
+    color: #17232E;
+    background: #B9C5CF;
+}
+
+html[data-theme="dark"] body.veterinary-dashboard-home .vet-status {
+    color: #17232E;
+    background: #B9C5CF;
+}
+
+html[data-theme="dark"] body.veterinary-dashboard-home .vet-status-en-espera,
+html[data-theme="dark"] body.veterinary-dashboard-home .vet-status-llamar { background: var(--accent); }
+html[data-theme="dark"] body.veterinary-dashboard-home .vet-status-confirmada { background: var(--primary); }
+
+html[data-theme="dark"] body.veterinary-dashboard-home .vet-inventory-totals a {
+    border-color: #56677A;
+    background: #1A2632;
+}
+
+html[data-theme="dark"] body.veterinary-dashboard-home .vet-inventory-totals a:hover { border-color: var(--accent); }
+
+@media (max-width: 1040px) {
+    html[data-theme="dark"] body.veterinary-dashboard-home .page-shell { display: block; padding: 12px; }
+    html[data-theme="dark"] body.veterinary-dashboard-home .main-shell { padding: 0 14px 22px; border: 1px solid #344454; }
+    html[data-theme="dark"] body.veterinary-dashboard-home .vet-sidebar { border: 1px solid #344454; border-bottom: 0; }
+}
+
+@media (max-width: 700px) {
+    html[data-theme="dark"] body.veterinary-dashboard-home .vet-dashboard-topbar { min-height: 76px; margin: 0 -14px 4px; padding: 0 16px; }
+    html[data-theme="dark"] body.veterinary-dashboard-home .vet-dashboard-search { width: auto; flex: 1; min-height: 44px; }
+    html[data-theme="dark"] body.veterinary-dashboard-home .vet-dashboard-search span,
+    html[data-theme="dark"] body.veterinary-dashboard-home .vet-dashboard-user > span:last-child { display: none; }
+    html[data-theme="dark"] body.veterinary-dashboard-home .vet-board-signals { grid-template-columns: 1fr; }
+}
+
+/* Reference dashboard composition: four concise summary cards followed by the
+   agenda and inventory workspace. Scoped to the veterinary home only. */
+html[data-theme="dark"] body.veterinary-dashboard-home .vet-operations-strip { display: none; }
+
+html[data-theme="dark"] body.veterinary-dashboard-home .vet-board-signals {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 14px;
+}
+
+html[data-theme="dark"] body.veterinary-dashboard-home .vet-board-signals .vet-signal {
+    min-height: 182px;
+    grid-template-columns: 58px minmax(0, 1fr) auto;
+    grid-template-rows: auto auto;
+    align-content: center;
+    gap: 13px 14px;
+    padding: 19px 20px 16px;
+}
+
+html[data-theme="dark"] body.veterinary-dashboard-home .vet-board-signals .vet-signal::before { display: none; }
+
+html[data-theme="dark"] body.veterinary-dashboard-home .vet-signal-icon {
+    display: grid;
+    grid-row: 1;
+    grid-column: 1;
+    place-items: center;
+    width: 58px;
+    height: 58px;
+    border-radius: 50%;
+    color: #17232E;
+}
+
+html[data-theme="dark"] body.veterinary-dashboard-home .vet-signal-icon svg { width: 28px; height: 28px; }
+html[data-theme="dark"] body.veterinary-dashboard-home .vet-signal-icon-sage { background: var(--primary); }
+html[data-theme="dark"] body.veterinary-dashboard-home .vet-signal-icon-amber { background: var(--accent); }
+html[data-theme="dark"] body.veterinary-dashboard-home .vet-signal-icon-lilac { background: var(--secondary); }
+html[data-theme="dark"] body.veterinary-dashboard-home .vet-signal-icon-slate { background: #B9C5CF; }
+
+html[data-theme="dark"] body.veterinary-dashboard-home .vet-signal-copy {
+    display: grid;
+    grid-row: 1;
+    grid-column: 2;
+    gap: 3px;
+    min-width: 0;
+}
+
+html[data-theme="dark"] body.veterinary-dashboard-home .vet-board-signals .vet-signal .vet-signal-copy > span {
+    color: var(--text);
+    font-size: .98rem;
+    font-weight: 760;
+}
+
+html[data-theme="dark"] body.veterinary-dashboard-home .vet-signal-copy small,
+html[data-theme="dark"] body.veterinary-dashboard-home .vet-signal-details {
+    color: var(--muted);
+    font-size: .7rem;
+    font-weight: 650;
+}
+
+html[data-theme="dark"] body.veterinary-dashboard-home .vet-board-signals .vet-signal strong {
+    grid-row: 1;
+    grid-column: 3;
+    color: var(--text);
+    font-size: 2.35rem;
+}
+
+html[data-theme="dark"] body.veterinary-dashboard-home .vet-signal-details {
+    grid-row: 2;
+    grid-column: 1 / -1;
+    padding-top: 11px;
+    border-top: 1px solid #415163;
+}
+
+html[data-theme="dark"] body.veterinary-dashboard-home .vet-board-layout {
+    grid-template-columns: minmax(0, 1.3fr) minmax(360px, .7fr);
+    gap: 18px;
+}
+
+@media (max-width: 900px) {
+    html[data-theme="dark"] body.veterinary-dashboard-home .vet-board-signals { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 700px) {
+    html[data-theme="dark"] body.veterinary-dashboard-home .vet-board-signals { grid-template-columns: 1fr; }
+}
+
+/* Shared veterinary workspace. Agenda, insumos and alertas keep the same calm
+   frame as the board; clinical patients and administration remain untouched. */
+html[data-theme="dark"] body.veterinary-workspace {
+    --surface: #1E2935;
+    --surface-strong: #263342;
+    --surface-deep: #101820;
+    --text: #F1F5F9;
+    --muted: #B8C3D0;
+    --primary: #B7C8A7;
+    --primary-hover: #D0DDC4;
+    --secondary: #C3AFD0;
+    --accent: #E8C36C;
+    --accent-soft: rgba(232, 195, 108, .15);
+    --accent-deep: #F0D38C;
+    --border: #64748A;
+    --shadow: 0 12px 28px rgba(4, 10, 18, .28);
+    background: #101820;
+}
+
+html[data-theme="dark"] body.veterinary-workspace .page-shell {
+    max-width: none;
+    min-height: 100vh;
+    padding: 10px;
+    gap: 0;
+    grid-template-columns: 280px minmax(0, 1fr);
+}
+
+html[data-theme="dark"] body.veterinary-workspace .main-shell {
+    padding: 0 26px 28px;
+    border: 1px solid #344454;
+    border-left: 0;
+    background: #101820;
+}
+
+html[data-theme="dark"] body.veterinary-workspace .vet-sidebar {
+    min-height: calc(100vh - 20px);
+    padding: 26px 24px 20px;
+    border: 1px solid #344454;
+    border-right: 0;
+    border-radius: 0;
+    background: #17232E;
+    box-shadow: none;
+}
+
+html[data-theme="dark"] body.veterinary-workspace .vet-sidebar-brand {
+    grid-template-columns: 1fr;
+    align-items: start;
+    gap: 2px;
+    padding: 8px 8px 30px;
+}
+
+html[data-theme="dark"] body.veterinary-workspace .vet-wordmark {
+    align-self: start;
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 2.05rem;
+    font-weight: 700;
+    letter-spacing: -.045em;
+}
+
+html[data-theme="dark"] body.veterinary-workspace .vet-sidebar-brand small {
+    grid-column: 1;
+    margin-top: 0;
+    color: var(--muted);
+    font-size: .64rem;
+}
+
+html[data-theme="dark"] body.veterinary-workspace .vet-sidebar-nav { gap: 8px; }
+
+html[data-theme="dark"] body.veterinary-workspace .vet-sidebar-nav a {
+    min-height: 58px;
+    padding: 13px 16px;
+    border-radius: 12px;
+    color: #C8D1DD;
+    font-size: .95rem;
+}
+
+html[data-theme="dark"] body.veterinary-workspace .vet-sidebar-nav a:hover {
+    color: var(--text);
+    background: #263342;
+    transform: none;
+}
+
+html[data-theme="dark"] body.veterinary-workspace .vet-sidebar-nav a.is-active {
+    border-color: transparent;
+    background: rgba(183, 200, 167, .14);
+    box-shadow: inset 4px 0 0 var(--primary);
+}
+
+html[data-theme="dark"] body.veterinary-workspace :is(.vet-single-site, .vet-scope-form, .theme-switcher) {
+    border-color: #415163;
+    background: #1A2632;
+}
+
+html[data-theme="dark"] body.veterinary-workspace .vet-workspace-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    min-height: 102px;
+    margin: 0 -26px 24px;
+    padding: 0 30px;
+    border-bottom: 1px solid #344454;
+}
+
+html[data-theme="dark"] body.veterinary-workspace .vet-dashboard-search {
+    display: flex;
+    align-items: center;
+    width: min(100%, 670px);
+    min-height: 54px;
+    gap: 13px;
+    padding: 0 18px;
+    border: 1px solid #56677A;
+    border-radius: 10px;
+    color: #B8C3D0;
+    background: #1C2834;
+    font-size: .94rem;
+}
+
+html[data-theme="dark"] body.veterinary-workspace .vet-dashboard-search:hover { border-color: var(--primary); color: var(--text); }
+html[data-theme="dark"] body.veterinary-workspace .vet-dashboard-search svg { width: 22px; height: 22px; flex: 0 0 auto; }
+
+html[data-theme="dark"] body.veterinary-workspace .vet-dashboard-user { display: flex; align-items: center; gap: 11px; }
+html[data-theme="dark"] body.veterinary-workspace .vet-dashboard-user > span:last-child { display: grid; gap: 2px; }
+html[data-theme="dark"] body.veterinary-workspace .vet-dashboard-user strong { font-size: .84rem; }
+html[data-theme="dark"] body.veterinary-workspace .vet-dashboard-user small { color: var(--muted); font-size: .7rem; }
+
+html[data-theme="dark"] body.veterinary-workspace .vet-dashboard-avatar {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    border: 1px solid #94A3B8;
+    border-radius: 50%;
+    color: var(--text);
+    background: #2A3744;
+    font-size: .9rem;
+    font-weight: 800;
+}
+
+html[data-theme="dark"] body.veterinary-workspace :is(
+    .panel-card, .vet-panel, .vet-stock-card, .vet-stock-item, .vet-alert-card,
+    .vet-alert-sidebar, .vet-agenda-toolbar, .vet-availability-card,
+    .vet-confirm-card, .vet-history-entry, .vet-inventory-drawer,
+    .vet-next-appointment, .vet-trace-panel, .vet-inventory-signals > div,
+    .vet-supply-request, .timeline-row
+) {
+    border-color: #718197;
+    background: #202C38;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .05), 0 8px 18px rgba(0, 0, 0, .12);
+}
+
+html[data-theme="dark"] body.veterinary-workspace :is(input, select, textarea) {
+    color: var(--text);
+    border-color: #56677A;
+    background: #1C2834;
+}
+
+html[data-theme="dark"] body.veterinary-workspace :is(input, select, textarea):focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(183, 200, 167, .16);
+}
+
+html[data-theme="dark"] body.veterinary-workspace .metric-chip,
+html[data-theme="dark"] body.veterinary-workspace .vet-alert-summary span,
+html[data-theme="dark"] body.veterinary-workspace .vet-alert-tabs .is-active {
+    border-color: #56677A;
+    color: var(--text);
+    background: #263342;
+}
+
+html[data-theme="dark"] body.veterinary-workspace .vet-stock-filter,
+html[data-theme="dark"] body.veterinary-workspace .vet-alert-tabs,
+html[data-theme="dark"] body.veterinary-workspace .vet-panel-heading {
+    border-color: #415163;
+    background: #1C2834;
+}
+
+html[data-theme="dark"] body.veterinary-workspace .vet-alert-card-copy small { color: var(--muted); }
+
+@media (max-width: 1040px) {
+    html[data-theme="dark"] body.veterinary-workspace .page-shell { display: block; padding: 12px; }
+    html[data-theme="dark"] body.veterinary-workspace .main-shell { padding: 0 14px 22px; border: 1px solid #344454; }
+    html[data-theme="dark"] body.veterinary-workspace .vet-sidebar { border: 1px solid #344454; border-bottom: 0; }
+}
+
+@media (max-width: 700px) {
+    html[data-theme="dark"] body.veterinary-workspace .vet-workspace-topbar { min-height: 76px; margin: 0 -14px 18px; padding: 0 16px; }
+    html[data-theme="dark"] body.veterinary-workspace .vet-dashboard-search { width: auto; flex: 1; min-height: 44px; }
+    html[data-theme="dark"] body.veterinary-workspace .vet-dashboard-search span,
+    html[data-theme="dark"] body.veterinary-workspace .vet-dashboard-user > span:last-child { display: none; }
+}
+
 /* Dark mode hierarchy: page, navigation and cards use distinct surfaces.
    The boundaries are intentionally calm but always perceptible in long sessions. */
 html[data-theme="dark"] body.veterinary-dashboard-page {
-    --surface: #17272a;
-    --surface-strong: #20363a;
-    --surface-deep: #0d1719;
-    --text: #e5efea;
-    --muted: #a7bbb3;
-    --accent: #66b8a8;
-    --accent-soft: rgba(102, 184, 168, .15);
-    --accent-deep: #b0e1d5;
-    --border: #587579;
-    --shadow: 0 10px 26px rgba(0, 0, 0, .18);
+    --surface: #222730;
+    --surface-strong: #2C333E;
+    --surface-deep: #171A1F;
+    --text: #F4F7F9;
+    --muted: #C7CFD8;
+    --primary: #A7B7A0;
+    --primary-hover: #C3D0BA;
+    --secondary: #B6A8C8;
+    --accent: #D7BA83;
+    --accent-soft: rgba(215, 186, 131, .14);
+    --accent-deep: #E5CB9C;
+    --border: #78869A;
+    --shadow: 0 10px 26px rgba(2, 6, 23, .30);
     background:
-        radial-gradient(circle at 88% 6%, rgba(102, 184, 168, .07), transparent 28rem),
-        linear-gradient(160deg, #0d1517 0%, #121f22 55%, #17282a 100%);
+        radial-gradient(circle at 88% 6%, rgba(167, 183, 160, .05), transparent 28rem),
+        #171A1F;
 }
 
 html[data-theme="dark"] body.veterinary-dashboard-page .vet-sidebar {
-    background: #122023;
-    border: 1px solid #4c696d;
+    background: #1D222A;
+    border: 1px solid #78869A;
     box-shadow: 0 1px 0 rgba(255, 255, 255, .025), 0 12px 30px rgba(0, 0, 0, .2);
 }
 
@@ -953,13 +2419,13 @@ html[data-theme="dark"] body.veterinary-dashboard-page :is(
     .vet-next-appointment,
     .vet-trace-panel
 ) {
-    border-color: #587579;
-    background: #17272a;
+    border-color: #78869A;
+    background: #222730;
     box-shadow: 0 1px 0 rgba(255, 255, 255, .03), 0 9px 20px rgba(0, 0, 0, .14);
 }
 
 html[data-theme="dark"] body.veterinary-dashboard-page .vet-operations-strip {
-    background: #1b2e31;
+    background: #2C333E;
 }
 
 html[data-theme="dark"] body.veterinary-dashboard-page :is(
@@ -967,31 +2433,31 @@ html[data-theme="dark"] body.veterinary-dashboard-page :is(
     .vet-board-queue-row,
     .vet-team-load > div
 ) {
-    border-color: #48666a;
+    border-color: #78869A;
 }
 
 html[data-theme="dark"] body.veterinary-dashboard-page .vet-inventory-totals a {
-    background: #1c2e31;
+    background: #2C333E;
 }
 
 html[data-theme="dark"] body.veterinary-dashboard-page .vet-sidebar-nav a.is-active {
-    border-color: #6b8a8d;
-    background: #214346;
-    box-shadow: inset 3px 0 0 #78c8b7;
+    border-color: #99A48E;
+    background: #303842;
+    box-shadow: inset 3px 0 0 #A7B7A0;
 }
 
 html[data-theme="dark"] body.veterinary-dashboard-page .vet-sidebar-nav a:hover {
-    background: #1b3538;
+    background: #2C333E;
 }
 
 html[data-theme="dark"] body.veterinary-dashboard-page .vet-board-queue-row:hover,
 html[data-theme="dark"] body.veterinary-dashboard-page .vet-signal:hover {
-    background: #1d3336;
+    background: #2C333E;
 }
 
 html[data-theme="dark"] body.veterinary-dashboard-page .theme-switcher {
-    border-color: #587579;
-    background: #142629;
+    border-color: #78869A;
+    background: #1D222A;
 }
 
 /* Capa final del tema claro: prevalece sobre los acabados oscuros de cada módulo. */
@@ -1183,24 +2649,27 @@ html[data-theme="light"] body.veterinary-dashboard-page .vet-inventory-drawer[op
 
 /* Tema principal: verde petróleo, menta y superficies claras. */
 html[data-theme="light"] body.veterinary-dashboard-page {
-    --surface: rgba(255, 255, 255, .9);
-    --surface-strong: #0f766e;
-    --surface-deep: #ffffff;
-    --text: #1f2937;
-    --muted: #60717a;
-    --accent: #0f766e;
-    --accent-soft: rgba(15, 118, 110, .1);
-    --accent-deep: #0f766e;
-    --border: rgba(15, 118, 110, .18);
-    --shadow: 0 18px 46px rgba(15, 76, 71, .11);
-    --mint: #0f766e;
-    --line: rgba(15, 118, 110, .18);
-    --panel: rgba(255, 255, 255, .9);
+    --surface: #FFFFFF;
+    --surface-strong: #EDF0EB;
+    --surface-deep: #FFFFFF;
+    --text: #19212B;
+    --muted: #506070;
+    --primary: #3E6658;
+    --primary-hover: #2F5145;
+    --secondary: #625F86;
+    --accent: #946B32;
+    --accent-soft: rgba(148, 107, 50, .12);
+    --accent-deep: #6F4F24;
+    --border: #66758A;
+    --shadow: 0 12px 28px rgba(25, 33, 43, .09);
+    --mint: #3E6658;
+    --line: #66758A;
+    --panel: #FFFFFF;
     color: var(--text);
     background:
-        radial-gradient(circle at 90% 2%, rgba(204, 251, 241, .95), transparent 31rem),
-        radial-gradient(circle at 0 36%, rgba(15, 118, 110, .08), transparent 29rem),
-        linear-gradient(155deg, #fbfffe 0%, #f2fcf9 48%, #e6f8f3 100%);
+        radial-gradient(circle at 90% 2%, rgba(98, 95, 134, .06), transparent 31rem),
+        radial-gradient(circle at 0 36%, rgba(62, 102, 88, .05), transparent 29rem),
+        #F5F6F3;
 }
 
 html[data-theme="light"] body.veterinary-dashboard-page :is(
@@ -3108,6 +4577,76 @@ body:has(.vet-inventory-drawer[open] > .vet-drawer-form) { overflow: hidden; }
 .vet-status-cancelada { color: #ff9ca5; background: rgba(217, 105, 105, .15); }
 .vet-cancellation-note { color: #ef9ca4 !important; }
 
+/* Dashboard controls and operational hierarchy. These stay semantic in both themes. */
+.vet-dashboard-controls { margin:2px 0 0; border:1px solid var(--border); border-radius:13px; background:rgba(9, 43, 49, .48); }
+.vet-dashboard-controls > summary { display:flex; align-items:center; gap:9px; min-height:42px; padding:0 14px; cursor:pointer; list-style:none; }
+.vet-dashboard-controls > summary::-webkit-details-marker { display:none; }
+.vet-dashboard-controls > summary span { color:var(--text); font-size:.82rem; font-weight:850; }
+.vet-dashboard-controls > summary small { color:var(--muted); font-size:.74rem; }
+.vet-dashboard-controls > summary b { margin-left:auto; color:var(--accent-deep); transition:transform .16s ease; }
+.vet-dashboard-controls[open] > summary { border-bottom:1px solid var(--border); }
+.vet-dashboard-controls[open] > summary b { transform:rotate(180deg); }
+.vet-dashboard-controls-body { display:flex; justify-content:space-between; align-items:end; gap:14px; padding:12px 14px; }
+.vet-period-form { display:flex; flex-wrap:wrap; align-items:end; gap:9px; }
+.vet-period-form label { display:grid; gap:4px; min-width:112px; }
+.vet-period-form label > span { color:var(--muted); font-size:.72rem; font-weight:800; letter-spacing:.05em; text-transform:uppercase; }
+.vet-period-form select,.vet-period-form input { min-height:36px; padding:6px 9px; border:1px solid var(--border); border-radius:9px; color:var(--text); background:var(--panel); font:inherit; }
+.vet-period-apply,.vet-summary-actions a { display:inline-flex; align-items:center; justify-content:center; min-height:36px; padding:7px 11px; border:1px solid rgba(91,218,205,.38); border-radius:9px; color:var(--accent-deep); background:var(--accent-soft); font:inherit; font-size:.84rem; font-weight:800; cursor:pointer; }
+.vet-summary-actions { display:flex; flex-wrap:wrap; gap:8px; }
+.vet-summary-actions a { color:var(--text); background:transparent; }
+.vet-trend-grid,.vet-clinical-indicators { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; margin:14px 0; }
+.vet-dashboard-analytics { margin:12px 0; border:1px solid var(--border); border-radius:14px; background:rgba(9,43,49,.38); }
+.vet-dashboard-analytics > summary { display:flex; align-items:center; justify-content:space-between; gap:14px; padding:11px 14px; cursor:pointer; list-style:none; }
+.vet-dashboard-analytics > summary::-webkit-details-marker { display:none; }
+.vet-dashboard-analytics summary span { display:grid; gap:2px; }.vet-dashboard-analytics summary strong { color:var(--text); font-size:.9rem; }.vet-dashboard-analytics summary small { color:var(--muted); font-size:.76rem; }.vet-dashboard-analytics summary b { color:var(--accent-deep); font-size:.8rem; }.vet-dashboard-analytics[open] summary b { font-size:0; }.vet-dashboard-analytics[open] summary b::after { content:'Ocultar detalle'; font-size:.8rem; }
+.vet-dashboard-analytics[open] { padding-bottom:1px; }.vet-dashboard-analytics[open] .vet-trend-grid,.vet-dashboard-analytics[open] .vet-clinical-indicators { margin:10px 14px; }
+.vet-dashboard-views { display:flex; flex-wrap:wrap; gap:7px; margin:2px 0 0; padding:4px; border:1px solid var(--border); border-radius:13px; background:rgba(9,43,49,.36); }
+.vet-dashboard-views button { min-height:32px; padding:6px 11px; border:0; border-radius:9px; color:var(--muted); background:transparent; font:inherit; font-size:.8rem; font-weight:800; cursor:pointer; }
+.vet-dashboard-views button:hover { color:var(--text); }.vet-dashboard-views button.is-active { color:var(--text); background:var(--accent-soft); box-shadow:inset 0 0 0 1px rgba(91,218,205,.22); }
+.vet-dashboard [data-dashboard-section] { display:none; }.vet-dashboard[data-dashboard-view="operation"] [data-dashboard-section="operation"],.vet-dashboard[data-dashboard-view="analysis"] [data-dashboard-section="analysis"],.vet-dashboard[data-dashboard-view="resources"] [data-dashboard-section="resources"],.vet-dashboard[data-dashboard-view="continuity"] [data-dashboard-section="continuity"] { display:grid; }
+.vet-dashboard[data-dashboard-view="analysis"] .vet-dashboard-analytics { display:block; }.vet-dashboard[data-dashboard-view="analysis"] .vet-board-layout { display:none; }
+.vet-dashboard[data-dashboard-view="resources"] .vet-board-layout,.vet-dashboard[data-dashboard-view="continuity"] .vet-board-layout { grid-template-columns:minmax(0,760px); justify-content:center; }.vet-dashboard[data-dashboard-view="resources"] .vet-side-stack,.vet-dashboard[data-dashboard-view="continuity"] .vet-side-stack { grid-column:1; }.vet-dashboard[data-dashboard-view="resources"] .vet-board-next,.vet-dashboard[data-dashboard-view="continuity"] .vet-board-next { display:none; }
+.vet-dashboard-analytics { padding:14px; }.vet-dashboard-analytics > header span { display:grid; gap:2px; }.vet-dashboard-analytics > header strong { color:var(--text); font-size:.95rem; }.vet-dashboard-analytics > header small { color:var(--muted); font-size:.78rem; }
+.vet-dashboard-connection { color:#89d9af; }.vet-dashboard-connection.is-syncing { color:#f2c66c; }.vet-dashboard-connection.is-offline { color:#ff969f; }
+.vet-card-hidden,.dashboard-hide-agenda :is(.vet-board-next,.vet-board-active),.dashboard-hide-tasks .vet-board-tasks,.dashboard-hide-resources :is(.vet-board-inventory,.vet-board-team) { display:none !important; }
+.vet-dashboard-customize { position:relative; }.vet-dashboard-customize > summary { list-style:none; cursor:pointer; }.vet-dashboard-customize > summary::-webkit-details-marker { display:none; }.vet-dashboard-customize form { position:absolute; z-index:4; right:0; display:grid; gap:8px; width:230px; margin-top:8px; padding:12px; border:1px solid var(--border); border-radius:12px; background:var(--panel); box-shadow:0 16px 34px rgba(0,0,0,.24); }.vet-dashboard-customize form label { color:var(--text); font-size:.8rem; }.vet-dashboard-customize button { min-height:32px; border:0; border-radius:8px; color:#fff; background:var(--accent); font:inherit; font-weight:800; }
+.vet-task-manager summary { display:flex; align-items:center; justify-content:space-between; padding:12px 14px; cursor:pointer; list-style:none; }.vet-task-manager summary::-webkit-details-marker { display:none; }.vet-task-manager summary span { display:grid; gap:2px; }.vet-task-manager summary small { color:var(--muted); }.vet-task-manager-body { display:grid; gap:10px; padding:0 14px 14px; }.vet-task-create,.vet-task-editor form { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }.vet-task-create label { display:grid; gap:4px; color:var(--muted); font-size:.74rem; }.vet-task-manager input,.vet-task-manager select { min-width:0; padding:8px; border:1px solid var(--border); border-radius:8px; color:var(--text); background:var(--panel); font:inherit; }.vet-task-manager button { padding:8px 10px; border:1px solid rgba(91,218,205,.3); border-radius:8px; color:var(--text); background:var(--accent-soft); font:inherit; font-weight:800; }.vet-task-editor { padding:9px; border:1px solid var(--border); border-radius:10px; }.vet-task-editor summary { padding:2px 0 8px; font-size:.82rem; }.vet-task-editor > form:last-child { margin-top:7px; }
+/* La gestión de pendientes conserva el tablero a la vista en un cajón lateral. */
+html:has(.vet-task-manager[open]) { overflow:hidden; }
+.vet-task-manager[open] { display:grid; grid-template-rows:max-content 1fr; align-content:start; position:fixed; z-index:80; top:0; right:0; left:auto; width:min(460px,calc(100vw - 20px)); height:100dvh; max-height:none; overflow:auto; border:1px solid #5a7188; border-right:0; border-radius:18px 0 0 18px; background:#17232e; box-shadow:0 0 0 100vmax rgba(3,15,20,.74),-20px 0 52px rgba(0,0,0,.34); animation:dashboard-task-drawer-in .2s ease-out; }
+.vet-task-manager[open] > summary { position:sticky; top:0; z-index:1; min-height:60px; padding:0 22px; border-bottom:1px solid #52687d; background:#17232e; }.vet-task-manager[open] > summary small { font-size:0; }.vet-task-manager[open] > summary small::after { content:"Gestión de pendientes"; font-size:.76rem; color:var(--muted); }.vet-task-manager[open] > summary b { font-size:0; }.vet-task-manager[open] > summary b::after { content:"Cerrar"; font-size:.76rem; color:var(--accent-deep); }.vet-task-manager[open] .vet-task-manager-body { padding:18px 22px 26px; }.vet-task-manager[open] .vet-task-editor { background:rgba(9,43,49,.28); }
+html[data-theme="light"] .vet-task-manager[open],html[data-theme="light"] .vet-task-manager[open] > summary { background:#ffffff; } html[data-theme="light"] .vet-task-manager[open] { border-color:#9db1c3; } html[data-theme="light"] .vet-task-manager[open] > summary { border-color:#c9d7e2; }
+@keyframes dashboard-task-drawer-in { from { transform:translateX(100%); } to { transform:translateX(0); } }
+.vet-history-chart { margin:14px 0 2px; padding:14px; border:1px solid var(--border); border-radius:14px; background:rgba(9,43,49,.52); }.vet-history-chart header { display:flex; align-items:start; justify-content:space-between; gap:10px; }.vet-history-chart header span { display:grid; gap:2px; }.vet-history-chart header small { color:var(--muted); font-size:.76rem; }.vet-history-chart header button { min-height:30px; padding:5px 8px; border:1px solid var(--border); border-radius:8px; color:var(--text); background:transparent; font:inherit; font-size:.73rem; font-weight:800; cursor:pointer; }.vet-chart-bars { display:flex; align-items:end; gap:10px; height:154px; margin-top:12px; padding-top:12px; border-bottom:1px solid var(--border); overflow:hidden; }.vet-chart-bars > div { display:grid; grid-template-rows:1fr auto auto; align-items:end; justify-items:center; flex:1; height:100%; min-width:26px; gap:4px; }.vet-chart-bars b { width:min(34px,100%); min-height:9px; border-radius:7px 7px 2px 2px; background:linear-gradient(#54d6c6,#157d81); }.vet-chart-bars span,.vet-chart-bars small { color:var(--muted); font-size:.66rem; }.vet-chart-bars small { color:var(--text); font-weight:800; }
+.vet-trend-card,.vet-clinical-indicators > a { display:grid; gap:3px; min-height:92px; padding:14px; border:1px solid var(--border); border-radius:14px; background:rgba(9,43,49,.62); }
+.vet-trend-card > span,.vet-clinical-indicators span { color:var(--muted); font-size:.79rem; font-weight:750; }
+.vet-trend-card strong,.vet-clinical-indicators strong { color:var(--text); font-size:1.35rem; line-height:1.1; }
+.vet-trend-card small,.vet-clinical-indicators small { color:var(--muted); font-size:.75rem; }
+.vet-trend-positive { border-color:rgba(87,202,142,.38); }.vet-trend-attention { border-color:rgba(239,184,82,.5); }.vet-trend-neutral { border-color:var(--border); }
+.vet-clinical-indicators > a:hover,.vet-summary-actions a:hover { border-color:var(--accent); transform:translateY(-1px); }
+.vet-board-empty-compact { min-height:92px; padding:12px; }
+.vet-empty-state { min-height:150px; padding:16px; }
+.vet-task-list { display:grid; }
+.vet-task-row { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:10px; align-items:center; padding:11px 14px; border-top:1px solid rgba(132,165,182,.18); }
+.vet-task-row:first-child { border-top:0; }.vet-task-row > span { display:grid; gap:3px; min-width:0; }.vet-task-row strong { overflow:hidden; color:var(--text); font-size:.87rem; text-overflow:ellipsis; white-space:nowrap; }.vet-task-row small { color:var(--muted); font-size:.75rem; }.vet-task-row > span:last-child { justify-items:end; }.vet-task-row b { padding:3px 7px; border-radius:999px; font-size:.68rem; text-transform:capitalize; }
+.vet-task-urgent { border-left:3px solid #e2767e; }.vet-task-urgent b { color:#ffb0b5; background:rgba(217,105,105,.18); }.vet-task-important { border-left:3px solid #e6b34d; }.vet-task-important b { color:#ffe09b; background:rgba(230,168,77,.18); }.vet-task-normal { border-left:3px solid #4da98a; }.vet-task-normal b { color:#a8e6c7; background:rgba(57,167,127,.16); }
+.vet-status-pendiente { color:#a9c7e8; background:rgba(77,145,207,.16); }.vet-status-en-espera,.vet-status-llamar { color:#ffcf77; background:rgba(230,168,77,.17); }.vet-status-en-consulta { color:#96edc2; background:rgba(57,167,127,.18); }.vet-status-atendida { color:#91e3b8; background:rgba(57,167,127,.16); }.vet-status-cancelada { color:#ff9ca5; background:rgba(217,105,105,.15); }
+/* The first screen is a control surface, not a report: only the current view stays visible. */
+.vet-control-board { gap:12px; }
+.vet-control-board .vet-operations-strip { margin:0; padding:10px 14px; border-radius:13px; box-shadow:none; }
+.vet-control-board .vet-operations-strip dl div { min-width:72px; padding:2px 9px; }
+.vet-control-board .vet-board-signals .vet-signal { min-height:54px; padding:9px 12px; border-radius:12px; }
+.vet-control-board .vet-signal-details { display:none; }
+.vet-control-board .vet-board-queue-row { min-height:56px; padding:8px 13px; }
+.vet-control-board .vet-panel-heading { min-height:52px; padding:10px 13px; }
+.vet-control-board .vet-task-row { padding:8px 12px; }
+@media (max-width: 760px) {
+  .vet-dashboard-controls-body { align-items:stretch; flex-direction:column; }.vet-dashboard-controls > summary small { display:none; }.vet-period-form,.vet-summary-actions { width:100%; }.vet-period-form > * { flex:1 1 120px; }.vet-summary-actions a { flex:1; }
+  .vet-dashboard-views { overflow-x:auto; flex-wrap:nowrap; }.vet-dashboard-views button { white-space:nowrap; }
+  .vet-trend-grid,.vet-clinical-indicators { grid-template-columns:repeat(2,minmax(0,1fr)); }.vet-board-signals > :last-child { order:-2; }.vet-board-next { order:1; }.vet-side-stack { order:2; }.vet-empty-state { min-height:112px; }
+  .vet-task-create,.vet-task-editor form { grid-template-columns:1fr; }.vet-chart-bars { gap:4px; }.vet-chart-bars > div { min-width:18px; }.vet-chart-bars span { display:none; }
+}
+
 .vet-appointment-actions {
     display: flex;
     justify-content: flex-end;
@@ -3142,6 +4681,52 @@ body:has(.vet-inventory-drawer[open] > .vet-drawer-form) { overflow: hidden; }
 }
 .vet-icon-action svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .vet-icon-action:hover { color: var(--text); border-color: rgba(91, 218, 205, .4); background: var(--accent-soft); }
+
+/* Agenda calendar, waitlist and direct rescheduling. */
+.agenda-calendar { display:grid; gap:10px; margin:14px 0; }.agenda-calendar-week { grid-template-columns:repeat(7,minmax(130px,1fr)); overflow:auto; }.agenda-calendar-month { grid-template-columns:repeat(7,minmax(120px,1fr)); overflow:auto; }
+.agenda-calendar-day { display:grid; align-content:start; gap:7px; min-height:150px; padding:10px; border:1px solid var(--border); border-radius:12px; background:rgba(9,43,49,.38); transition:border-color .15s, background .15s; }.agenda-calendar-day.is-drop-target { border-color:var(--accent); background:var(--accent-soft); }.agenda-calendar-day header { display:flex; justify-content:space-between; gap:6px; color:var(--text); font-size:.78rem; }.agenda-calendar-day header small,.agenda-calendar-day > p { color:var(--muted); font-size:.7rem; }
+.agenda-calendar-event { display:grid; gap:2px; padding:7px; border:1px solid rgba(91,218,205,.22); border-radius:8px; color:var(--text); background:rgba(8,47,54,.5); text-align:left; cursor:grab; font:inherit; }.agenda-calendar-event b { color:var(--accent-deep); font-size:.7rem; }.agenda-calendar-event span { font-size:.78rem; font-weight:800; }.agenda-calendar-event small { color:var(--muted); font-size:.67rem; }.agenda-timeline-secondary { display:none; }
+.agenda-patient-glance { margin-top:6px; max-width:540px; color:var(--muted); font-size:.78rem; }.agenda-patient-glance summary { color:var(--accent-deep); cursor:pointer; font-weight:800; }.agenda-patient-glance p { margin:5px 0 0; line-height:1.45; }
+.agenda-side-stack { gap:12px; }.agenda-management-panel { padding:0; overflow:visible; backdrop-filter:none; }.agenda-management-heading { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:16px 18px 10px; }.agenda-management-heading .eyebrow { margin:0 0 3px; }.agenda-management-heading h3 { margin:0; font-size:1.05rem; }.agenda-active-empty { display:flex; align-items:center; gap:8px; margin:0 18px 14px; padding:10px 12px; border:1px solid rgba(91,218,205,.16); border-radius:11px; color:var(--muted); background:rgba(9,43,49,.28); font-size:.78rem; }.agenda-active-empty > span { display:grid; place-items:center; width:24px; height:24px; border-radius:8px; color:var(--accent-deep); background:var(--accent-soft); font-weight:900; }.agenda-active-empty strong { color:var(--text); font-size:.8rem; }.agenda-active-empty small { margin-left:auto; color:var(--muted); font-size:.7rem; }.agenda-queue-list { padding:0 18px 12px; }.agenda-queue-list .queue-card { padding:10px 12px; border-radius:12px; }.agenda-management-actions { border-top:1px solid rgba(132,165,182,.18); }.agenda-management-disclosure { border-top:1px solid rgba(132,165,182,.12); }.agenda-management-disclosure:first-child { border-top:0; }.agenda-management-disclosure > summary { display:flex; align-items:center; justify-content:space-between; gap:10px; min-height:48px; padding:0 18px; cursor:pointer; list-style:none; }.agenda-management-disclosure > summary::-webkit-details-marker { display:none; }.agenda-management-disclosure > summary span { color:var(--text); font-size:.84rem; font-weight:800; }.agenda-management-disclosure > summary small { color:var(--muted); font-size:.71rem; }.agenda-management-disclosure > div { display:grid; gap:10px; padding:2px 18px 16px; }.agenda-management-disclosure p { display:grid; gap:2px; margin:0; padding:8px 0; border-bottom:1px solid rgba(132,165,182,.14); }.agenda-management-disclosure p small { color:var(--muted); }
+/* Keep the active queue and its management actions visually distinct and aligned. */
+.agenda-management-heading { padding:18px 20px 12px; }
+.agenda-management-heading > .mini-badge { border:1px solid rgba(91,218,205,.2); color:var(--accent-deep); background:rgba(91,218,205,.1); white-space:nowrap; }
+.agenda-active-empty { display:grid; grid-template-columns:32px minmax(0,1fr); align-items:center; gap:3px 11px; margin:0 20px 16px; padding:13px 14px; }
+.agenda-active-empty > span { grid-column:1; grid-row:1 / span 2; width:30px; height:30px; border-radius:10px; }
+.agenda-active-empty strong { grid-column:2; grid-row:1; font-size:.84rem; }
+.agenda-active-empty small { grid-column:2; grid-row:2; margin:0; line-height:1.35; font-size:.74rem; }
+.agenda-management-actions { padding:5px 10px 8px; border-top:1px solid rgba(132,165,182,.14); }
+.agenda-management-disclosure { margin-top:5px; overflow:hidden; border:1px solid rgba(132,165,182,.14); border-radius:12px; background:rgba(9,43,49,.18); transition:border-color .15s,background .15s; }
+.agenda-management-disclosure:first-child { border-top:1px solid rgba(132,165,182,.14); }
+.agenda-management-disclosure:hover,.agenda-management-disclosure[open] { border-color:rgba(91,218,205,.35); background:rgba(9,43,49,.32); }
+.agenda-management-disclosure > summary { display:grid; grid-template-columns:minmax(0,1fr) auto 16px; grid-template-rows:auto auto; align-content:center; justify-content:initial; gap:2px 10px; min-height:58px; padding:9px 12px; }
+.agenda-management-disclosure > summary span { grid-column:1; grid-row:1; font-size:.82rem; }
+.agenda-management-disclosure > summary small { grid-column:1; grid-row:2; font-size:.69rem; }
+.agenda-management-disclosure > summary::after { grid-column:3; grid-row:1 / span 2; content:'›'; color:var(--muted); font-size:1.2rem; line-height:1; transition:transform .15s,color .15s; }
+.agenda-management-disclosure[open] > summary::after { transform:rotate(90deg); color:var(--accent-deep); }
+.agenda-management-disclosure:nth-child(2) > summary small { grid-column:2; grid-row:1 / span 2; justify-self:end; align-self:center; padding:5px 8px; border:1px solid rgba(91,218,205,.18); border-radius:999px; color:var(--accent-deep); background:rgba(91,218,205,.1); white-space:nowrap; }
+.agenda-management-disclosure > div { padding:4px 12px 14px; }
+.agenda-management-disclosure[open] > summary { grid-template-columns:minmax(0,1fr) 24px; grid-template-rows:auto auto; align-content:center; justify-content:initial; min-height:74px; }
+.agenda-management-disclosure[open] > summary span { grid-column:1; grid-row:1; }
+.agenda-management-disclosure[open] > summary small { grid-column:1; grid-row:2; justify-self:start; align-self:center; margin:2px 0 0; padding:0; border:0; border-radius:0; color:var(--accent-deep); background:transparent; font-size:0; }
+.agenda-management-disclosure[open] > summary small::after { content:"Cerrar"; color:var(--accent-deep); font-size:.72rem; }
+.agenda-management-disclosure[open] > summary::after { grid-column:2; grid-row:1 / span 2; justify-self:end; content:"×"; color:var(--muted); font-size:1.25rem; }
+html[data-theme="light"] .agenda-active-empty { background:#f3f8f8; }
+html[data-theme="light"] .agenda-management-disclosure { background:#f8fbfc; }
+html[data-theme="light"] .agenda-management-disclosure:hover,html[data-theme="light"] .agenda-management-disclosure[open] { background:#f0f8f7; }
+/* Opening a management tool must not stretch the Agenda or move its scroll position. */
+html:has(.agenda-management-disclosure[open]) { overflow:hidden; }
+.agenda-management-disclosure[open] { position:fixed; z-index:80; top:0; right:0; left:auto; width:min(460px,calc(100vw - 20px)); height:100dvh; max-height:none; overflow:auto; transform:none; border:1px solid #5a7188; border-right:0; border-radius:18px 0 0 18px; background:#17232e; box-shadow:0 0 0 100vmax rgba(3,15,20,.74),-20px 0 52px rgba(0,0,0,.34); animation:agenda-drawer-in .2s ease-out; }
+.agenda-management-disclosure[open] > summary { position:sticky; top:0; z-index:1; min-height:60px; padding:0 22px; border-bottom:1px solid #52687d; color:var(--accent-deep); background:#17232e; }.agenda-management-disclosure[open] > summary small { font-size:0; }.agenda-management-disclosure[open] > summary small::after { content:"Cerrar"; font-size:.76rem; color:var(--accent-deep); }.agenda-management-disclosure[open] > div { padding:18px 22px 26px; }.agenda-management-disclosure[open] form { display:grid; gap:12px; }.agenda-management-disclosure[open] fieldset { display:flex; flex-wrap:wrap; gap:8px; margin:0; padding:10px; border:1px solid #52687d; border-radius:11px; }.agenda-management-disclosure[open] fieldset legend { padding:0 6px; color:var(--muted); font-size:.76rem; }.agenda-management-disclosure[open] fieldset label { display:inline-flex; align-items:center; gap:5px; min-width:36px; color:var(--text); }.agenda-management-disclosure[open] fieldset input { width:16px; height:16px; margin:0; }
+@keyframes agenda-drawer-in { from { transform:translateX(100%); } to { transform:translateX(0); } }
+html[data-theme="light"] .agenda-management-disclosure[open],html[data-theme="light"] .agenda-management-disclosure[open] > summary { background:#ffffff; } html[data-theme="light"] .agenda-management-disclosure[open] { border-color:#9db1c3; } html[data-theme="light"] .agenda-management-disclosure[open] > summary,html[data-theme="light"] .agenda-management-disclosure[open] fieldset { border-color:#c9d7e2; }
+.agenda-summary-strip { align-items:center; margin:0 0 12px; }.agenda-summary-strip > .metric-chip { min-height:32px; padding:6px 10px; font-size:.75rem; }.agenda-summary-more { display:contents; }.agenda-summary-more summary { order:1; margin-left:auto; list-style:none; min-height:32px; padding:7px 10px; border:1px solid var(--border); border-radius:10px; color:var(--muted); cursor:pointer; font-size:.75rem; font-weight:800; }.agenda-summary-more summary::-webkit-details-marker { display:none; }.agenda-summary-more[open] summary { color:var(--accent-deep); background:var(--accent-soft); }.agenda-summary-more > div { order:2; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px; flex-basis:100%; width:100%; margin-top:2px; padding:9px 10px; border:1px solid var(--border); border-radius:10px; color:var(--text); background:rgba(9,43,49,.4); font-size:.75rem; }.agenda-summary-more > div span { padding:2px 6px; }
+.vet-agenda-toolbar { grid-template-columns:auto auto 1fr; align-items:end; }.vet-agenda-toolbar > .agenda-utilities { grid-column:1 / -1; border-top:1px solid rgba(132,165,182,.16); }.agenda-utilities > summary { display:flex; align-items:center; gap:8px; min-height:34px; padding-top:10px; color:var(--muted); cursor:pointer; font-size:.78rem; font-weight:800; list-style:none; }.agenda-utilities > summary::-webkit-details-marker { display:none; }.agenda-utilities > summary small { color:var(--accent-deep); font-size:.69rem; }.agenda-utilities-body { display:grid; grid-template-columns:repeat(4,minmax(120px,1fr)) auto; gap:9px; align-items:end; padding:2px 0; }.agenda-utilities-body label { display:grid; gap:5px; color:var(--muted); font-size:.7rem; font-weight:800; }.agenda-utilities-body select { min-height:36px; padding:6px 9px; border:1px solid var(--border); border-radius:9px; color:var(--text); background:var(--panel); font:inherit; }.agenda-utility-links { display:flex; flex-wrap:wrap; gap:7px; }.agenda-utility-links a { display:inline-flex; align-items:center; min-height:34px; padding:6px 9px; border:1px solid var(--border); border-radius:9px; color:var(--accent-deep); text-decoration:none; font-size:.74rem; font-weight:800; }
+.agenda-appointment-primary { margin:2px 0 0 !important; color:var(--muted); font-size:.83rem; }.timeline-row .timeline-body > strong { line-height:1.12; }
+@media (max-width: 900px) { .vet-agenda-toolbar { grid-template-columns:1fr 1fr; }.vet-agenda-toolbar .filter-actions { grid-column:1 / -1; }.agenda-utilities-body { grid-template-columns:repeat(2,minmax(0,1fr)); }.agenda-utility-links { grid-column:1 / -1; } }
+@media (max-width: 560px) { .agenda-summary-strip { gap:6px; }.agenda-summary-more summary { margin-left:0; }.agenda-summary-more > div { grid-template-columns:1fr; }.agenda-utilities-body { grid-template-columns:1fr; }.agenda-utility-links { display:grid; }.agenda-utility-links a { justify-content:center; }.agenda-management-heading { padding:14px 15px 8px; }.agenda-active-empty { align-items:flex-start; flex-wrap:wrap; margin:0 15px 12px; }.agenda-active-empty small { flex-basis:100%; margin-left:32px; }.agenda-management-disclosure > summary { padding:0 15px; }.agenda-management-disclosure > div { padding:2px 15px 14px; } }
+.vet-agenda-waitlist summary,.vet-agenda-resources summary { display:flex; justify-content:space-between; padding:12px 14px; cursor:pointer; list-style:none; }.vet-agenda-waitlist summary::-webkit-details-marker,.vet-agenda-resources summary::-webkit-details-marker { display:none; }.vet-agenda-waitlist > div,.vet-agenda-resources > div { display:grid; gap:10px; padding:0 14px 14px; }.vet-agenda-waitlist p { display:grid; gap:2px; margin:0; padding:8px 0; border-bottom:1px solid var(--border); }.vet-agenda-waitlist p small { color:var(--muted); }
+@media (max-width: 760px) { .agenda-calendar-week,.agenda-calendar-month { grid-template-columns:repeat(7,160px); }.agenda-calendar-day { min-height:130px; } }
 .vet-icon-action-danger:hover { color: #ff9ca5; border-color: rgba(217,105,105,.35); background: rgba(217,105,105,.1); }
 .vet-icon-action-admin { width: 34px; padding: 6px; color: rgba(173, 202, 204, .48); border-color: transparent; background: transparent; }
 .vet-icon-action-admin:hover { color: #ff9ca5; border-color: rgba(217,105,105,.25); background: rgba(217,105,105,.08); }
@@ -3529,5 +5114,203 @@ body:has(.vet-inventory-drawer[open] > .vet-drawer-form) { overflow: hidden; }
     body.veterinary-dashboard-page .vet-sidebar-nav {
         width: 100%;
         min-width: 0;
+    }
+}
+
+/* The final workspace layer is deliberately last: module styles must not
+   change the frame when the user moves between Tablero, Agenda, Insumos and
+   Alertas. Patients and Administración do not receive this class. */
+
+/* Light dashboard mirrors the validated dark layout: compact metric cards,
+   fixed icon containers and a stable four-column desktop grid. */
+html[data-theme="light"] body.veterinary-dashboard-home .vet-operations-strip { display: none; }
+
+html[data-theme="light"] body.veterinary-dashboard-home .vet-board-signals {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 14px;
+}
+
+html[data-theme="light"] body.veterinary-dashboard-home .vet-board-signals .vet-signal {
+    min-height: 182px;
+    grid-template-columns: 58px minmax(0, 1fr) auto;
+    grid-template-rows: auto auto;
+    align-content: center;
+    gap: 13px 14px;
+    padding: 19px 20px 16px;
+    color: var(--text);
+    border-color: #718197;
+    border-radius: 12px;
+    background: #FFFFFF;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .9), 0 8px 18px rgba(25, 33, 43, .08);
+}
+
+html[data-theme="light"] body.veterinary-dashboard-home .vet-signal-icon {
+    display: grid;
+    grid-row: 1;
+    grid-column: 1;
+    place-items: center;
+    width: 58px;
+    height: 58px;
+    border-radius: 50%;
+}
+
+html[data-theme="light"] body.veterinary-dashboard-home .vet-signal-icon svg { width: 28px; height: 28px; }
+html[data-theme="light"] body.veterinary-dashboard-home .vet-signal-icon-sage { color: #17543F; background: #DCEBDD; }
+html[data-theme="light"] body.veterinary-dashboard-home .vet-signal-icon-amber { color: #81520E; background: #F7E8C6; }
+html[data-theme="light"] body.veterinary-dashboard-home .vet-signal-icon-lilac { color: #5B3B78; background: #E9DCF1; }
+html[data-theme="light"] body.veterinary-dashboard-home .vet-signal-icon-slate { color: #344C62; background: #E0E8EF; }
+
+html[data-theme="light"] body.veterinary-dashboard-home .vet-signal-copy {
+    display: grid;
+    grid-row: 1;
+    grid-column: 2;
+    gap: 3px;
+    min-width: 0;
+}
+
+html[data-theme="light"] body.veterinary-dashboard-home .vet-board-signals .vet-signal .vet-signal-copy > span {
+    color: var(--text);
+    font-size: .98rem;
+    font-weight: 760;
+}
+
+html[data-theme="light"] body.veterinary-dashboard-home .vet-signal-copy small,
+html[data-theme="light"] body.veterinary-dashboard-home .vet-signal-details {
+    color: var(--muted);
+    font-size: .7rem;
+    font-weight: 650;
+}
+
+html[data-theme="light"] body.veterinary-dashboard-home .vet-board-signals .vet-signal strong {
+    grid-row: 1;
+    grid-column: 3;
+    color: var(--text);
+    font-size: 2.35rem;
+}
+
+html[data-theme="light"] body.veterinary-dashboard-home .vet-signal-details {
+    grid-row: 2;
+    grid-column: 1 / -1;
+    padding-top: 11px;
+    border-top: 1px solid #D1DAE3;
+}
+
+html[data-theme="light"] body.veterinary-dashboard-home .vet-board-layout {
+    grid-template-columns: minmax(0, 1.3fr) minmax(360px, .7fr);
+    gap: 18px;
+}
+
+@media (max-width: 900px) {
+    html[data-theme="light"] body.veterinary-dashboard-home .vet-board-signals { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 700px) {
+    html[data-theme="light"] body.veterinary-dashboard-home .vet-board-signals { grid-template-columns: 1fr; }
+}
+
+/* Final light-mode accessibility layer. */
+html[data-theme="light"] body.veterinary-workspace .vet-dashboard-topbar-compact {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    min-height: 64px;
+    margin: 0 -26px 16px;
+    padding: 0 30px;
+    border-bottom: 1px solid var(--border);
+}
+
+html[data-theme="light"] body.veterinary-dashboard-page .vet-nav-icon-dashboard { color: #17634F; background: rgba(23, 99, 79, .08); }
+html[data-theme="light"] body.veterinary-dashboard-page .vet-nav-icon-agenda { color: #1D5FA7; background: rgba(29, 95, 167, .08); }
+html[data-theme="light"] body.veterinary-dashboard-page .vet-nav-icon-patients { color: #69479A; background: rgba(105, 71, 154, .08); }
+html[data-theme="light"] body.veterinary-dashboard-page .vet-nav-icon-supplies { color: #965A12; background: rgba(150, 90, 18, .09); }
+html[data-theme="light"] body.veterinary-dashboard-page .vet-nav-icon-alerts { color: #B44A3D; background: rgba(180, 74, 61, .08); }
+html[data-theme="light"] body.veterinary-dashboard-page .vet-nav-icon-admin { color: #45586D; background: rgba(69, 88, 109, .08); }
+
+html[data-theme="light"] body.veterinary-dashboard-page .vet-sidebar-nav a.is-active .vet-nav-icon {
+    border-color: rgba(255, 255, 255, .32);
+    color: #FFFFFF;
+    background: rgba(255, 255, 255, .16);
+}
+
+html[data-theme="light"] body.veterinary-dashboard-page .vet-sidebar-nav a:focus-visible {
+    outline: 3px solid rgba(15, 118, 110, .32);
+    outline-offset: 3px;
+}
+
+@media (max-width: 700px) {
+    html[data-theme="light"] body.veterinary-workspace .vet-dashboard-topbar-compact {
+        min-height: 56px;
+        margin: 0 -14px 12px;
+        padding: 0 16px;
+    }
+}
+html[data-theme="dark"] body.veterinary-workspace .main-shell {
+    padding: 0 26px 28px;
+    border: 1px solid #344454;
+    border-left: 0;
+    background: #101820;
+}
+
+html[data-theme="dark"] body.veterinary-workspace .vet-sidebar {
+    min-height: calc(100vh - 20px);
+    padding: 26px 24px 20px;
+    border: 1px solid #344454;
+    border-right: 0;
+    border-radius: 0;
+    background: #17232E;
+    box-shadow: none;
+}
+
+html[data-theme="dark"] body.veterinary-workspace .vet-sidebar-nav a.is-active {
+    border-color: transparent;
+    background: rgba(183, 200, 167, .14);
+    box-shadow: inset 4px 0 0 var(--primary);
+}
+
+html[data-theme="dark"] body.veterinary-workspace :is(
+    .panel-card, .vet-panel, .vet-stock-card, .vet-stock-item, .vet-alert-card,
+    .vet-alert-sidebar, .vet-agenda-toolbar, .vet-availability-card,
+    .vet-confirm-card, .vet-history-entry, .vet-inventory-drawer,
+    .vet-next-appointment, .vet-trace-panel, .vet-inventory-signals > div,
+    .vet-supply-request, .timeline-row
+) {
+    border-color: #718197;
+    background: #202C38;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .05), 0 8px 18px rgba(0, 0, 0, .12);
+}
+
+html[data-theme="dark"] body.veterinary-workspace .vet-stock-filter,
+html[data-theme="dark"] body.veterinary-workspace .vet-alert-tabs,
+html[data-theme="dark"] body.veterinary-workspace .vet-panel-heading {
+    border-color: #415163;
+    background: #1C2834;
+}
+
+html[data-theme="dark"] body.veterinary-workspace :is(input, select, textarea) {
+    color: var(--text);
+    border-color: #56677A;
+    background: #1C2834;
+}
+
+/* Keep the profile rail compact after all route-specific header rules. */
+html[data-theme="dark"] body.veterinary-workspace .vet-dashboard-topbar-compact,
+html[data-theme="dark"] body.veterinary-workspace .vet-workspace-topbar-compact {
+    min-height: 64px;
+    margin-bottom: 16px;
+    padding-top: 0;
+    padding-bottom: 0;
+}
+
+html[data-theme="light"] body.veterinary-workspace .vet-workspace-topbar-compact {
+    min-height: 64px;
+    margin-bottom: 16px;
+}
+
+@media (max-width: 700px) {
+    html[data-theme="dark"] body.veterinary-workspace .vet-dashboard-topbar-compact,
+    html[data-theme="dark"] body.veterinary-workspace .vet-workspace-topbar-compact,
+    html[data-theme="light"] body.veterinary-workspace .vet-workspace-topbar-compact {
+        min-height: 56px;
+        margin-bottom: 12px;
     }
 }

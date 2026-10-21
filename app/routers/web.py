@@ -1,11 +1,12 @@
 import csv
 import json
+import re
 import sqlite3
 import tempfile
 from io import StringIO
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
-from urllib.parse import quote
+from urllib.parse import quote, urlencode
 
 from fastapi import APIRouter, File, Form, Query, Request, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
@@ -14,9 +15,19 @@ from fastapi.templating import Jinja2Templates
 from app.core.config import get_settings
 from app.core.database import get_connection, get_database_dialect, get_database_url, sqlite_db_path
 from app.services.appointments import (
+    appointment_summary,
     appointment_belongs_to_scope,
     create_appointment,
+    create_appointment_block,
+    create_appointment_resource,
+    create_recurring_appointments,
+    create_waitlist_entry,
     delete_appointment,
+    list_appointment_resources,
+    list_appointments_between,
+    list_waitlist,
+    notify_waitlist_of_opening,
+    reschedule_appointment,
     update_appointment as update_appointment_record,
     update_appointment_status,
 )
@@ -48,16 +59,23 @@ from app.services.clinical import (
     create_clinical_record,
     create_patient,
     delete_clinical_record,
+    delete_patient_history,
     delete_patient,
     find_patient_duplicate,
+    get_clinical_record,
     get_patient,
     list_clinical_records,
     list_patients,
+    patient_preventive_dates,
     update_patient,
     update_clinical_record_status,
 )
+from app.services.clinical_pdf import build_patient_history_pdf
 from app.services.commercial import assert_capacity, list_commercial_plans, organization_subscription
-from app.services.dashboard import create_shift_handoff, get_dashboard_context
+from app.services.dashboard import (
+    create_shift_handoff, get_dashboard_context, get_dashboard_preferences, save_dashboard_preferences,
+    save_dashboard_role_preferences,
+)
 from app.services.inventory import (
     count_inventory_item,
     create_inventory_replenishment,
@@ -74,7 +92,7 @@ from app.services.inventory import (
     transfer_inventory_item,
     update_inventory_item,
 )
-from app.services.integrations import integration_outbox_summary, integration_readiness
+from app.services.integrations import enqueue_integration_event, integration_outbox_summary, integration_readiness
 from app.services.legal import legal_context, record_legal_acceptance
 from app.services.mailer import (
     send_password_reset_email,
@@ -275,6 +293,18 @@ def context_for_authenticated_user(
     storage_area: str = "",
     supplier: str = "",
     expiry: str = "",
+    period: str = "",
+    date_from: str = "",
+    date_to: str = "",
+    agenda_status: str = "",
+    veterinarian_filter: str = "",
+    priority_filter: str = "",
+    appointment_status_filter: str = "",
+    agenda_view: str = "day",
+    agenda_veterinarian: str = "",
+    agenda_priority: str = "",
+    agenda_channel: str = "",
+    history_span: str = "week",
     active_path: str = "/",
 ) -> tuple[dict, dict] | tuple[None, None]:
     user = user_with_permissions(request)
@@ -303,12 +333,24 @@ def context_for_authenticated_user(
         storage_area=storage_area,
         supplier=supplier,
         expiry=expiry,
+        period=period,
+        date_from=date_from,
+        date_to=date_to,
+        user_role=user["role"],
+        user_id=user["id"],
+        veterinarian_filter=veterinarian_filter,
+        priority_filter=priority_filter,
+        appointment_status_filter=appointment_status_filter,
+        history_span=history_span,
     )
     request.session["preferred_organization_id"] = context["scope"]["organization_id"]
     request.session["preferred_location_id"] = context["scope"]["location_id"]
     context["request"] = request
     context["current_user"] = {**user, "role_label": role_label(user["role"])}
     context["permissions"] = user["permissions"]
+    if agenda_status:
+        context["appointments"] = [item for item in context["appointments"] if item["status"] == agenda_status]
+    context["agenda_status_filter"] = agenda_status
     context["active_path"] = active_path
     context["entry_intent"] = entry_intent
     context["is_veterinary_flow"] = entry_intent == "veterinaria"
@@ -371,11 +413,137 @@ def context_for_authenticated_user(
             category="Veterinaria",
             location="Nevera A",
         )
+    if active_path == "/agenda":
+        selected = datetime.fromisoformat(context["agenda_day"]).date()
+        normalized_view = agenda_view if agenda_view in {"day", "week", "month"} else "day"
+        if normalized_view == "week":
+            range_start = selected - timedelta(days=selected.weekday())
+            range_end = range_start + timedelta(days=6)
+        elif normalized_view == "month":
+            range_start = selected.replace(day=1)
+            next_month = (range_start.replace(day=28) + timedelta(days=4)).replace(day=1)
+            range_end = next_month - timedelta(days=1)
+        else:
+            range_start = range_end = selected
+        agenda_items = list_appointments_between(range_start.isoformat(), range_end.isoformat(), context["scope"]["organization_id"], context["scope"]["location_id"])
+        if context["is_veterinary_flow"]:
+            agenda_items = [item for item in agenda_items if item["specialty"] == "Veterinaria"]
+        if agenda_status:
+            agenda_items = [item for item in agenda_items if item["status"] == agenda_status]
+        if agenda_veterinarian.isdigit():
+            agenda_items = [item for item in agenda_items if item.get("veterinarian_user_id") == int(agenda_veterinarian)]
+        if agenda_priority:
+            agenda_items = [item for item in agenda_items if item.get("priority") == agenda_priority]
+        if agenda_channel:
+            agenda_items = [item for item in agenda_items if item.get("channel") == agenda_channel]
+        context["appointments"] = agenda_items
+        context["agenda_summary"] = appointment_summary(agenda_items)
+        context["agenda_view"] = normalized_view
+        context["agenda_filters"] = {"veterinarian": agenda_veterinarian, "priority": agenda_priority, "channel": agenda_channel, "status": agenda_status}
+        context["agenda_range"] = {"start": range_start.isoformat(), "end": range_end.isoformat()}
+        context["agenda_days"] = [{"date": (range_start + timedelta(days=index)).isoformat(), "label": (range_start + timedelta(days=index)).strftime("%a %d"), "appointments": [item for item in agenda_items if item["date"] == (range_start + timedelta(days=index)).isoformat()]} for index in range((range_end - range_start).days + 1)]
+        context["agenda_resources"] = list_appointment_resources(context["scope"]["organization_id"], context["scope"]["location_id"])
+        context["agenda_waitlist"] = list_waitlist(context["scope"]["organization_id"], context["scope"]["location_id"])
     context["scope_query"] = build_scope_query(
         context["scope"]["organization_id"],
         context["scope"]["location_id"],
     )
     return context, user
+
+
+def _patient_age_label(birth_date: str | None) -> str:
+    if not birth_date:
+        return "Edad sin registrar"
+    try:
+        born = date.fromisoformat(birth_date[:10])
+        today = date.today()
+    except (TypeError, ValueError):
+        return "Edad sin registrar"
+    if born > today:
+        return "Fecha de nacimiento futura"
+    months = (today.year - born.year) * 12 + today.month - born.month - (today.day < born.day)
+    if months < 1:
+        return "Menos de un mes"
+    years, remaining_months = divmod(months, 12)
+    if years and remaining_months:
+        return f"{years} a, {remaining_months} m"
+    if years:
+        return f"{years} {('año' if years == 1 else 'años')}"
+    return f"{remaining_months} {('mes' if remaining_months == 1 else 'meses')}"
+
+
+def _has_actionable_clinical_value(value: str | None) -> bool:
+    normalized = " ".join(str(value or "").casefold().strip().split())
+    if not normalized:
+        return False
+    return not normalized.startswith(("sin ", "no ", "ninguna", "ninguno", "n/a", "na ", "no aplica")) and normalized not in {"-", "n/a", "na"}
+
+
+def _build_patient_directory(
+    patients: list[dict], preventive_dates: dict[int, str], *,
+    search: str = "", status_filter: str = "", species_filter: str = "",
+    prevention_filter: str = "", alerts_only: bool = False, page: int = 1,
+) -> dict:
+    today = date.today()
+    species_options = sorted({str(item.get("species") or "").strip() for item in patients if str(item.get("species") or "").strip()}, key=str.casefold)
+    query = search.strip().casefold()
+    filtered = []
+    for original in patients:
+        patient = dict(original)
+        due_raw = preventive_dates.get(int(patient["id"]), "")
+        try:
+            due = date.fromisoformat(due_raw[:10]) if due_raw else None
+        except (TypeError, ValueError):
+            due = None
+        patient["next_vaccine_due"] = due_raw
+        patient["age_label"] = _patient_age_label(patient.get("birth_date"))
+        patient["vaccine_due_state"] = "overdue" if due and due <= today else "upcoming" if due and (due - today).days <= 30 else ""
+        deworming = str(patient.get("deworming_status") or "").casefold()
+        deworm_due_raw = str(patient.get("next_deworming_due") or "")
+        try:
+            deworm_due = date.fromisoformat(deworm_due_raw[:10]) if deworm_due_raw else None
+        except (TypeError, ValueError):
+            deworm_due = None
+        patient["next_deworming_due"] = deworm_due_raw
+        patient["deworming_due_state"] = "overdue" if deworm_due and deworm_due <= today else "upcoming" if deworm_due and (deworm_due - today).days <= 30 else ""
+        vaccine_status = str(patient.get("vaccine_status") or "").casefold()
+        patient["allergies_actionable"] = _has_actionable_clinical_value(patient.get("allergies"))
+        patient["clinical_alert_actionable"] = _has_actionable_clinical_value(patient.get("clinical_alert"))
+        patient["conditions_actionable"] = _has_actionable_clinical_value(patient.get("preexisting_conditions"))
+        allergy_or_alert = patient["allergies_actionable"] or patient["clinical_alert_actionable"] or patient["conditions_actionable"]
+        patient["has_clinical_alert"] = allergy_or_alert
+        patient["deworming_pending"] = bool(patient["deworming_due_state"]) or any(word in deworming for word in ("pend", "venc", "atras"))
+        patient["vaccine_pending"] = bool(patient["vaccine_due_state"]) or any(word in vaccine_status for word in ("pend", "venc", "seguimiento"))
+        if query and not any(query in str(patient.get(key) or "").casefold() for key in ("display_name", "species", "breed", "owner_name", "phone", "microchip")):
+            continue
+        status = str(patient.get("patient_status") or "active").casefold()
+        if status_filter and status != status_filter:
+            continue
+        if species_filter and str(patient.get("species") or "").casefold() != species_filter.casefold():
+            continue
+        if alerts_only and not allergy_or_alert:
+            continue
+        if prevention_filter == "vaccine" and not patient["vaccine_pending"]:
+            continue
+        if prevention_filter == "deworming" and not patient["deworming_pending"]:
+            continue
+        filtered.append(patient)
+
+    per_page = 20
+    total = len(filtered)
+    pages = max(1, (total + per_page - 1) // per_page)
+    page = min(max(1, page), pages)
+    # Keep active search facets in pager URLs; scope is appended by the template.
+    params = [(key, value) for key, value in (("q", search.strip()), ("patient_status", status_filter), ("species", species_filter), ("prevention", prevention_filter), ("alerts", "1" if alerts_only else "")) if value]
+    return {
+        "items": filtered[(page - 1) * per_page:page * per_page],
+        "total": total,
+        "page": page,
+        "pages": pages,
+        "page_query": urlencode(params),
+        "species_options": species_options,
+        "filters": {"q": search.strip(), "status": status_filter, "species": species_filter, "prevention": prevention_filter, "alerts": alerts_only},
+    }
 
 
 def render_authenticated_page(
@@ -401,7 +569,27 @@ def render_authenticated_page(
     storage_area: str = "",
     supplier: str = "",
     expiry: str = "",
+    period: str = "",
+    date_from: str = "",
+    date_to: str = "",
+    agenda_status: str = "",
+    veterinarian_filter: str = "",
+    priority_filter: str = "",
+    appointment_status_filter: str = "",
+    agenda_view: str = "day",
+    agenda_veterinarian: str = "",
+    agenda_priority: str = "",
+    agenda_channel: str = "",
+    history_span: str = "week",
     active_path: str = "/",
+    record_patient_id: int = 0,
+    patient_history_view: bool = False,
+    patient_search: str = "",
+    patient_status_filter: str = "",
+    patient_species_filter: str = "",
+    patient_prevention_filter: str = "",
+    patient_alerts_only: bool = False,
+    patient_page: int = 1,
     extra_context: dict | None = None,
 ):
     context, user = context_for_authenticated_user(
@@ -416,10 +604,40 @@ def render_authenticated_page(
         storage_area=storage_area,
         supplier=supplier,
         expiry=expiry,
+        period=period,
+        date_from=date_from,
+        date_to=date_to,
+        agenda_status=agenda_status,
+        veterinarian_filter=veterinarian_filter,
+        priority_filter=priority_filter,
+        appointment_status_filter=appointment_status_filter,
+        agenda_view=agenda_view,
+        agenda_veterinarian=agenda_veterinarian,
+        agenda_priority=agenda_priority,
+        agenda_channel=agenda_channel,
+        history_span=history_span,
         active_path=active_path,
     )
     if context is None:
         return None
+
+    if template_name == "clinical.html":
+        preventive_dates = patient_preventive_dates(
+            context["scope"]["organization_id"], context["scope"]["location_id"]
+        )
+        directory = _build_patient_directory(
+            context["patients"], preventive_dates,
+            search=patient_search, status_filter=patient_status_filter,
+            species_filter=patient_species_filter, prevention_filter=patient_prevention_filter,
+            alerts_only=patient_alerts_only, page=patient_page,
+        )
+        context["patient_directory"] = directory["items"]
+        context["patient_directory_total"] = directory["total"]
+        context["patient_directory_page"] = directory["page"]
+        context["patient_directory_pages"] = directory["pages"]
+        context["patient_directory_query"] = directory["page_query"]
+        context["patient_species_options"] = directory["species_options"]
+        context["patient_filters"] = directory["filters"]
 
     context["saved"] = saved
     context["moved"] = moved
@@ -430,6 +648,40 @@ def render_authenticated_page(
     context["movement_error"] = movement_error
     context["permission_error"] = permission_error
     context["agenda_error"] = agenda_error
+    selected_patient = next(
+        (
+            item
+            for item in context["patients"]
+            if item["id"] == record_patient_id
+        ),
+        None,
+    )
+    if selected_patient is not None:
+        context["clinical_records"] = list_clinical_records(
+            limit=100,
+            organization_id=context["scope"]["organization_id"],
+            location_id=context["scope"]["location_id"],
+            patient_id=record_patient_id,
+        )
+        context["selected_patient"] = selected_patient
+        context["selected_patient_id"] = record_patient_id
+        context["selected_patient_age"] = _patient_age_label(selected_patient.get("birth_date"))
+        weighted_records = [item for item in context["clinical_records"] if item.get("current_weight_kg") and float(item["current_weight_kg"]) > 0]
+        weighted_records = sorted(weighted_records, key=lambda item: str(item.get("encounter_date") or ""))[-12:]
+        weights = [float(item["current_weight_kg"]) for item in weighted_records]
+        low, high = (min(weights), max(weights)) if weights else (0, 0)
+        span = high - low or 1
+        chart_points = []
+        for index, item in enumerate(weighted_records):
+            x = 24 + (352 * index / max(1, len(weighted_records) - 1))
+            y = 104 - ((float(item["current_weight_kg"]) - low) / span * 68)
+            chart_points.append({"x": round(x, 1), "y": round(y, 1), "weight": item["current_weight_kg"], "date": item.get("encounter_date") or ""})
+        context["patient_weight_points"] = chart_points
+    else:
+        context["selected_patient"] = None
+        context["selected_patient_id"] = 0
+        context["patient_weight_points"] = []
+    context["patient_history_view"] = bool(patient_history_view and selected_patient)
     if extra_context:
         context.update(extra_context)
     return templates.TemplateResponse(
@@ -634,7 +886,10 @@ async def login_page(
     if user:
         return RedirectResponse(url="/", status_code=303)
 
-    selected_intent = intent or request.session.get("entry_intent", "")
+    # La pantalla de acceso inicial es siempre la selección de flujo. El flujo
+    # solo se conserva cuando viene explícitamente en la URL (por ejemplo,
+    # desde la página pública de Veterinaria o después de un error de acceso).
+    selected_intent = intent
     enabled_intents = {
         flow["id"] for flow in entry_flows() if flow.get("enabled", True)
     }
@@ -737,7 +992,15 @@ async def terms_page(request: Request) -> HTMLResponse:
 
 
 @router.get("/password-reset", response_class=HTMLResponse)
-async def password_reset_request_page(request: Request, error: str = "", success: str = "") -> HTMLResponse:
+async def password_reset_request_page(
+    request: Request,
+    error: str = "",
+    success: str = "",
+    intent: str = Query(default=""),
+) -> HTMLResponse:
+    enabled_intents = {flow["id"] for flow in entry_flows() if flow.get("enabled", True)}
+    selected_intent = intent if intent in enabled_intents else ""
+    login_url = f"/login?intent={selected_intent}" if selected_intent else "/login"
     return templates.TemplateResponse(
         request=request,
         name="password_reset_request.html",
@@ -747,6 +1010,8 @@ async def password_reset_request_page(request: Request, error: str = "", success
             "success": success,
             "email_enabled": smtp_is_configured(),
             "sms_enabled": sms_is_configured(),
+            "selected_intent": selected_intent,
+            "login_url": login_url,
         },
     )
 
@@ -757,11 +1022,15 @@ async def password_reset_request_action(
     email: str = Form(...),
     method: str = Form("email"),
     phone: str = Form(""),
+    intent: str = Query(default=""),
 ) -> RedirectResponse:
+    enabled_intents = {flow["id"] for flow in entry_flows() if flow.get("enabled", True)}
+    selected_intent = intent if intent in enabled_intents else ""
+    intent_suffix = f"&intent={selected_intent}" if selected_intent else ""
     token = create_password_reset_token(email.strip())
     if token is None:
         return RedirectResponse(
-            url=f"/password-reset?success={encoded_message('Si el correo existe, se genero un enlace de recuperacion.')}",
+            url=f"/password-reset?success={encoded_message('Si el correo existe, se genero un enlace de recuperacion.')}{intent_suffix}",
             status_code=303,
         )
 
@@ -780,14 +1049,14 @@ async def password_reset_request_action(
             detail="Token generado para cambio de clave mediante enlace local",
         )
         return RedirectResponse(
-            url=f"/password-reset?success={encoded_message(f'Enlace local generado: {local_path}')}",
+            url=f"/password-reset?success={encoded_message(f'Enlace local generado: {local_path}')}{intent_suffix}",
             status_code=303,
         )
     if method == "phone":
         normalized_phone = phone.strip()
         if not normalized_phone:
             return RedirectResponse(
-                url=f"/password-reset?error={encoded_message('Debes escribir un telefono para enviar el enlace por SMS.')}",
+                url=f"/password-reset?error={encoded_message('Debes escribir un telefono para enviar el enlace por SMS.')}{intent_suffix}",
                 status_code=303,
             )
         sms_sent = False
@@ -819,7 +1088,7 @@ async def password_reset_request_action(
                 f"Usa este enlace local temporal: {local_path}"
             )
         return RedirectResponse(
-            url=f"/password-reset?success={encoded_message(success_message)}",
+            url=f"/password-reset?success={encoded_message(success_message)}{intent_suffix}",
             status_code=303,
         )
 
@@ -849,7 +1118,7 @@ async def password_reset_request_action(
     if not email_sent:
         success_message = f"Correo no configurado. Usa este enlace local: {local_path}"
     return RedirectResponse(
-        url=f"/password-reset?success={encoded_message(success_message)}",
+        url=f"/password-reset?success={encoded_message(success_message)}{intent_suffix}",
         status_code=303,
     )
 
@@ -1087,6 +1356,13 @@ async def home(
     category: str = Query(default=""),
     status: str = Query(default=""),
     day: str = Query(default=""),
+    period: str = Query(default="today"),
+    date_from: str = Query(default=""),
+    date_to: str = Query(default=""),
+    veterinarian_filter: str = Query(default=""),
+    priority_filter: str = Query(default=""),
+    appointment_status_filter: str = Query(default=""),
+    history_span: str = Query(default="week"),
     organization_id: str = Query(default=""),
     location_id: str = Query(default=""),
 ):
@@ -1104,6 +1380,13 @@ async def home(
         category=category,
         status=status,
         day=day,
+        period=period,
+        date_from=date_from,
+        date_to=date_to,
+        veterinarian_filter=veterinarian_filter,
+        priority_filter=priority_filter,
+        appointment_status_filter=appointment_status_filter,
+        history_span=history_span,
         organization_id=organization_id,
         location_id=location_id,
         active_path="/",
@@ -1111,6 +1394,144 @@ async def home(
     if response is None:
         return redirect_to_login(request.session.get("entry_intent", ""))
     return response
+
+
+def _dashboard_summary_context(
+    request: Request, *, day: str, period: str, date_from: str, date_to: str,
+    organization_id: str, location_id: str,
+) -> tuple[dict | None, dict | None]:
+    return context_for_authenticated_user(
+        request, day=day, period=period, date_from=date_from, date_to=date_to,
+        organization_id=organization_id, location_id=location_id, active_path="/",
+    )
+
+
+@router.get("/dashboard/resumen/export")
+async def export_dashboard_summary(
+    request: Request,
+    day: str = Query(default=""), period: str = Query(default="today"),
+    date_from: str = Query(default=""), date_to: str = Query(default=""),
+    organization_id: str = Query(default=""), location_id: str = Query(default=""),
+):
+    context, _user = _dashboard_summary_context(
+        request, day=day, period=period, date_from=date_from, date_to=date_to,
+        organization_id=organization_id, location_id=location_id,
+    )
+    if context is None:
+        return redirect_to_login(request.session.get("entry_intent", ""))
+    if not _user["permissions"].get("export_dashboard", False):
+        return redirect_to_module_with_error("/", "Tu rol no puede exportar el resumen del tablero.")
+    board = context["veterinary_dashboard"]
+    output = StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["Resumen diario Velmorax", board["period"]["label"]])
+    writer.writerow(["Indicador", "Valor", "Comparación anterior"])
+    for item in board["trends"]:
+        writer.writerow([item["label"], item["value"], item["previous"]])
+    writer.writerow([])
+    writer.writerow(["Indicadores clínicos", "Valor", "Detalle"])
+    for item in board["clinical_indicators"]:
+        writer.writerow([item["label"], item["value"], item["detail"]])
+    writer.writerow([])
+    writer.writerow(["Pendiente", "Responsable", "Prioridad", "Fecha límite", "Origen"])
+    for item in board["assigned_tasks"]:
+        writer.writerow([item["title"], item["responsible"], item["priority"], item["due_at"], item["source"]])
+    filename = f"resumen-velmorax-{board['period']['start']}-{board['period']['end']}.csv"
+    log_audit_event(user_id=_user["id"], organization_id=int(context["scope"]["organization_id"]), location_id=int(context["scope"]["location_id"]), action="Exportó resumen", entity_type="Tablero", entity_label="Resumen operativo", detail=board["period"]["label"])
+    return Response(
+        content="\ufeff" + output.getvalue(), media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@router.get("/dashboard/resumen/imprimir", response_class=HTMLResponse)
+async def print_dashboard_summary(
+    request: Request,
+    day: str = Query(default=""), period: str = Query(default="today"),
+    date_from: str = Query(default=""), date_to: str = Query(default=""),
+    organization_id: str = Query(default=""), location_id: str = Query(default=""),
+):
+    context, _user = _dashboard_summary_context(
+        request, day=day, period=period, date_from=date_from, date_to=date_to,
+        organization_id=organization_id, location_id=location_id,
+    )
+    if context is None:
+        return redirect_to_login(request.session.get("entry_intent", ""))
+    if not _user["permissions"].get("export_dashboard", False):
+        return redirect_to_module_with_error("/", "Tu rol no puede imprimir el resumen del tablero.")
+    log_audit_event(user_id=_user["id"], organization_id=int(context["scope"]["organization_id"]), location_id=int(context["scope"]["location_id"]), action="Imprimió resumen", entity_type="Tablero", entity_label="Resumen operativo", detail=context["veterinary_dashboard"]["period"]["label"])
+    return templates.TemplateResponse(request=request, name="dashboard_summary_print.html", context=context)
+
+
+@router.post("/dashboard/preferences")
+async def update_dashboard_preferences(
+    request: Request,
+    selected_view: str = Form("operation"),
+    visible_cards: list[str] = Form([]),
+    apply_to_role: str = Form(""),
+    view_only: int = Form(0),
+) -> RedirectResponse:
+    user = user_with_permissions(request)
+    if user is None:
+        return redirect_to_login()
+    if view_only:
+        visible_cards = list(get_dashboard_preferences(user["id"], user["role"])["visible_cards"])
+    if apply_to_role in {"owner", "admin", "clinical", "reception", "inventory"} and user["permissions"]["manage_admin"]:
+        save_dashboard_role_preferences(apply_to_role, visible_cards)
+        label = f"rol {apply_to_role}"
+    else:
+        save_dashboard_preferences(user["id"], selected_view, visible_cards)
+        label = "preferencias personales"
+    log_audit_event(user_id=user["id"], organization_id=user["organization_id"], location_id=user["location_id"], action="Actualizó tablero", entity_type="Preferencias", entity_label=label, detail=selected_view)
+    return RedirectResponse(url="/", status_code=303)
+
+
+@router.post("/dashboard/tasks")
+async def create_dashboard_task(
+    request: Request,
+    organization_id: int = Form(...), location_id: int = Form(...), title: str = Form(...),
+    assigned_user_id: int = Form(0), priority: str = Form("normal"), due_at: str = Form(...),
+    message: str = Form(""),
+) -> RedirectResponse:
+    user = user_with_permissions(request)
+    if user is None:
+        return redirect_to_login()
+    if not user["permissions"].get("manage_dashboard_tasks") or not inventory_scope_allowed(user, organization_id, location_id):
+        return redirect_to_module_with_error("/", "Tu rol no puede crear acciones en el tablero.")
+    if not title.strip() or priority not in {"urgent", "important", "normal"}:
+        return redirect_to_module_with_error("/", "Completa el título y una prioridad válida.")
+    create_alert({"organization_id": organization_id, "location_id": location_id, "created_by": user["id"], "assigned_user_id": assigned_user_id, "title": title.strip(), "message": message, "priority": priority, "due_at": due_at, "recurrence": "once", "escalation_minutes": 0, "entity_type": "dashboard_task"})
+    log_audit_event(user_id=user["id"], organization_id=organization_id, location_id=location_id, action="Creó pendiente", entity_type="Tablero", entity_label=title.strip(), detail=priority)
+    return RedirectResponse(url="/", status_code=303)
+
+
+@router.post("/dashboard/tasks/{alert_id}")
+async def update_dashboard_task(
+    request: Request, alert_id: int, organization_id: int = Form(...), location_id: int = Form(...),
+    title: str = Form(...), assigned_user_id: int = Form(0), priority: str = Form("normal"), due_at: str = Form(...), message: str = Form(""),
+) -> RedirectResponse:
+    user = user_with_permissions(request)
+    if user is None:
+        return redirect_to_login()
+    if not user["permissions"].get("manage_dashboard_tasks") or not inventory_scope_allowed(user, organization_id, location_id) or not alert_belongs_to_scope(alert_id, organization_id, location_id):
+        return redirect_to_module_with_error("/", "No puedes modificar esta acción.")
+    update_alert(alert_id, organization_id, location_id, {"title": title, "message": message, "priority": priority, "due_at": due_at, "assigned_user_id": assigned_user_id, "recurrence": "once", "escalation_minutes": 0})
+    log_audit_event(user_id=user["id"], organization_id=organization_id, location_id=location_id, action="Actualizó pendiente", entity_type="Tablero", entity_label=title.strip(), detail=priority)
+    return RedirectResponse(url="/", status_code=303)
+
+
+@router.post("/dashboard/tasks/{alert_id}/close")
+async def close_dashboard_task(request: Request, alert_id: int, organization_id: int = Form(...), location_id: int = Form(...)) -> RedirectResponse:
+    user = user_with_permissions(request)
+    if user is None:
+        return redirect_to_login()
+    if not user["permissions"].get("manage_dashboard_tasks") or not inventory_scope_allowed(user, organization_id, location_id) or not alert_belongs_to_scope(alert_id, organization_id, location_id):
+        return redirect_to_module_with_error("/", "No puedes cerrar esta acción.")
+    resolved = resolve_alert(alert_id, organization_id, location_id)
+    if resolved is None:
+        return redirect_to_module_with_error("/", "Solo las acciones manuales pueden cerrarse desde el tablero.")
+    log_audit_event(user_id=user["id"], organization_id=organization_id, location_id=location_id, action="Cerró pendiente", entity_type="Tablero", entity_label=str(alert_id))
+    return RedirectResponse(url="/", status_code=303)
 
 
 @router.get("/agenda", response_class=HTMLResponse)
@@ -1121,7 +1542,13 @@ async def agenda_page(
     permission_error: str = "",
     agenda_error: str = "",
     new_appointment: int = Query(default=0, alias="new"),
+    patient_id: int = Query(default=0),
     day: str = Query(default=""),
+    status: str = Query(default=""),
+    view: str = Query(default="day"),
+    veterinarian: str = Query(default=""),
+    priority: str = Query(default=""),
+    channel: str = Query(default=""),
     organization_id: str = Query(default=""),
     location_id: str = Query(default=""),
 ):
@@ -1132,8 +1559,13 @@ async def agenda_page(
         appointment_updated=appointment_updated,
         permission_error=permission_error,
         agenda_error=agenda_error,
-        extra_context={"open_new_appointment": bool(new_appointment)},
+        extra_context={"open_new_appointment": bool(new_appointment), "agenda_preselected_patient_id": patient_id},
         day=day,
+        agenda_status=status,
+        agenda_view=view,
+        agenda_veterinarian=veterinarian,
+        agenda_priority=priority,
+        agenda_channel=channel,
         organization_id=organization_id,
         location_id=location_id,
         active_path="/agenda",
@@ -1191,6 +1623,7 @@ async def alerts_page(
     saved: int = 0,
     updated: int = 0,
     notice: str = Query(default=""),
+    priority: str = Query(default=""),
     organization_id: str = Query(default=""),
     location_id: str = Query(default=""),
 ):
@@ -1211,6 +1644,9 @@ async def alerts_page(
         context["scope"]["organization_id"],
         context["scope"]["location_id"],
     )
+    if priority in {"urgent", "important", "normal"}:
+        context["alerts"] = [item for item in context["alerts"] if item["priority"] == priority]
+        context["alert_priority_filter"] = priority
     context["resolved_alerts"] = list_resolved_alerts(
         context["scope"]["organization_id"], context["scope"]["location_id"]
     )
@@ -1275,6 +1711,12 @@ async def clinical_page(
     organization_id: str = Query(default=""),
     location_id: str = Query(default=""),
     patient_id: int = Query(default=0),
+    q: str = Query(default=""),
+    patient_status: str = Query(default=""),
+    species: str = Query(default=""),
+    prevention: str = Query(default=""),
+    alerts: int = Query(default=0),
+    page: int = Query(default=1),
 ):
     response = render_authenticated_page(
         request,
@@ -1286,11 +1728,79 @@ async def clinical_page(
         organization_id=organization_id,
         location_id=location_id,
         active_path="/clinica",
-        extra_context={"selected_patient_id": patient_id},
+        record_patient_id=patient_id,
+        patient_search=q,
+        patient_status_filter=patient_status,
+        patient_species_filter=species,
+        patient_prevention_filter=prevention,
+        patient_alerts_only=bool(alerts),
+        patient_page=page,
     )
     if response is None:
         return redirect_to_login(request.session.get("entry_intent", "odontologia"))
     return response
+
+
+@router.get("/pacientes/{patient_id}/historial", response_class=HTMLResponse)
+async def patient_history_page(
+    request: Request,
+    patient_id: int,
+    organization_id: str = Query(default=""),
+    location_id: str = Query(default=""),
+):
+    """Muestra el historial clínico de una mascota dentro de su sede actual."""
+    response = render_authenticated_page(
+        request,
+        "clinical.html",
+        organization_id=organization_id,
+        location_id=location_id,
+        active_path="/clinica",
+        record_patient_id=patient_id,
+        patient_history_view=True,
+    )
+    if response is None:
+        return redirect_to_login(request.session.get("entry_intent", "odontologia"))
+    return response
+
+
+@router.get("/pacientes/{patient_id}/historial/descargar")
+async def download_patient_history(
+    request: Request,
+    patient_id: int,
+    organization_id: str = Query(default=""),
+    location_id: str = Query(default=""),
+):
+    """Descarga el historial de una mascota sin salir de la sede seleccionada."""
+    context, user = context_for_authenticated_user(
+        request,
+        organization_id=organization_id,
+        location_id=location_id,
+        active_path="/clinica",
+    )
+    if context is None or user is None:
+        return redirect_to_login(request.session.get("entry_intent", "odontologia"))
+    if not user["permissions"]["view_clinical"]:
+        return redirect_to_module_with_error("/clinica", "Tu rol no puede descargar historiales clínicos.")
+
+    patient = next(
+        (item for item in context["patients"] if item["id"] == patient_id),
+        None,
+    )
+    if patient is None:
+        return redirect_to_module_with_error("/clinica", "La mascota no pertenece a la sede seleccionada.")
+
+    records = list_clinical_records(
+        limit=100,
+        organization_id=str(context["scope"]["organization_id"]),
+        location_id=str(context["scope"]["location_id"]),
+        patient_id=patient_id,
+    )
+    filename_stub = re.sub(r"[^a-z0-9]+", "-", patient["display_name"].lower()).strip("-") or "paciente"
+    return Response(
+        content=build_patient_history_pdf(patient, records),
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="historial-{filename_stub}.pdf"'},
+    )
 
 
 @router.get("/clinica/cierre-diario/export")
@@ -2653,6 +3163,10 @@ async def create_new_appointment(
     priority: str = Form("Normal"),
     triage_level: str = Form(""),
     triage_note: str = Form(""),
+    resource_id: int = Form(0),
+    reminder_channel: str = Form(""),
+    recurrence_interval_days: int = Form(0),
+    recurrence_occurrences: int = Form(1),
 ) -> RedirectResponse:
     user = user_with_permissions(request)
     if user is None:
@@ -2669,7 +3183,7 @@ async def create_new_appointment(
         return redirect_to_module_with_error("/agenda", "Selecciona un paciente y veterinario válidos.")
     patient_name = patient["display_name"]
     try:
-        create_appointment({
+        appointment_payload = {
             "organization_id": organization_id,
             "location_id": location_id,
             "appointment_date": appointment_date,
@@ -2689,7 +3203,29 @@ async def create_new_appointment(
             "triage_level": triage_level,
             "triage_note": triage_note,
             "arrival_at": f"{appointment_date}T{appointment_time}" if priority == "Urgente" else "",
-        })
+            "resource_id": resource_id or None,
+            "resource_name": "",
+            "reminder_channel": reminder_channel,
+            "reminder_status": "Pendiente" if reminder_channel else "",
+        }
+        if recurrence_interval_days and recurrence_occurrences > 1:
+            create_recurring_appointments(appointment_payload, recurrence_interval_days, recurrence_occurrences)
+        else:
+            create_appointment(appointment_payload)
+        if reminder_channel:
+            enqueue_integration_event(
+                organization_id=organization_id,
+                location_id=location_id,
+                event_type=f"agenda.reminder.{reminder_channel.lower()}",
+                event_key=f"agenda-reminder:{patient_id}:{appointment_date}:{appointment_time}:{reminder_channel.lower()}",
+                payload={
+                    "patient_id": patient_id,
+                    "appointment_date": appointment_date,
+                    "appointment_time": appointment_time,
+                    "service": service.strip(),
+                    "channel": reminder_channel,
+                },
+            )
     except ValueError as exc:
         suffix = build_scope_query(str(organization_id), str(location_id), appointment_date)
         return RedirectResponse(url=f"/agenda?agenda_error={quote(str(exc))}&{suffix}", status_code=303)
@@ -2737,6 +3273,118 @@ async def save_professional_schedule(
     return RedirectResponse(url=f"/agenda?appointment_updated=1&{suffix}", status_code=303)
 
 
+@router.post("/appointments/{appointment_id}/reschedule")
+async def quick_reschedule_appointment(
+    request: Request, appointment_id: int, appointment_date: str = Form(...), appointment_time: str = Form(...),
+    organization_id: int = Form(...), location_id: int = Form(...),
+) -> RedirectResponse:
+    user = user_with_permissions(request)
+    if user is None:
+        return redirect_to_login()
+    if not user["permissions"]["manage_agenda"] or not appointment_belongs_to_scope(appointment_id, organization_id, location_id):
+        return redirect_to_module_with_error("/agenda", "No puedes reprogramar esta cita.")
+    try:
+        reschedule_appointment(appointment_id, appointment_date, appointment_time)
+    except ValueError as exc:
+        return RedirectResponse(url=f"/agenda?agenda_error={quote(str(exc))}&{build_scope_query(str(organization_id), str(location_id), appointment_date)}", status_code=303)
+    log_audit_event(user_id=user["id"], organization_id=organization_id, location_id=location_id, action="Reprogramó cita", entity_type="Agenda", entity_label=f"Cita #{appointment_id}", detail=f"{appointment_date} {appointment_time}")
+    return RedirectResponse(url=f"/agenda?appointment_updated=1&{build_scope_query(str(organization_id), str(location_id), appointment_date)}", status_code=303)
+
+
+@router.post("/agenda/waitlist")
+async def add_to_waitlist(
+    request: Request, organization_id: int = Form(...), location_id: int = Form(...), patient_id: int = Form(...),
+    service: str = Form(...), veterinarian_user_id: int = Form(0), requested_date: str = Form(""), preferred_time: str = Form(""),
+    priority: str = Form("Normal"), channel: str = Form("Correo"), note: str = Form(""),
+) -> RedirectResponse:
+    user = user_with_permissions(request)
+    if user is None:
+        return redirect_to_login()
+    if not user["permissions"]["manage_agenda"] or not inventory_scope_allowed(user, organization_id, location_id):
+        return redirect_to_module_with_error("/agenda", "No puedes gestionar la lista de espera.")
+    create_waitlist_entry({"organization_id": organization_id, "location_id": location_id, "patient_id": patient_id, "service": service.strip(), "veterinarian_user_id": veterinarian_user_id or None, "requested_date": requested_date, "preferred_time": preferred_time, "priority": "Urgente" if priority == "Urgente" else "Normal", "channel": channel, "note": note.strip()})
+    log_audit_event(user_id=user["id"], organization_id=organization_id, location_id=location_id, action="Agregó lista de espera", entity_type="Agenda", entity_label=service.strip())
+    return RedirectResponse(url=f"/agenda?appointment_updated=1&{build_scope_query(str(organization_id), str(location_id), requested_date)}", status_code=303)
+
+
+@router.post("/agenda/resources")
+async def add_agenda_resource(
+    request: Request, organization_id: int = Form(...), location_id: int = Form(...), name: str = Form(...), resource_type: str = Form("Consultorio"),
+) -> RedirectResponse:
+    user = user_with_permissions(request)
+    if user is None:
+        return redirect_to_login()
+    if not user["permissions"]["manage_admin"] or not inventory_scope_allowed(user, organization_id, location_id):
+        return redirect_to_module_with_error("/agenda", "Solo administración puede crear recursos.")
+    if name.strip():
+        create_appointment_resource(organization_id, location_id, name, resource_type)
+        log_audit_event(user_id=user["id"], organization_id=organization_id, location_id=location_id, action="Creó recurso de agenda", entity_type="Agenda", entity_label=name.strip())
+    return RedirectResponse(url=f"/agenda?appointment_updated=1&{build_scope_query(str(organization_id), str(location_id))}", status_code=303)
+
+
+@router.post("/agenda/blocks")
+async def add_agenda_block(
+    request: Request, organization_id: int = Form(...), location_id: int = Form(...), veterinarian_user_id: int = Form(0),
+    block_date: str = Form(...), start_time: str = Form(""), end_time: str = Form(""), block_type: str = Form("Ausencia"), note: str = Form(""),
+) -> RedirectResponse:
+    user = user_with_permissions(request)
+    if user is None:
+        return redirect_to_login()
+    if not user["permissions"]["manage_admin"] or not inventory_scope_allowed(user, organization_id, location_id):
+        return redirect_to_module_with_error("/agenda", "Solo administración puede bloquear agenda.")
+    create_appointment_block({"organization_id": organization_id, "location_id": location_id, "veterinarian_user_id": veterinarian_user_id or None, "block_date": block_date, "start_time": start_time, "end_time": end_time, "block_type": block_type, "note": note.strip()})
+    log_audit_event(user_id=user["id"], organization_id=organization_id, location_id=location_id, action="Bloqueó agenda", entity_type="Agenda", entity_label=block_type, detail=block_date)
+    return RedirectResponse(url=f"/agenda?appointment_updated=1&{build_scope_query(str(organization_id), str(location_id), block_date)}", status_code=303)
+
+
+@router.get("/agenda/export")
+async def export_agenda(request: Request, day: str = Query(default=""), organization_id: str = Query(default=""), location_id: str = Query(default=""), veterinarian: str = Query(default="")) -> Response:
+    user = user_with_permissions(request)
+    if user is None:
+        return Response(status_code=401)
+    if not user["permissions"].get("export_dashboard", False):
+        return Response("Tu rol no puede exportar la agenda.", status_code=403)
+    selected_day = day or datetime.now().date().isoformat()
+    items = list_appointments_between(selected_day, selected_day, organization_id, location_id)
+    if veterinarian.isdigit():
+        items = [item for item in items if item.get("veterinarian_user_id") == int(veterinarian)]
+    output = StringIO(); writer = csv.writer(output)
+    writer.writerow(["Agenda Velmorax", selected_day]); writer.writerow(["Hora", "Paciente", "Servicio", "Veterinario", "Estado", "Prioridad", "Recurso", "Llegada", "Espera (min)"])
+    for item in items: writer.writerow([item["time"], item["patient"], item["service"], item["veterinarian"], item["status"], item["priority"], item["resource_name"], item["arrival_at"], item["wait_minutes"]])
+    log_audit_event(user_id=user["id"], organization_id=int(organization_id or user["organization_id"]), location_id=int(location_id or user["location_id"]), action="Exportó agenda", entity_type="Agenda", entity_label=selected_day)
+    return Response("\ufeff" + output.getvalue(), media_type="text/csv; charset=utf-8", headers={"Content-Disposition": f'attachment; filename="agenda-{selected_day}.csv"'})
+
+
+@router.get("/agenda/imprimir", response_class=HTMLResponse)
+async def print_agenda(
+    request: Request,
+    day: str = Query(default=""),
+    organization_id: str = Query(default=""),
+    location_id: str = Query(default=""),
+    veterinarian: str = Query(default=""),
+) -> HTMLResponse:
+    user = user_with_permissions(request)
+    if user is None:
+        return HTMLResponse("Inicia sesión para imprimir la agenda.", status_code=401)
+    if not user["permissions"].get("export_dashboard", False):
+        return HTMLResponse("Tu rol no puede imprimir la agenda.", status_code=403)
+    selected_day = day or datetime.now().date().isoformat()
+    items = list_appointments_between(selected_day, selected_day, organization_id, location_id)
+    professional = "Todos los profesionales"
+    if veterinarian.isdigit():
+        items = [item for item in items if item.get("veterinarian_user_id") == int(veterinarian)]
+        professional = items[0]["veterinarian"] if items else "Profesional seleccionado"
+    log_audit_event(
+        user_id=user["id"], organization_id=int(organization_id or user["organization_id"]),
+        location_id=int(location_id or user["location_id"]), action="Imprimió agenda",
+        entity_type="Agenda", entity_label=selected_day,
+    )
+    return templates.TemplateResponse(request, "agenda_print.html", {
+        "day": selected_day, "items": items, "professional": professional,
+        "generated_at": datetime.now().strftime("%d/%m/%Y %H:%M"),
+    })
+
+
 @router.post("/appointments/{appointment_id}")
 async def update_full_appointment(
     request: Request,
@@ -2754,6 +3402,8 @@ async def update_full_appointment(
     priority: str = Form("Normal"),
     triage_level: str = Form(""),
     triage_note: str = Form(""),
+    resource_id: int = Form(0),
+    reminder_channel: str = Form(""),
     organization_id: int = Form(0),
     location_id: int = Form(0),
 ) -> RedirectResponse:
@@ -2791,6 +3441,9 @@ async def update_full_appointment(
         "triage_level": triage_level,
         "triage_note": triage_note,
         "arrival_at": f"{appointment_date}T{appointment_time}" if priority == "Urgente" else "",
+        "resource_id": resource_id or None,
+        "resource_name": "",
+        "reminder_channel": reminder_channel,
     })
     except ValueError as exc:
         suffix = build_scope_query(str(organization_id or ""), str(location_id or ""), appointment_date)
@@ -2824,6 +3477,8 @@ async def update_appointment(
     if status == "Cancelada" and not cancellation_reason.strip():
         return redirect_to_module_with_error("/agenda", "Indica el motivo de la cancelación.")
     update_appointment_status(appointment_id, status, cancellation_reason)
+    if status == "Cancelada":
+        notify_waitlist_of_opening(organization_id, location_id, day)
     log_audit_event(
         user_id=user["id"],
         organization_id=organization_id or None,
@@ -2854,6 +3509,7 @@ async def remove_appointment(
         return redirect_to_module_with_error("/agenda", "La cita no pertenece a la sede seleccionada.")
 
     delete_appointment(appointment_id)
+    notify_waitlist_of_opening(organization_id, location_id, day)
     log_audit_event(
         user_id=user["id"],
         organization_id=organization_id or None,
@@ -2900,6 +3556,7 @@ async def create_new_patient(
     medical_history: str = Form(""),
     deworming_status: str = Form(""),
     deworming_date: str = Form(""),
+    next_deworming_due: str = Form(""),
     clinical_alert: str = Form(""),
     patient_status: str = Form("active"),
 ) -> RedirectResponse:
@@ -2965,6 +3622,7 @@ async def create_new_patient(
             "medical_history": medical_history.strip(),
             "deworming_status": deworming_status.strip(),
             "deworming_date": deworming_date,
+            "next_deworming_due": next_deworming_due,
             "clinical_alert": clinical_alert.strip(),
             "patient_status": patient_status.strip() or "active",
             "updated_at": datetime.now(UTC).isoformat(),
@@ -3017,6 +3675,7 @@ async def edit_patient(
     medical_history: str = Form(""),
     deworming_status: str = Form(""),
     deworming_date: str = Form(""),
+    next_deworming_due: str = Form(""),
     clinical_alert: str = Form(""),
     patient_status: str = Form("active"),
 ) -> RedirectResponse:
@@ -3103,6 +3762,7 @@ async def edit_patient(
             "medical_history": medical_history.strip() or patient.get("medical_history", ""),
             "deworming_status": deworming_status.strip() or patient.get("deworming_status", ""),
             "deworming_date": deworming_date or patient.get("deworming_date", ""),
+            "next_deworming_due": next_deworming_due or patient.get("next_deworming_due", ""),
             "clinical_alert": clinical_alert.strip() or patient.get("clinical_alert", ""),
             "patient_status": patient_status.strip() if patient_status != "active" else patient.get("patient_status", "active"),
             "updated_at": datetime.now(UTC).isoformat(),
@@ -3347,12 +4007,25 @@ async def remove_record(
     record_id: int,
     organization_id: int = Form(0),
     location_id: int = Form(0),
+    patient_id: int = Form(0),
 ) -> RedirectResponse:
     user = user_with_permissions(request)
     if user is None:
         return redirect_to_login()
     if not user["permissions"]["manage_clinical"]:
         return redirect_to_module_with_error("/clinica", "Tu rol no puede eliminar atenciones.")
+
+    record = get_clinical_record(record_id)
+    if (
+        record is None
+        or not inventory_scope_allowed(user, organization_id, location_id)
+        or int(record["organization_id"]) != organization_id
+        or int(record["location_id"]) != location_id
+        or (patient_id and int(record["patient_id"]) != patient_id)
+    ):
+        return redirect_to_module_with_error(
+            "/clinica", "La atención no pertenece a la sede seleccionada."
+        )
 
     delete_clinical_record(record_id)
     log_audit_event(
@@ -3364,8 +4037,53 @@ async def remove_record(
         entity_label=f"Registro #{record_id}",
         detail="Registro clinico eliminado desde la interfaz",
     )
-    suffix = build_scope_query(str(organization_id or ""), str(location_id or ""))
-    return RedirectResponse(url=f"/clinica?{suffix}" if suffix else "/clinica", status_code=303)
+    suffix = build_scope_query(str(organization_id), str(location_id))
+    return RedirectResponse(
+        url=f"/pacientes/{record['patient_id']}/historial?{suffix}#historial-clinico",
+        status_code=303,
+    )
+
+
+@router.post("/pacientes/{patient_id}/historial/delete")
+async def remove_patient_history(
+    request: Request,
+    patient_id: int,
+    organization_id: int = Form(0),
+    location_id: int = Form(0),
+) -> RedirectResponse:
+    """Elimina el historial clínico, conservando la ficha de la mascota."""
+    user = user_with_permissions(request)
+    if user is None:
+        return redirect_to_login()
+    if not user["permissions"]["manage_clinical"]:
+        return redirect_to_module_with_error("/clinica", "Tu rol no puede eliminar historiales.")
+
+    patient = get_patient(patient_id)
+    if (
+        patient is None
+        or not inventory_scope_allowed(user, organization_id, location_id)
+        or int(patient["organization_id"]) != organization_id
+        or int(patient["location_id"]) != location_id
+    ):
+        return redirect_to_module_with_error(
+            "/clinica", "El historial no pertenece a la sede seleccionada."
+        )
+
+    delete_patient_history(patient_id)
+    log_audit_event(
+        user_id=user["id"],
+        organization_id=organization_id,
+        location_id=location_id,
+        action="Eliminacion",
+        entity_type="Historia",
+        entity_label=f"Historial de {patient['display_name']}",
+        detail="Historial clínico eliminado; ficha de paciente conservada",
+    )
+    suffix = build_scope_query(str(organization_id), str(location_id))
+    return RedirectResponse(
+        url=f"/pacientes/{patient_id}/historial?{suffix}#historial-clinico",
+        status_code=303,
+    )
 
 
 def health_payload(check_database: bool = True) -> tuple[dict, int]:

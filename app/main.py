@@ -2,12 +2,12 @@ from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.trustedhost import TrustedHostMiddleware
-from starlette.middleware.sessions import SessionMiddleware
 
 from app.core.config import get_settings
 from app.core.database import init_db, seed_db
 from app.core.observability import RequestObservabilityMiddleware, configure_logging, logger
 from app.core.security import SecurityHeadersMiddleware
+from app.core.session import RememberableSessionMiddleware
 from app.routers.web import router as web_router
 
 
@@ -22,9 +22,10 @@ app = FastAPI(
 )
 
 app.add_middleware(
-    SessionMiddleware,
+    RememberableSessionMiddleware,
     secret_key=settings.session_secret,
     max_age=settings.session_max_age_seconds,
+    remember_max_age=settings.session_remember_idle_days * 24 * 60 * 60,
     same_site="lax",
     https_only=settings.session_https_only,
 )

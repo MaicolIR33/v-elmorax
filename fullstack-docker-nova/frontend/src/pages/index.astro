@@ -1,0 +1,25 @@
+---
+import TaskList from '../components/TaskList.jsx';
+import '../styles/global.css';
+---
+
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Actividad Full Stack Docker: tablero de tareas." />
+    <title>Actividad Docker · Tablero de tareas</title>
+  </head>
+  <body>
+    <main class="layout">
+      <header class="intro">
+        <p class="kicker">Full Stack · Docker</p>
+        <h1>Pequeñas tareas.<br /><em>Avances reales.</em></h1>
+        <p class="summary">Crea y consulta tareas desde una interfaz conectada a Express y MySQL.</p>
+      </header>
+      <TaskList client:load />
+      <footer>Actividad práctica · API de tareas</footer>
+    </main>
+  </body>
+</html>

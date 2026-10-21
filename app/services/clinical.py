@@ -43,6 +43,7 @@ def list_patients(
             patients.medical_history,
             patients.deworming_status,
             patients.deworming_date,
+            patients.next_deworming_due,
             patients.clinical_alert,
             patients.patient_status,
             patients.updated_at,
@@ -101,6 +102,7 @@ def list_patients(
             "medical_history": row["medical_history"],
             "deworming_status": row["deworming_status"],
             "deworming_date": row["deworming_date"],
+            "next_deworming_due": row["next_deworming_due"] or "",
             "clinical_alert": row["clinical_alert"],
             "patient_status": row["patient_status"],
             "updated_at": row["updated_at"],
@@ -127,6 +129,26 @@ def patient_options(organization_id: str = "", location_id: str = "") -> list[di
         for item in items
     ]
 
+
+def patient_preventive_dates(organization_id: str = "", location_id: str = "") -> dict[int, str]:
+    """Return the latest recorded next-vaccine date for each patient in scope."""
+    query = """
+        SELECT r.patient_id, MAX(NULLIF(r.next_vaccine_due, '')) AS next_vaccine_due
+        FROM clinical_records AS r
+        WHERE r.patient_id IS NOT NULL AND NULLIF(r.next_vaccine_due, '') IS NOT NULL
+    """
+    params: list[int] = []
+    if organization_id:
+        query += " AND r.organization_id = ?"
+        params.append(int(organization_id))
+    if location_id:
+        query += " AND r.location_id = ?"
+        params.append(int(location_id))
+    query += " GROUP BY r.patient_id"
+    with get_connection() as connection:
+        rows = connection.execute(query, tuple(params)).fetchall()
+    return {int(row["patient_id"]): row["next_vaccine_due"] for row in rows if row["next_vaccine_due"]}
+
 def find_patient_duplicate(
     organization_id: int,
     location_id: int,
@@ -139,6 +161,14 @@ def find_patient_duplicate(
     exclude_patient_id: int | None = None,
 ) -> dict | None:
     """Return a probable duplicate only when there is a reliable identifier."""
+    # Los datos históricos pueden contener NULL en campos opcionales. Para la
+    # validación de duplicados, un valor ausente equivale a un texto vacío.
+    display_name = display_name or ""
+    owner_name = owner_name or ""
+    document_number = document_number or ""
+    microchip = microchip or ""
+    species = species or ""
+    birth_date = birth_date or ""
     conditions = ["organization_id = ?"]
     params: list[object] = [organization_id]
 
@@ -186,6 +216,15 @@ def get_patient(patient_id: int) -> dict | None:
     return patient
 
 
+def get_clinical_record(record_id: int) -> dict | None:
+    """Obtiene una atención para validar su alcance antes de modificarla."""
+    with get_connection() as connection:
+        row = connection.execute(
+            "SELECT * FROM clinical_records WHERE id = ?", (record_id,)
+        ).fetchone()
+    return dict(row) if row is not None else None
+
+
 def update_patient(patient_id: int, payload: dict) -> None:
     with get_connection() as connection:
         connection.execute(
@@ -220,6 +259,7 @@ def update_patient(patient_id: int, payload: dict) -> None:
             medical_history = :medical_history,
             deworming_status = :deworming_status,
             deworming_date = :deworming_date,
+            next_deworming_due = :next_deworming_due,
             clinical_alert = :clinical_alert,
             patient_status = :patient_status,
             updated_at = :updated_at,
@@ -250,6 +290,7 @@ def create_patient(payload: dict) -> None:
         "medical_history": "",
         "deworming_status": "",
         "deworming_date": "",
+        "next_deworming_due": "",
         "clinical_alert": "",
         "patient_status": "active",
         "updated_at": "",
@@ -291,6 +332,7 @@ def create_patient(payload: dict) -> None:
             medical_history,
             deworming_status,
             deworming_date,
+            next_deworming_due,
             clinical_alert,
             patient_status,
             updated_at,
@@ -328,6 +370,7 @@ def create_patient(payload: dict) -> None:
             :medical_history,
             :deworming_status,
             :deworming_date,
+            :next_deworming_due,
             :clinical_alert,
             :patient_status,
             :updated_at,
@@ -356,10 +399,12 @@ def list_clinical_records(
     limit: int = 8,
     organization_id: str = "",
     location_id: str = "",
+    patient_id: int = 0,
 ) -> list[dict]:
     query = """
         SELECT
             r.id,
+            r.patient_id,
             r.organization_id,
             r.location_id,
             r.encounter_date,
@@ -407,6 +452,9 @@ def list_clinical_records(
     if location_id:
         query += " AND r.location_id = ?"
         params.append(int(location_id))
+    if patient_id:
+        query += " AND r.patient_id = ?"
+        params.append(patient_id)
     query += " ORDER BY r.encounter_date DESC, r.id DESC LIMIT ?"
     params.append(limit)
     with get_connection() as connection:
@@ -415,6 +463,7 @@ def list_clinical_records(
     return [
         {
             "id": row["id"],
+            "patient_id": row["patient_id"],
             "organization_id": row["organization_id"],
             "location_id": row["location_id"],
             "encounter_date": row["encounter_date"],
@@ -503,6 +552,15 @@ def delete_clinical_record(record_id: int) -> None:
         connection.execute(
             "DELETE FROM clinical_records WHERE id = ?",
             (record_id,),
+        )
+        connection.commit()
+
+
+def delete_patient_history(patient_id: int) -> None:
+    """Elimina las atenciones de una mascota sin borrar su ficha."""
+    with get_connection() as connection:
+        connection.execute(
+            "DELETE FROM clinical_records WHERE patient_id = ?", (patient_id,)
         )
         connection.commit()
 

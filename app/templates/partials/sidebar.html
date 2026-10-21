@@ -7,34 +7,34 @@
 
     <nav class="vet-sidebar-nav" aria-label="Navegacion principal">
         <a href="/{% if scope_query %}?{{ scope_query }}{% endif %}"{% if active_path == '/' %} class="is-active" aria-current="page"{% endif %} title="Tablero">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h6v7H4V4ZM14 4h6v4h-6V4ZM14 12h6v8h-6v-8ZM4 15h6v5H4v-5Z"></path></svg>
+            <span class="vet-nav-icon vet-nav-icon-dashboard" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="7" height="7" rx="1"></rect><rect x="13.5" y="3.5" width="7" height="4.5" rx="1"></rect><rect x="13.5" y="11" width="7" height="9.5" rx="1"></rect><rect x="3.5" y="13.5" width="7" height="7" rx="1"></rect></svg></span>
             <span>Tablero</span>
         </a>
         {% if permissions.view_agenda %}
         <a href="/agenda{% if scope_query %}?{{ scope_query }}{% endif %}"{% if active_path == '/agenda' %} class="is-active" aria-current="page"{% endif %} title="Agenda">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3v3M17 3v3M4 9h16M5 5h14a1 1 0 0 1 1 1v14H4V6a1 1 0 0 1 1-1Z"></path></svg>
+            <span class="vet-nav-icon vet-nav-icon-agenda" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 3v3M17 3v3M4 9h16M5 5h14a1 1 0 0 1 1 1v14H4V6a1 1 0 0 1 1-1Z"></path></svg></span>
             <span>Agenda</span>
         </a>
         {% endif %}
         {% if permissions.view_clinical %}
         <a href="/clinica{% if scope_query %}?{{ scope_query }}{% endif %}"{% if active_path == '/clinica' %} class="is-active" aria-current="page"{% endif %} title="Pacientes">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="4"></circle><path d="M2.5 21c.5-4.2 2.7-6.5 6.5-6.5s6 2.3 6.5 6.5M18 8v7M14.5 11.5h7"></path></svg>
+            <span class="vet-nav-icon vet-nav-icon-patients" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="7.25" cy="7.25" r="2.15"></circle><circle cx="16.75" cy="7.25" r="2.15"></circle><circle cx="4.75" cy="13" r="2"></circle><circle cx="19.25" cy="13" r="2"></circle><path d="M7.7 20c0-3.2 1.8-5.5 4.3-5.5s4.3 2.3 4.3 5.5c0 1.2-1.1 2-2.3 2-.8 0-1.5-.3-2-.9-.5.6-1.2.9-2 .9-1.2 0-2.3-.8-2.3-2Z"></path></svg></span>
             <span>Pacientes</span>
         </a>
         {% endif %}
         {% if permissions.view_inventory %}
         <a href="/inventario{% if scope_query %}?{{ scope_query }}{% endif %}"{% if active_path == '/inventario' %} class="is-active" aria-current="page"{% endif %} title="Insumos">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 7 8-4 8 4-8 4-8-4Z"></path><path d="M4 7v10l8 4 8-4V7M12 11v10"></path></svg>
+            <span class="vet-nav-icon vet-nav-icon-supplies" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m4 7 8-4 8 4-8 4-8-4Z"></path><path d="M4 7v10l8 4 8-4V7M12 11v10"></path></svg></span>
             <span>Insumos</span>
         </a>
         {% endif %}
         <a href="/alertas{% if scope_query %}?{{ scope_query }}{% endif %}"{% if active_path == '/alertas' %} class="is-active" aria-current="page"{% endif %} title="Alertas">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 3 20h18L12 3Z"></path><path d="M12 9v5M12 17.5v.5"></path></svg>
+            <span class="vet-nav-icon vet-nav-icon-alerts" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3 3 20h18L12 3Z"></path><path d="M12 9v5M12 17.5v.5"></path></svg></span>
             <span>Alertas</span>{% if veterinary_dashboard.alerts_total %}<strong class="vet-nav-alert-count">{{ veterinary_dashboard.alerts_total }}</strong>{% endif %}
         </a>
         {% if permissions.manage_admin %}
         <a href="/admin{% if scope_query %}?{{ scope_query }}{% endif %}"{% if active_path == '/admin' %} class="is-active" aria-current="page"{% endif %} title="Administracion">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2.8 2.8-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21h-4v-.1a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1L4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9A1.7 1.7 0 0 0 3.1 14H3v-4h.1a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.9L4.2 7 7 4.2l.1.1a1.7 1.7 0 0 0 1.9.3 1.7 1.7 0 0 0 1-1.5V3h4v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1L19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.5 1h.1v4h-.1a1.7 1.7 0 0 0-1.5 1Z"></path></svg>
+            <span class="vet-nav-icon vet-nav-icon-admin" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2.8 2.8-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21h-4v-.1a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1L4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9A1.7 1.7 0 0 0 3.1 14H3v-4h.1a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.9L4.2 7 7 4.2l.1.1a1.7 1.7 0 0 0 1.9.3 1.7 1.7 0 0 0 1-1.5V3h4v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1L19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.5 1h.1v4h-.1a1.7 1.7 0 0 0-1.5 1Z"></path></svg></span>
             <span>Admin</span>
         </a>
         {% endif %}
@@ -71,13 +71,20 @@
         </button>
     </div>
 
+    <nav class="vet-sidebar-legal" aria-label="Enlaces de soporte y legales">
+        <span class="vet-sidebar-legal-label">Soporte y legal</span>
+        <a href="/ayuda">Ayuda</a>
+        <a href="/planes">Planes</a>
+        <a href="/privacidad">Privacidad</a>
+        <a href="/tratamiento-de-datos">Datos</a>
+        <a href="/terminos">Términos</a>
+    </nav>
+
     <div class="vet-sidebar-user">
         <span class="vet-user-avatar" aria-hidden="true">{{ current_user.full_name[:1] }}</span>
         <span><strong>{{ current_user.full_name }}</strong><small>{{ current_user.role_label }}</small></span>
         <form action="/logout" method="post">
-            <button type="submit" aria-label="Cerrar sesion" title="Cerrar sesion">
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 4H4v16h6M14 8l4 4-4 4M8 12h10"></path></svg>
-            </button>
+            <button type="submit" title="Cerrar sesión" aria-label="Cerrar sesión"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 4H4v16h6M14 8l4 4-4 4M8 12h10"></path></svg></button>
         </form>
     </div>
 </aside>

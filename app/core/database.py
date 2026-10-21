@@ -207,6 +207,12 @@ def init_db() -> None:
         ensure_column(connection, "appointments", "arrival_at", "TEXT NOT NULL DEFAULT ''")
         ensure_column(connection, "appointments", "source_system", "TEXT NOT NULL DEFAULT ''")
         ensure_column(connection, "appointments", "external_id", "TEXT NOT NULL DEFAULT ''")
+        ensure_column(connection, "appointments", "resource_id", "INTEGER")
+        ensure_column(connection, "appointments", "resource_name", "TEXT NOT NULL DEFAULT ''")
+        ensure_column(connection, "appointments", "recurrence_group", "TEXT NOT NULL DEFAULT ''")
+        ensure_column(connection, "appointments", "reminder_channel", "TEXT NOT NULL DEFAULT ''")
+        ensure_column(connection, "appointments", "reminder_status", "TEXT NOT NULL DEFAULT ''")
+        ensure_column(connection, "appointments", "no_show_reason", "TEXT NOT NULL DEFAULT ''")
         ensure_column(connection, "patients", "organization_id", "INTEGER NOT NULL DEFAULT 1")
         ensure_column(connection, "patients", "location_id", "INTEGER NOT NULL DEFAULT 1")
         ensure_column(connection, "patients", "document_number", "TEXT NOT NULL DEFAULT ''")
@@ -236,6 +242,7 @@ def init_db() -> None:
         ensure_column(connection,"patients", "medical_history", "TEXT")
         ensure_column(connection,"patients", "deworming_status", "TEXT")
         ensure_column(connection,"patients", "deworming_date", "TEXT")
+        ensure_column(connection,"patients", "next_deworming_due", "TEXT NOT NULL DEFAULT ''")
         ensure_column(connection,"patients", "clinical_alert", "TEXT")
         ensure_column(connection,"patients","patient_status","TEXT NOT NULL DEFAULT 'active'")
         ensure_column(connection,"patients", "updated_at", "TEXT")
@@ -285,6 +292,9 @@ def ensure_indexes(connection: DatabaseConnection) -> None:
         CREATE INDEX IF NOT EXISTS idx_users_locked_until ON users(locked_until);
         CREATE INDEX IF NOT EXISTS idx_password_reset_token_hash ON password_reset_tokens(token_hash);
         CREATE INDEX IF NOT EXISTS idx_alerts_scope_due ON alerts(organization_id, location_id, status, due_at);
+        CREATE INDEX IF NOT EXISTS idx_dashboard_snapshots_scope_date ON dashboard_snapshots(organization_id, location_id, snapshot_date);
+        CREATE INDEX IF NOT EXISTS idx_appointments_scope_date ON appointments(organization_id, location_id, appointment_date);
+        CREATE INDEX IF NOT EXISTS idx_appointment_waitlist_scope_status ON appointment_waitlist(organization_id, location_id, status, requested_date);
         CREATE INDEX IF NOT EXISTS idx_inventory_items_scope_status ON inventory_items(organization_id, location_id, lot_status);
         CREATE INDEX IF NOT EXISTS idx_inventory_items_product_lot ON inventory_items(organization_id, product_id, lot);
         CREATE INDEX IF NOT EXISTS idx_inventory_movements_scope_created ON inventory_movements(organization_id, location_id, created_at);
@@ -541,9 +551,44 @@ def build_schema_sql(dialect: str) -> str:
             arrival_at TEXT NOT NULL DEFAULT '',
             source_system TEXT NOT NULL DEFAULT '',
             external_id TEXT NOT NULL DEFAULT '',
+            resource_id INTEGER,
+            resource_name TEXT NOT NULL DEFAULT '',
+            recurrence_group TEXT NOT NULL DEFAULT '',
+            reminder_channel TEXT NOT NULL DEFAULT '',
+            reminder_status TEXT NOT NULL DEFAULT '',
+            no_show_reason TEXT NOT NULL DEFAULT '',
             created_at {created_at_type} NOT NULL DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (organization_id) REFERENCES organizations (id),
             FOREIGN KEY (location_id) REFERENCES locations (id)
+        );
+
+        CREATE TABLE IF NOT EXISTS appointment_resources (
+            id {id_column}, organization_id INTEGER NOT NULL, location_id INTEGER NOT NULL,
+            name TEXT NOT NULL, resource_type TEXT NOT NULL DEFAULT 'Consultorio', is_active INTEGER NOT NULL DEFAULT 1,
+            created_at {created_at_type} NOT NULL DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE IF NOT EXISTS appointment_waitlist (
+            id {id_column}, organization_id INTEGER NOT NULL, location_id INTEGER NOT NULL,
+            patient_id INTEGER NOT NULL, service TEXT NOT NULL, veterinarian_user_id INTEGER,
+            requested_date TEXT NOT NULL DEFAULT '', preferred_time TEXT NOT NULL DEFAULT '',
+            priority TEXT NOT NULL DEFAULT 'Normal', channel TEXT NOT NULL DEFAULT 'Correo',
+            note TEXT NOT NULL DEFAULT '', status TEXT NOT NULL DEFAULT 'En espera', notified_at TEXT NOT NULL DEFAULT '',
+            created_at {created_at_type} NOT NULL DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE IF NOT EXISTS appointment_blocks (
+            id {id_column}, organization_id INTEGER NOT NULL, location_id INTEGER NOT NULL,
+            veterinarian_user_id INTEGER, block_date TEXT NOT NULL, start_time TEXT NOT NULL DEFAULT '',
+            end_time TEXT NOT NULL DEFAULT '', block_type TEXT NOT NULL DEFAULT 'Ausencia', note TEXT NOT NULL DEFAULT '',
+            created_at {created_at_type} NOT NULL DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE IF NOT EXISTS appointment_notifications (
+            id {id_column}, appointment_id INTEGER NOT NULL, organization_id INTEGER NOT NULL, location_id INTEGER NOT NULL,
+            channel TEXT NOT NULL, kind TEXT NOT NULL DEFAULT 'Confirmación', status TEXT NOT NULL DEFAULT 'Pendiente',
+            recipient TEXT NOT NULL DEFAULT '', scheduled_at TEXT NOT NULL DEFAULT '', sent_at TEXT NOT NULL DEFAULT '',
+            detail TEXT NOT NULL DEFAULT '', created_at {created_at_type} NOT NULL DEFAULT CURRENT_TIMESTAMP
         );
 
         CREATE TABLE IF NOT EXISTS patients (
@@ -693,6 +738,32 @@ def build_schema_sql(dialect: str) -> str:
             FOREIGN KEY (organization_id) REFERENCES organizations (id),
             FOREIGN KEY (location_id) REFERENCES locations (id),
             FOREIGN KEY (created_by) REFERENCES users (id)
+        );
+
+        CREATE TABLE IF NOT EXISTS dashboard_preferences (
+            user_id INTEGER PRIMARY KEY,
+            selected_view TEXT NOT NULL DEFAULT 'operation',
+            visible_cards TEXT NOT NULL DEFAULT '',
+            updated_at {created_at_type} NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users (id)
+        );
+
+        CREATE TABLE IF NOT EXISTS dashboard_role_preferences (
+            role TEXT PRIMARY KEY,
+            visible_cards TEXT NOT NULL DEFAULT '',
+            updated_at {created_at_type} NOT NULL DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE IF NOT EXISTS dashboard_snapshots (
+            id {id_column}, organization_id INTEGER NOT NULL, location_id INTEGER NOT NULL,
+            snapshot_date TEXT NOT NULL, appointments_total INTEGER NOT NULL DEFAULT 0,
+            attended_total INTEGER NOT NULL DEFAULT 0, cancelled_total INTEGER NOT NULL DEFAULT 0,
+            alerts_total INTEGER NOT NULL DEFAULT 0, consumption_total REAL NOT NULL DEFAULT 0,
+            followups_total INTEGER NOT NULL DEFAULT 0,
+            created_at {created_at_type} NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE (organization_id, location_id, snapshot_date),
+            FOREIGN KEY (organization_id) REFERENCES organizations (id),
+            FOREIGN KEY (location_id) REFERENCES locations (id)
         );
 
         CREATE TABLE IF NOT EXISTS integration_outbox (

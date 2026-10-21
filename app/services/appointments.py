@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import date, datetime, timedelta
+from uuid import uuid4
 from threading import RLock
 
 from app.core.database import get_connection
@@ -37,13 +38,20 @@ def list_appointments(
             appointments.patient_id,
             appointments.veterinarian_user_id,
             appointments.cancellation_reason,
+            appointments.resource_id, appointments.resource_name, appointments.recurrence_group,
+            appointments.reminder_channel, appointments.reminder_status, appointments.no_show_reason,
             appointments.created_at,
+            patients.allergies AS patient_allergies, patients.clinical_alert AS patient_alert,
+            patients.preexisting_conditions AS patient_conditions,
+            (SELECT encounter_date FROM clinical_records cr WHERE cr.patient_id = appointments.patient_id ORDER BY encounter_date DESC, id DESC LIMIT 1) AS last_clinical_date,
+            (SELECT diagnosis FROM clinical_records cr WHERE cr.patient_id = appointments.patient_id ORDER BY encounter_date DESC, id DESC LIMIT 1) AS last_diagnosis,
             organizations.name AS organization_name,
             locations.name AS site_name,
             locations.city AS site_city
         FROM appointments
         LEFT JOIN organizations ON organizations.id = appointments.organization_id
         LEFT JOIN locations ON locations.id = appointments.location_id
+        LEFT JOIN patients ON patients.id = appointments.patient_id
         WHERE appointment_date = ?
     """
     params: list[str | int] = [selected_day]
@@ -79,6 +87,18 @@ def list_appointments(
             "patient_id": row["patient_id"],
             "veterinarian_user_id": row["veterinarian_user_id"],
             "cancellation_reason": row["cancellation_reason"],
+            "resource_id": row["resource_id"] or 0,
+            "resource_name": row["resource_name"] or "",
+            "recurrence_group": row["recurrence_group"] or "",
+            "reminder_channel": row["reminder_channel"] or "",
+            "reminder_status": row["reminder_status"] or "",
+            "no_show_reason": row["no_show_reason"] or "",
+            "patient_allergies": row["patient_allergies"] or "",
+            "patient_alert": row["patient_alert"] or "",
+            "patient_conditions": row["patient_conditions"] or "",
+            "last_clinical_date": row["last_clinical_date"] or "",
+            "last_diagnosis": row["last_diagnosis"] or "",
+            "wait_minutes": _wait_minutes(row["appointment_date"], row["appointment_time"], row["arrival_at"] or ""),
             "organization_name": row["organization_name"] or "-",
             "site_name": row["site_name"] or "-",
             "site_city": row["site_city"] or "-",
@@ -87,36 +107,72 @@ def list_appointments(
     ]
 
 
-def create_appointment(payload: dict) -> None:
+def list_appointments_between(
+    start_day: str,
+    end_day: str,
+    organization_id: str = "",
+    location_id: str = "",
+) -> list[dict]:
+    """Return appointments for an inclusive date range using the same shape as Agenda."""
+    start = date.fromisoformat(start_day)
+    end = date.fromisoformat(end_day)
+    if end < start:
+        start, end = end, start
+    # Keep a dashboard range bounded even when a malformed URL is supplied.
+    if (end - start).days > 62:
+        end = start + timedelta(days=62)
+
+    items: list[dict] = []
+    cursor = start
+    while cursor <= end:
+        items.extend(list_appointments(cursor.isoformat(), organization_id, location_id))
+        cursor += timedelta(days=1)
+    return items
+
+
+def create_appointment(payload: dict) -> int:
     payload = _normalize_operational_fields(payload)
     with APPOINTMENT_WRITE_LOCK:
         validate_appointment_slot(payload)
         with get_connection() as connection:
-            connection.execute(
+            cursor = connection.execute(
                 """
                 INSERT INTO appointments (
                     organization_id, location_id, appointment_date, appointment_time,
                     patient_name, service, channel, status, specialty, note,
                     duration_minutes, veterinarian, patient_id, veterinarian_user_id,
-                    cancellation_reason, priority, triage_level, triage_note, arrival_at
+                    cancellation_reason, priority, triage_level, triage_note, arrival_at,
+                    resource_id, resource_name, recurrence_group, reminder_channel, reminder_status
                 )
                 VALUES (
                     :organization_id, :location_id, :appointment_date, :appointment_time,
                     :patient_name, :service, :channel, :status, :specialty, :note,
                     :duration_minutes, :veterinarian, :patient_id, :veterinarian_user_id,
-                    :cancellation_reason, :priority, :triage_level, :triage_note, :arrival_at
+                    :cancellation_reason, :priority, :triage_level, :triage_note, :arrival_at,
+                    :resource_id, :resource_name, :recurrence_group, :reminder_channel, :reminder_status
                 )
                 """,
                 payload,
             )
+            inserted = connection.execute(
+                "SELECT id FROM appointments WHERE organization_id=? AND location_id=? AND patient_id=? AND appointment_date=? AND appointment_time=? ORDER BY id DESC LIMIT 1",
+                (payload["organization_id"], payload["location_id"], payload["patient_id"], payload["appointment_date"], payload["appointment_time"]),
+            ).fetchone()
+            appointment_id = int(inserted["id"] if inserted else 0)
+            if payload.get("reminder_channel"):
+                connection.execute(
+                    "INSERT INTO appointment_notifications (appointment_id, organization_id, location_id, channel, kind, status, scheduled_at, detail) VALUES (?, ?, ?, ?, 'Confirmación', 'Pendiente', ?, ?)",
+                    (appointment_id, payload["organization_id"], payload["location_id"], payload["reminder_channel"], f"{payload['appointment_date']}T{payload['appointment_time']}", "Confirmación y recordatorio programado"),
+                )
             connection.commit()
+    return appointment_id
 
 
 def update_appointment_status(appointment_id: int, status: str, cancellation_reason: str = "") -> None:
     with get_connection() as connection:
         connection.execute(
-            "UPDATE appointments SET status = ?, cancellation_reason = ? WHERE id = ?",
-            (status.strip(), cancellation_reason.strip(), appointment_id),
+            "UPDATE appointments SET status = ?, cancellation_reason = ?, arrival_at = CASE WHEN ? = 'En espera' AND arrival_at = '' THEN ? ELSE arrival_at END, no_show_reason = CASE WHEN ? = 'No asistió' THEN ? ELSE no_show_reason END WHERE id = ?",
+            (status.strip(), cancellation_reason.strip(), status.strip(), datetime.now().isoformat(timespec="minutes"), status.strip(), cancellation_reason.strip(), appointment_id),
         )
         connection.commit()
 
@@ -133,7 +189,7 @@ def update_appointment(appointment_id: int, payload: dict) -> None:
                     service = ?, channel = ?, status = ?, specialty = ?, note = ?,
                     duration_minutes = ?, veterinarian = ?, patient_id = ?,
                     veterinarian_user_id = ?, cancellation_reason = ?, priority = ?,
-                    triage_level = ?, triage_note = ?, arrival_at = ?
+                    triage_level = ?, triage_note = ?, arrival_at = ?, resource_id = ?, resource_name = ?, reminder_channel = ?
                 WHERE id = ?
                 """,
                 (
@@ -143,7 +199,8 @@ def update_appointment(appointment_id: int, payload: dict) -> None:
                     payload["duration_minutes"], payload["veterinarian"], payload["patient_id"],
                     payload["veterinarian_user_id"], payload.get("cancellation_reason", ""),
                     payload.get("priority", "Normal"), payload["triage_level"],
-                    payload["triage_note"], payload["arrival_at"], appointment_id,
+                    payload["triage_note"], payload["arrival_at"], payload.get("resource_id") or None,
+                    payload.get("resource_name", ""), payload.get("reminder_channel", ""), appointment_id,
                 ),
             )
             connection.commit()
@@ -186,7 +243,7 @@ def validate_appointment_slot(payload: dict, exclude_id: int | None = None) -> N
     query = """
         SELECT id, appointment_time, duration_minutes FROM appointments
         WHERE appointment_date = ? AND location_id = ?
-          AND veterinarian_user_id = ? AND status != 'Cancelada'
+          AND veterinarian_user_id = ? AND status NOT IN ('Cancelada', 'No asistió')
     """
     params: list[str | int] = [payload["appointment_date"], payload["location_id"], veterinarian_user_id]
     if exclude_id is not None:
@@ -203,6 +260,33 @@ def validate_appointment_slot(payload: dict, exclude_id: int | None = None) -> N
             raise ValueError(
                 f"{veterinarian} ya tiene una cita entre {other_start:%H:%M} y {other_end:%H:%M}."
             )
+    resource_id = int(payload.get("resource_id") or 0)
+    if resource_id and not is_emergency:
+        with get_connection() as connection:
+            resource = connection.execute("SELECT name FROM appointment_resources WHERE id=? AND organization_id=? AND location_id=? AND is_active=1", (resource_id, payload["organization_id"], payload["location_id"])).fetchone()
+            resource_rows = connection.execute("SELECT appointment_time, duration_minutes FROM appointments WHERE appointment_date=? AND location_id=? AND resource_id=? AND status NOT IN ('Cancelada','No asistió')" + (" AND id != ?" if exclude_id else ""), tuple([payload["appointment_date"], payload["location_id"], resource_id] + ([exclude_id] if exclude_id else []))).fetchall()
+        if resource is None:
+            raise ValueError("Selecciona un consultorio o recurso activo de la sede.")
+        payload["resource_name"] = resource["name"]
+        for row in resource_rows:
+            other_start = datetime.strptime(f"{payload['appointment_date']} {row['appointment_time']}", "%Y-%m-%d %H:%M")
+            if start < other_start + timedelta(minutes=max(10, row["duration_minutes"] or 30)) and end > other_start:
+                raise ValueError(f"{resource['name']} ya está reservado en ese horario.")
+    with get_connection() as connection:
+        blocks = connection.execute(
+            """SELECT start_time, end_time, block_type FROM appointment_blocks
+               WHERE organization_id=? AND location_id=? AND block_date=?
+                 AND (veterinarian_user_id IS NULL OR veterinarian_user_id=?)""",
+            (payload["organization_id"], payload["location_id"], payload["appointment_date"], veterinarian_user_id),
+        ).fetchall()
+    for block in blocks:
+        # A block without an hour applies to the entire day (holidays and absences).
+        if not block["start_time"] or not block["end_time"]:
+            raise ValueError(f"La agenda está bloqueada por: {block['block_type']}.")
+        block_start = datetime.strptime(f"{payload['appointment_date']} {block['start_time']}", "%Y-%m-%d %H:%M")
+        block_end = datetime.strptime(f"{payload['appointment_date']} {block['end_time']}", "%Y-%m-%d %H:%M")
+        if start < block_end and end > block_start:
+            raise ValueError(f"El horario coincide con un bloqueo: {block['block_type']}.")
     patient_id = int(payload.get("patient_id") or 0)
     with get_connection() as connection:
         duplicate = connection.execute(
@@ -237,7 +321,7 @@ def available_slots(day: str, provider: dict, appointments: list[dict], duration
     break_end = datetime.strptime(f"{day} {provider['break_end']}", "%Y-%m-%d %H:%M") if provider.get("break_end") else None
     busy = []
     for item in appointments:
-        if item.get("veterinarian_user_id") != provider["id"] or item["status"] == "Cancelada":
+        if item.get("veterinarian_user_id") != provider["id"] or item["status"] in {"Cancelada", "No asistió"}:
             continue
         busy_start = datetime.strptime(f"{day} {item['time']}", "%Y-%m-%d %H:%M")
         busy.append((busy_start, busy_start + timedelta(minutes=item["duration_minutes"])))
@@ -260,6 +344,99 @@ def delete_appointment(appointment_id: int) -> None:
         connection.commit()
 
 
+def _wait_minutes(day: str, time: str, arrival_at: str) -> int:
+    if not arrival_at:
+        return 0
+    try:
+        return max(0, round((datetime.fromisoformat(arrival_at) - datetime.fromisoformat(f"{day}T{time}")).total_seconds() / 60))
+    except ValueError:
+        return 0
+
+
+def reschedule_appointment(appointment_id: int, appointment_date: str, appointment_time: str) -> None:
+    with get_connection() as connection:
+        row = connection.execute("SELECT * FROM appointments WHERE id=?", (appointment_id,)).fetchone()
+    if row is None:
+        raise ValueError("No se encontró la cita.")
+    payload = dict(row)
+    payload.update({"appointment_date": appointment_date, "appointment_time": appointment_time})
+    update_appointment(appointment_id, payload)
+
+
+def create_recurring_appointments(payload: dict, interval_days: int, occurrences: int) -> int:
+    group = str(uuid4())
+    created = 0
+    for step in range(max(1, min(24, occurrences))):
+        copied = {**payload, "appointment_date": (date.fromisoformat(payload["appointment_date"]) + timedelta(days=interval_days * step)).isoformat(), "recurrence_group": group}
+        create_appointment(copied)
+        created += 1
+    return created
+
+
+def list_appointment_resources(organization_id: str, location_id: str) -> list[dict]:
+    with get_connection() as connection:
+        rows = connection.execute("SELECT id, name, resource_type FROM appointment_resources WHERE organization_id=? AND location_id=? AND is_active=1 ORDER BY resource_type, name", (int(organization_id), int(location_id))).fetchall()
+    return [dict(row) for row in rows]
+
+
+def create_appointment_resource(organization_id: int, location_id: int, name: str, resource_type: str) -> None:
+    with get_connection() as connection:
+        connection.execute("INSERT INTO appointment_resources (organization_id, location_id, name, resource_type) VALUES (?, ?, ?, ?)", (organization_id, location_id, name.strip(), resource_type.strip() or "Consultorio"))
+        connection.commit()
+
+
+def create_waitlist_entry(payload: dict) -> None:
+    with get_connection() as connection:
+        connection.execute("INSERT INTO appointment_waitlist (organization_id, location_id, patient_id, service, veterinarian_user_id, requested_date, preferred_time, priority, channel, note) VALUES (:organization_id,:location_id,:patient_id,:service,:veterinarian_user_id,:requested_date,:preferred_time,:priority,:channel,:note)", payload)
+        connection.commit()
+
+
+def list_waitlist(organization_id: str, location_id: str) -> list[dict]:
+    with get_connection() as connection:
+        rows = connection.execute("SELECT w.*, p.display_name AS patient FROM appointment_waitlist w JOIN patients p ON p.id=w.patient_id WHERE w.organization_id=? AND w.location_id=? AND w.status IN ('En espera','Avisado') ORDER BY CASE w.status WHEN 'En espera' THEN 0 ELSE 1 END, CASE w.priority WHEN 'Urgente' THEN 0 ELSE 1 END, w.created_at", (int(organization_id), int(location_id))).fetchall()
+    return [dict(row) for row in rows]
+
+
+def notify_waitlist_of_opening(organization_id: int, location_id: int, day: str, veterinarian_user_id: int | None = None) -> dict | None:
+    """Offer the first matching waiting-list request when a slot is released.
+
+    Delivery is represented in the notification outbox, allowing the configured
+    mail/SMS/WhatsApp integration to process it without losing clinical traceability.
+    """
+    with get_connection() as connection:
+        query = """SELECT * FROM appointment_waitlist
+                   WHERE organization_id=? AND location_id=? AND status='En espera'
+                     AND (requested_date='' OR requested_date=? )"""
+        params: list[object] = [organization_id, location_id, day]
+        if veterinarian_user_id:
+            query += " AND (veterinarian_user_id IS NULL OR veterinarian_user_id=?)"
+            params.append(veterinarian_user_id)
+        query += " ORDER BY CASE priority WHEN 'Urgente' THEN 0 ELSE 1 END, created_at LIMIT 1"
+        entry = connection.execute(query, tuple(params)).fetchone()
+        if entry is None:
+            return None
+        notified_at = datetime.now().isoformat(timespec="minutes")
+        connection.execute(
+            "UPDATE appointment_waitlist SET status='Avisado', notified_at=? WHERE id=?",
+            (notified_at, entry["id"]),
+        )
+        connection.execute(
+            """INSERT INTO appointment_notifications
+               (appointment_id, organization_id, location_id, channel, kind, status, scheduled_at, detail)
+               VALUES (NULL, ?, ?, ?, 'Cupo disponible', 'Pendiente', ?, ?)""",
+            (organization_id, location_id, entry["channel"], notified_at,
+             f"Cupo liberado para {entry['service']} el {day}; paciente #{entry['patient_id']}"),
+        )
+        connection.commit()
+    return dict(entry)
+
+
+def create_appointment_block(payload: dict) -> None:
+    with get_connection() as connection:
+        connection.execute("INSERT INTO appointment_blocks (organization_id,location_id,veterinarian_user_id,block_date,start_time,end_time,block_type,note) VALUES (:organization_id,:location_id,:veterinarian_user_id,:block_date,:start_time,:end_time,:block_type,:note)", payload)
+        connection.commit()
+
+
 def appointment_summary(items: list[dict]) -> dict:
     confirmed = sum(1 for item in items if item["status"] == "Confirmada")
     pending = sum(1 for item in items if item["status"] in {"Pendiente", "En espera", "Llamar"})
@@ -270,9 +447,11 @@ def appointment_summary(items: list[dict]) -> dict:
         "pending": pending,
         "waiting": sum(1 for item in items if item["status"] == "En espera"),
         "in_consultation": sum(1 for item in items if item["status"] == "En consulta"),
+        "cancelled": sum(1 for item in items if item["status"] == "Cancelada"),
+        "no_show": sum(1 for item in items if item["status"] == "No asistió"),
         "virtual": virtual,
-        "urgent": sum(1 for item in items if item.get("priority") == "Urgente" and item["status"] not in {"Atendida", "Cancelada"}),
-        "triage_red": sum(1 for item in items if item.get("triage_level") == "Rojo" and item["status"] not in {"Atendida", "Cancelada"}),
+        "urgent": sum(1 for item in items if item.get("priority") == "Urgente" and item["status"] not in {"Atendida", "Cancelada", "No asistió"}),
+        "triage_red": sum(1 for item in items if item.get("triage_level") == "Rojo" and item["status"] not in {"Atendida", "Cancelada", "No asistió"}),
     }
 
 
@@ -289,4 +468,9 @@ def _normalize_operational_fields(payload: dict) -> dict:
         "triage_level": triage_level,
         "triage_note": payload.get("triage_note", "").strip() if priority == "Urgente" else "",
         "arrival_at": payload.get("arrival_at", "").strip() if priority == "Urgente" else "",
+        "resource_id": int(payload.get("resource_id") or 0) or None,
+        "resource_name": payload.get("resource_name", "").strip(),
+        "recurrence_group": payload.get("recurrence_group", "").strip(),
+        "reminder_channel": payload.get("reminder_channel", "").strip(),
+        "reminder_status": payload.get("reminder_status", "Pendiente").strip(),
     }

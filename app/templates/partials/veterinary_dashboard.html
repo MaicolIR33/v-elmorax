@@ -1,10 +1,32 @@
-<section class="vet-dashboard vet-control-board" data-veterinary-dashboard>
+<section class="vet-dashboard vet-control-board{% if 'agenda' not in veterinary_dashboard.preferences.visible_cards %} dashboard-hide-agenda{% endif %}{% if 'tasks' not in veterinary_dashboard.preferences.visible_cards %} dashboard-hide-tasks{% endif %}{% if 'resources' not in veterinary_dashboard.preferences.visible_cards %} dashboard-hide-resources{% endif %}" data-veterinary-dashboard data-dashboard-view="{{ veterinary_dashboard.preferences.selected_view }}">
+    <header class="vet-dashboard-topbar vet-dashboard-topbar-compact">
+        <div class="vet-dashboard-user">
+            <span class="vet-dashboard-avatar" aria-hidden="true">{{ current_user.full_name[:1] }}</span>
+            <span><strong>{{ current_user.full_name }}</strong><small>{{ current_user.role_label }}</small></span>
+        </div>
+    </header>
     <header class="vet-dashboard-heading">
-        <div><span class="vet-flow-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="7" cy="7" r="2.25"></circle><circle cx="17" cy="7" r="2.25"></circle><circle cx="4.5" cy="12.5" r="2"></circle><circle cx="19.5" cy="12.5" r="2"></circle><path d="M7.2 17.2c0-3 2.1-5.2 4.8-5.2s4.8 2.2 4.8 5.2c0 1.9-1.3 3.3-3.1 3.3-.8 0-1.3-.3-1.7-.7-.4.4-.9.7-1.7.7-1.8 0-3.1-1.4-3.1-3.3Z"></path></svg></span><div><p class="vet-overline">Actividad del día</p><h2>{{ scope.selected_location.name if scope.selected_location else 'Tablero' }}</h2></div></div>
-        <div class="vet-board-freshness"><time datetime="{{ agenda_day }}">{{ agenda_day }}</time><span data-dashboard-updated>Actualizado ahora</span></div>
+        <div><span class="vet-flow-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="7" cy="7" r="2.25"></circle><circle cx="17" cy="7" r="2.25"></circle><circle cx="4.5" cy="12.5" r="2"></circle><circle cx="19.5" cy="12.5" r="2"></circle><path d="M7.2 17.2c0-3 2.1-5.2 4.8-5.2s4.8 2.2 4.8 5.2c0 1.9-1.3 3.3-3.1 3.3-.8 0-1.3-.3-1.7-.7-.4.4-.9.7-1.7.7-1.8 0-3.1-1.4-3.1-3.3Z"></path></svg></span><div><p class="vet-overline">{{ veterinary_dashboard.role_focus.title }}</p><h2>{{ veterinary_dashboard.period.label }}</h2><small>{{ veterinary_dashboard.role_focus.detail }}</small></div></div>
+        <div class="vet-board-freshness"><time datetime="{{ veterinary_dashboard.period.start }}">{{ veterinary_dashboard.period.start }}{% if veterinary_dashboard.period.end != veterinary_dashboard.period.start %} · {{ veterinary_dashboard.period.end }}{% endif %}</time><span data-dashboard-updated>Actualizado a las {{ agenda_emergency_time }}</span><span class="vet-dashboard-connection" data-dashboard-connection>En línea</span></div>
     </header>
 
-    <section class="vet-operations-strip vet-operations-{{ veterinary_dashboard.operations.tone }}" aria-label="Pulso operativo" data-live-section="operations">
+    <details class="vet-dashboard-controls" aria-label="Controles del resumen">
+        <summary><span>Periodo: {{ veterinary_dashboard.period.label }}</span><small>Filtros, exportación y personalización</small><b>▾</b></summary>
+        <div class="vet-dashboard-controls-body">
+        <form method="get" action="/" class="vet-period-form">
+            <input type="hidden" name="organization_id" value="{{ scope.organization_id }}"><input type="hidden" name="location_id" value="{{ scope.location_id }}">
+            <label><span>Periodo</span><select name="period" data-period-select><option value="today" {% if veterinary_dashboard.period.id == 'today' %}selected{% endif %}>Hoy</option><option value="tomorrow" {% if veterinary_dashboard.period.id == 'tomorrow' %}selected{% endif %}>Mañana</option><option value="week" {% if veterinary_dashboard.period.id == 'week' %}selected{% endif %}>Semana</option><option value="range" {% if veterinary_dashboard.period.id == 'range' %}selected{% endif %}>Rango</option></select></label>
+            <label class="vet-period-range" {% if veterinary_dashboard.period.id != 'range' %}hidden{% endif %}><span>Desde</span><input type="date" name="date_from" value="{{ veterinary_dashboard.period.start }}"></label><label class="vet-period-range" {% if veterinary_dashboard.period.id != 'range' %}hidden{% endif %}><span>Hasta</span><input type="date" name="date_to" value="{{ veterinary_dashboard.period.end }}"></label>
+            <label><span>Veterinario</span><select name="veterinarian_filter"><option value="">Todos</option>{% for professional in agenda_professionals %}<option value="{{ professional.id }}" {% if veterinary_dashboard.filters.veterinarian == professional.id|string %}selected{% endif %}>{{ professional.full_name }}</option>{% endfor %}</select></label>
+            <label><span>Prioridad</span><select name="priority_filter"><option value="">Todas</option><option value="Urgente" {% if veterinary_dashboard.filters.priority == 'Urgente' %}selected{% endif %}>Urgente</option><option value="Normal" {% if veterinary_dashboard.filters.priority == 'Normal' %}selected{% endif %}>Normal</option></select></label>
+            <label><span>Estado</span><select name="appointment_status_filter"><option value="">Todos</option>{% for state in ['Pendiente','Confirmada','En espera','En consulta'] %}<option value="{{ state }}" {% if veterinary_dashboard.filters.status == state %}selected{% endif %}>{{ state }}</option>{% endfor %}</select></label>
+            <button type="submit" class="vet-period-apply">Actualizar</button>
+        </form>
+        <div class="vet-summary-actions">{% if permissions.export_dashboard %}<a href="/dashboard/resumen/export?period={{ veterinary_dashboard.period.id }}&date_from={{ veterinary_dashboard.period.start }}&date_to={{ veterinary_dashboard.period.end }}&organization_id={{ scope.organization_id }}&location_id={{ scope.location_id }}">Descargar CSV</a><a target="_blank" rel="noopener" href="/dashboard/resumen/imprimir?period={{ veterinary_dashboard.period.id }}&date_from={{ veterinary_dashboard.period.start }}&date_to={{ veterinary_dashboard.period.end }}&organization_id={{ scope.organization_id }}&location_id={{ scope.location_id }}">Imprimir resumen</a>{% endif %}<details class="vet-dashboard-customize"><summary>Personalizar</summary><form action="/dashboard/preferences" method="post"><input type="hidden" name="selected_view" value="{{ veterinary_dashboard.preferences.selected_view }}" data-preference-view>{% for card, label in [('operations','Pulso'),('signals','Prioridades'),('agenda','Agenda'),('tasks','Pendientes'),('analytics','Análisis'),('resources','Recursos'),('continuity','Turno')] %}<label><input type="checkbox" name="visible_cards" value="{{ card }}" {% if card in veterinary_dashboard.preferences.visible_cards %}checked{% endif %}> {{ label }}</label>{% endfor %}{% if permissions.manage_admin %}<label>Aplicar al rol<select name="apply_to_role"><option value="">Solo yo</option><option value="owner">Propietario</option><option value="admin">Administración</option><option value="clinical">Clínica</option><option value="reception">Recepción</option><option value="inventory">Inventario</option></select></label>{% endif %}<button type="submit">Guardar vista</button></form></details></div>
+        </div>
+    </details>
+
+    {% if 'operations' in veterinary_dashboard.preferences.visible_cards %}<section class="vet-operations-strip vet-operations-{{ veterinary_dashboard.operations.tone }}" aria-label="Pulso operativo" data-live-section="operations" data-dashboard-section="operation">
         <div><span class="vet-operations-pulse" aria-hidden="true"></span><div><p class="vet-overline">Pulso operativo</p><strong>{{ veterinary_dashboard.operations.status }}</strong></div></div>
         <dl>
             <div><dt>Urgencias</dt><dd>{{ veterinary_dashboard.operations.urgent }}</dd></div>
@@ -12,30 +34,61 @@
             <div><dt>Atendidas</dt><dd>{{ veterinary_dashboard.operations.completed }}</dd></div>
             <div><dt>Equipo activo</dt><dd>{{ veterinary_dashboard.operations.professionals }}</dd></div>
         </dl>
-    </section>
+    </section>{% endif %}
 
-    <section class="vet-signal-grid vet-board-signals" aria-label="Estado operativo" data-live-section="signals">
-        <a class="vet-signal" href="/agenda{% if scope_query %}?{{ scope_query }}{% endif %}"><span class="vet-signal-dot vet-signal-dot-green"></span><span>Citas de hoy</span><strong>{{ veterinary_dashboard.agenda_summary.total }}</strong></a>
-        <a class="vet-signal" href="/agenda{% if scope_query %}?{{ scope_query }}{% endif %}"><span class="vet-signal-dot vet-signal-dot-amber"></span><span>En espera</span><strong>{{ veterinary_dashboard.agenda_summary.waiting }}</strong></a>
-        <a class="vet-signal" href="/agenda{% if scope_query %}?{{ scope_query }}{% endif %}"><span class="vet-signal-dot vet-signal-dot-blue"></span><span>En consulta</span><strong>{{ veterinary_dashboard.agenda_summary.in_consultation }}</strong></a>
-        {% if permissions.view_inventory %}<a class="vet-signal" href="/alertas{% if scope_query %}?{{ scope_query }}{% endif %}"><span class="vet-signal-dot vet-signal-dot-red"></span><span>Alertas críticas</span><strong>{{ veterinary_dashboard.critical_alerts_total }}</strong></a>{% endif %}
+    {% if 'signals' in veterinary_dashboard.preferences.visible_cards %}<section class="vet-signal-grid vet-board-signals" aria-label="Estado operativo" data-live-section="signals" data-dashboard-section="operation">
+        <a class="vet-signal" href="/agenda?day={{ agenda_day }}{% if scope_query %}&{{ scope_query }}{% endif %}">
+            <span class="vet-signal-icon vet-signal-icon-sage" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 3v3M17 3v3M4 9h16M5 5h14a1 1 0 0 1 1 1v14H4V6a1 1 0 0 1 1-1Z"></path></svg></span>
+            <span class="vet-signal-copy"><span>Citas de hoy</span><small>Agenda activa</small></span><strong>{{ veterinary_dashboard.agenda_summary.total }}</strong><span class="vet-signal-details">Consulta y seguimiento</span>
+        </a>
+        <a class="vet-signal" href="/agenda?day={{ agenda_day }}&status=En%20espera{% if scope_query %}&{{ scope_query }}{% endif %}">
+            <span class="vet-signal-icon vet-signal-icon-amber" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3 3 20h18L12 3Z"></path><path d="M12 9v5M12 17.5v.5"></path></svg></span>
+            <span class="vet-signal-copy"><span>En espera</span><small>Atenciones pendientes</small></span><strong>{{ veterinary_dashboard.agenda_summary.waiting }}</strong><span class="vet-signal-details">Prioriza la recepción</span>
+        </a>
+        <a class="vet-signal" href="/agenda?day={{ agenda_day }}&status=En%20consulta{% if scope_query %}&{{ scope_query }}{% endif %}">
+            <span class="vet-signal-icon vet-signal-icon-lilac" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 8h6M9 12h6M9 16h4M5 3h14a1 1 0 0 1 1 1v16H4V4a1 1 0 0 1 1-1Z"></path></svg></span>
+            <span class="vet-signal-copy"><span>En consulta</span><small>Atención clínica</small></span><strong>{{ veterinary_dashboard.agenda_summary.in_consultation }}</strong><span class="vet-signal-details">Casos en curso</span>
+        </a>
+        {% if permissions.view_inventory %}<a class="vet-signal" href="/alertas?priority=urgent{% if scope_query %}&{{ scope_query }}{% endif %}">
+            <span class="vet-signal-icon vet-signal-icon-slate" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m4 7 8-4 8 4-8 4-8-4Z"></path><path d="M4 7v10l8 4 8-4V7M12 11v10"></path></svg></span>
+            <span class="vet-signal-copy"><span>Alertas críticas</span><small>Inventario</small></span><strong>{{ veterinary_dashboard.critical_alerts_total }}</strong><span class="vet-signal-details">Stock y vencimientos</span>
+        </a>{% endif %}
+    </section>{% endif %}
+
+    <nav class="vet-dashboard-views" aria-label="Vistas del tablero">
+        {% if 'agenda' in veterinary_dashboard.preferences.visible_cards or 'tasks' in veterinary_dashboard.preferences.visible_cards %}<button type="button" class="{% if veterinary_dashboard.preferences.selected_view == 'operation' %}is-active{% endif %}" data-dashboard-view-button="operation" aria-pressed="{{ 'true' if veterinary_dashboard.preferences.selected_view == 'operation' else 'false' }}">Operación</button>{% endif %}
+        {% if 'analytics' in veterinary_dashboard.preferences.visible_cards %}<button type="button" class="{% if veterinary_dashboard.preferences.selected_view == 'analysis' %}is-active{% endif %}" data-dashboard-view-button="analysis" aria-pressed="{{ 'true' if veterinary_dashboard.preferences.selected_view == 'analysis' else 'false' }}">Análisis</button>{% endif %}
+        {% if permissions.view_inventory and veterinary_dashboard.role_focus.show_inventory and 'resources' in veterinary_dashboard.preferences.visible_cards %}<button type="button" class="{% if veterinary_dashboard.preferences.selected_view == 'resources' %}is-active{% endif %}" data-dashboard-view-button="resources" aria-pressed="{{ 'true' if veterinary_dashboard.preferences.selected_view == 'resources' else 'false' }}">Recursos</button>{% endif %}
+        {% if veterinary_dashboard.role_focus.show_handoff and 'continuity' in veterinary_dashboard.preferences.visible_cards %}<button type="button" class="{% if veterinary_dashboard.preferences.selected_view == 'continuity' %}is-active{% endif %}" data-dashboard-view-button="continuity" aria-pressed="{{ 'true' if veterinary_dashboard.preferences.selected_view == 'continuity' else 'false' }}">Entrega de turno</button>{% endif %}
+    </nav>
+
+    <section class="vet-dashboard-analytics" data-dashboard-section="analysis">
+        <header><span><strong>Indicadores y tendencias</strong><small>Atenciones, alertas, consumo y seguimiento clínico</small></span></header>
+        <section class="vet-trend-grid" aria-label="Tendencias del periodo" data-live-section="trends">
+            {% for metric in veterinary_dashboard.trends %}<article class="vet-trend-card vet-trend-{{ metric.tone }}"><span>{{ metric.label }}</span><strong>{{ metric.value }}</strong><small><b>{{ metric.delta_label }}</b> frente al periodo anterior</small></article>{% endfor %}
+        </section>
+        <section class="vet-clinical-indicators" aria-label="Indicadores clínicos" data-live-section="clinical-indicators">
+            {% for indicator in veterinary_dashboard.clinical_indicators %}<a href="{% if loop.index == 4 %}/clinica{% else %}/agenda?day={{ agenda_day }}{% endif %}{% if scope_query %}{% if loop.index == 4 %}?{% else %}&{% endif %}{{ scope_query }}{% endif %}"><span>{{ indicator.label }}</span><strong>{{ indicator.value }}</strong><small>{{ indicator.detail }}</small></a>{% endfor %}
+        </section>
+        <section class="vet-history-chart" aria-label="Evolución histórica"><header><span><strong>Evolución {{ 'mensual' if veterinary_dashboard.history_span == 'month' else 'semanal' }}</strong><small>Citas registradas por día</small></span><form method="get"><input type="hidden" name="history_span" value="{{ 'week' if veterinary_dashboard.history_span == 'month' else 'month' }}"><button type="submit">Ver {{ '7 días' if veterinary_dashboard.history_span == 'month' else '30 días' }}</button></form></header><div class="vet-chart-bars">{% for point in veterinary_dashboard.history_series %}<div title="{{ point.date }} · {{ point.appointments }} citas"><b style="height: {{ point.height }}%"></b><span>{{ point.label }}</span><small>{{ point.appointments }}</small></div>{% else %}<p>El histórico se irá construyendo con la operación diaria.</p>{% endfor %}</div></section>
     </section>
 
     <div class="vet-board-layout">
-        <article class="vet-panel vet-board-next" data-live-section="next-appointment">
+        <article class="vet-panel vet-board-next{% if 'agenda' not in veterinary_dashboard.preferences.visible_cards %} vet-card-hidden{% endif %}" data-live-section="next-appointment" data-dashboard-section="operation">
             <header class="vet-panel-heading"><div><span class="vet-panel-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 3v3M17 3v3M4 9h16M5 5h14a1 1 0 0 1 1 1v14H4V6a1 1 0 0 1 1-1Z"></path></svg></span><div><p class="vet-overline">Agenda inmediata</p><h3>Próximas atenciones</h3></div></div><a class="vet-icon-button vet-icon-button-soft" href="/agenda{% if scope_query %}?{{ scope_query }}{% endif %}" aria-label="Ver agenda completa">→</a></header>
             {% if veterinary_dashboard.appointments %}<div class="vet-board-queue">{% for appointment in veterinary_dashboard.appointments %}<a href="/agenda?day={{ agenda_day }}{% if scope_query %}&{{ scope_query }}{% endif %}" class="vet-board-queue-row{% if appointment.is_urgent %} vet-board-queue-urgent{% endif %}{% if appointment.is_delayed %} vet-board-queue-delayed{% endif %}"><time>{{ appointment.time }}</time><span class="vet-pet-avatar" aria-hidden="true">✦</span><span><strong>{{ appointment.patient }}</strong><small>{{ appointment.service }} · {{ appointment.veterinarian or 'Sin asignar' }}</small></span><span class="vet-queue-state">{% if appointment.triage_level %}<b>Triaje {{ appointment.triage_level }}</b>{% elif appointment.is_delayed %}<b>Retrasada</b>{% elif appointment.is_urgent %}<b>Urgente</b>{% endif %}<span class="vet-status vet-status-{{ appointment.status|lower|replace(' ', '-') }}">{{ appointment.status }}</span></span></a>{% endfor %}</div>
             {% else %}<div class="vet-empty-state"><span aria-hidden="true">✓</span><strong>Agenda libre</strong><p>No hay atenciones pendientes para hoy.</p></div>{% endif %}
         </article>
 
         <div class="vet-side-stack">
-            <article class="vet-panel vet-board-active" data-live-section="active-consultation"><header class="vet-panel-heading"><div><span class="vet-panel-icon" aria-hidden="true">⌁</span><div><p class="vet-overline">Atención</p><h3>En curso</h3></div></div></header>{% set active = veterinary_dashboard.active_appointment %}{% if active %}<div class="vet-active-consultation"><strong>{{ active.patient }}</strong><p>{{ active.service }}</p><small>{{ active.veterinarian }}{% if active.elapsed_minutes is defined %} · {{ active.elapsed_minutes }} min{% endif %}</small>{% if active.patient_id and permissions.view_clinical %}<a class="btn btn-primary" href="/clinica?organization_id={{ scope.organization_id }}&location_id={{ scope.location_id }}&patient_id={{ active.patient_id }}#registro-clinico">Abrir consulta</a>{% endif %}</div>{% else %}<div class="vet-board-empty"><span>✓</span><strong>Sin atención activa</strong></div>{% endif %}</article>
+            <article class="vet-panel vet-board-active" data-live-section="active-consultation" data-dashboard-section="operation"><header class="vet-panel-heading"><div><span class="vet-panel-icon" aria-hidden="true">⌁</span><div><p class="vet-overline">Atención</p><h3>En curso</h3></div></div></header>{% set active = veterinary_dashboard.active_appointment %}{% if active %}<div class="vet-active-consultation"><strong>{{ active.patient }}</strong><p>{{ active.service }}</p><small>{{ active.veterinarian }}{% if active.elapsed_minutes is defined %} · {{ active.elapsed_minutes }} min{% endif %}</small>{% if active.patient_id and permissions.view_clinical %}<a class="btn btn-primary" href="/clinica?organization_id={{ scope.organization_id }}&location_id={{ scope.location_id }}&patient_id={{ active.patient_id }}#registro-clinico">Abrir consulta</a>{% endif %}</div>{% else %}<div class="vet-board-empty"><span>✓</span><strong>Sin atención activa</strong></div>{% endif %}</article>
 
-            {% if permissions.view_inventory %}<article class="vet-panel vet-board-inventory" data-live-section="inventory-critical"><header class="vet-panel-heading"><div><span class="vet-panel-icon" aria-hidden="true">◇</span><div><p class="vet-overline">Inventario</p><h3>Estado crítico</h3></div></div><a class="vet-icon-button vet-icon-button-soft" href="/inventario?status=red{% if scope_query %}&{{ scope_query }}{% endif %}" aria-label="Revisar insumos">→</a></header><div class="vet-inventory-totals"><a href="/inventario?status=red{% if scope_query %}&{{ scope_query }}{% endif %}"><strong>{{ veterinary_dashboard.inventory_summary.critical }}</strong><span>Vencidos o próximos</span></a><a href="/inventario?status=low{% if scope_query %}&{{ scope_query }}{% endif %}"><strong>{{ veterinary_dashboard.inventory_summary.low_stock }}</strong><span>Stock crítico</span></a></div>{% if not veterinary_dashboard.inventory_summary.critical and not veterinary_dashboard.inventory_summary.low_stock %}<div class="vet-board-empty"><span>✓</span><strong>Inventario al día</strong></div>{% endif %}</article>{% endif %}
+            {% if permissions.view_inventory and veterinary_dashboard.role_focus.show_inventory %}<article class="vet-panel vet-board-inventory" data-live-section="inventory-critical" data-dashboard-section="resources"><header class="vet-panel-heading"><div><span class="vet-panel-icon" aria-hidden="true">◇</span><div><p class="vet-overline">Inventario</p><h3>Estado crítico</h3></div></div><a class="vet-icon-button vet-icon-button-soft" href="/inventario?status=red{% if scope_query %}&{{ scope_query }}{% endif %}" aria-label="Revisar insumos">→</a></header><div class="vet-inventory-totals"><a href="/inventario?status=red{% if scope_query %}&{{ scope_query }}{% endif %}"><strong>{{ veterinary_dashboard.inventory_summary.critical }}</strong><span>Vencidos o próximos</span></a><a href="/inventario?status=low{% if scope_query %}&{{ scope_query }}{% endif %}"><strong>{{ veterinary_dashboard.inventory_summary.low_stock }}</strong><span>Stock crítico</span></a></div>{% if not veterinary_dashboard.inventory_summary.critical and not veterinary_dashboard.inventory_summary.low_stock %}<div class="vet-board-empty"><span>✓</span><strong>Inventario al día</strong></div>{% endif %}</article>{% endif %}
 
-            {% if veterinary_dashboard.professional_load|length > 1 %}<article class="vet-panel vet-board-team" data-live-section="team-load"><header class="vet-panel-heading"><div><span class="vet-panel-icon" aria-hidden="true">⌾</span><div><p class="vet-overline">Capacidad</p><h3>Carga del equipo</h3></div></div><a class="vet-icon-button vet-icon-button-soft" href="/agenda{% if scope_query %}?{{ scope_query }}{% endif %}" aria-label="Ver distribución en agenda">→</a></header><div class="vet-team-load">{% for member in veterinary_dashboard.professional_load %}<div><span><strong>{{ member.name }}</strong><small>{{ member.scheduled }} programadas</small></span><span>{% if member.active %}<b>{{ member.active }} en curso</b>{% elif member.waiting %}<b>{{ member.waiting }} esperando</b>{% else %}<b>Disponible</b>{% endif %}</span></div>{% endfor %}</div></article>{% endif %}
+            {% if veterinary_dashboard.role_focus.show_team and veterinary_dashboard.professional_load|length > 1 %}<article class="vet-panel vet-board-team" data-live-section="team-load" data-dashboard-section="resources"><header class="vet-panel-heading"><div><span class="vet-panel-icon" aria-hidden="true">⌾</span><div><p class="vet-overline">Capacidad</p><h3>Carga del equipo</h3></div></div><a class="vet-icon-button vet-icon-button-soft" href="/agenda{% if scope_query %}?{{ scope_query }}{% endif %}" aria-label="Ver distribución en agenda">→</a></header><div class="vet-team-load">{% for member in veterinary_dashboard.professional_load %}<div><span><strong>{{ member.name }}</strong><small>{{ member.scheduled }} programadas</small></span><span>{% if member.active %}<b>{{ member.active }} en curso</b>{% elif member.waiting %}<b>{{ member.waiting }} esperando</b>{% else %}<b>Disponible</b>{% endif %}</span></div>{% endfor %}</div></article>{% endif %}
 
-            <details class="vet-panel vet-handoff" data-live-section="shift-handoff">
+            {% if permissions.manage_dashboard_tasks %}<details class="vet-panel vet-task-manager" data-dashboard-section="operation"><summary><span><small>Gestión</small><strong>Crear o administrar pendientes</strong></span><b>›</b></summary><div class="vet-task-manager-body"><form action="/dashboard/tasks" method="post" class="vet-task-create"><input type="hidden" name="organization_id" value="{{ scope.organization_id }}"><input type="hidden" name="location_id" value="{{ scope.location_id }}"><label>Tarea<input name="title" required placeholder="Acción concreta"></label><label>Responsable<select name="assigned_user_id"><option value="0">Sin asignar</option>{% for professional in agenda_professionals %}<option value="{{ professional.id }}">{{ professional.full_name }}</option>{% endfor %}</select></label><label>Prioridad<select name="priority"><option value="normal">Normal</option><option value="important">Por revisar</option><option value="urgent">Urgente</option></select></label><label>Fecha límite<input type="datetime-local" name="due_at" required></label><label>Nota<input name="message" placeholder="Contexto opcional"></label><button type="submit">Crear pendiente</button></form>{% for task in veterinary_dashboard.assigned_tasks if task.editable %}<details class="vet-task-editor"><summary>{{ task.title }} · {{ task.responsible }}</summary><form action="/dashboard/tasks/{{ task.id }}" method="post"><input type="hidden" name="organization_id" value="{{ scope.organization_id }}"><input type="hidden" name="location_id" value="{{ scope.location_id }}"><input name="title" value="{{ task.title }}" required><select name="assigned_user_id"><option value="0">Sin asignar</option>{% for professional in agenda_professionals %}<option value="{{ professional.id }}" {% if task.assigned_user_id == professional.id %}selected{% endif %}>{{ professional.full_name }}</option>{% endfor %}</select><select name="priority"><option value="normal" {% if task.priority == 'normal' %}selected{% endif %}>Normal</option><option value="important" {% if task.priority == 'important' %}selected{% endif %}>Por revisar</option><option value="urgent" {% if task.priority == 'urgent' %}selected{% endif %}>Urgente</option></select><input type="datetime-local" name="due_at" value="{{ task.due_at|replace(' ', 'T') }}" required><input name="message" value="{{ task.message or '' }}" placeholder="Nota"><button type="submit">Guardar</button></form><form action="/dashboard/tasks/{{ task.id }}/close" method="post"><input type="hidden" name="organization_id" value="{{ scope.organization_id }}"><input type="hidden" name="location_id" value="{{ scope.location_id }}"><button type="submit">Cerrar pendiente</button></form></details>{% endfor %}</div></details>{% endif %}
+            {% if veterinary_dashboard.role_focus.show_handoff %}<details class="vet-panel vet-handoff" data-live-section="shift-handoff" data-dashboard-section="continuity">
                 <summary><span class="vet-panel-icon" aria-hidden="true">↗</span><span><small>Continuidad 24/7</small><strong>Entrega de turno</strong></span><b>›</b></summary>
                 {% if veterinary_dashboard.latest_handoff %}<div class="vet-handoff-latest"><span>{{ veterinary_dashboard.latest_handoff.shift_label or 'Última entrega' }} · {{ veterinary_dashboard.latest_handoff.created_at }}</span><strong>{{ veterinary_dashboard.latest_handoff.summary }}</strong>{% if veterinary_dashboard.latest_handoff.pending_actions %}<p>Pendiente: {{ veterinary_dashboard.latest_handoff.pending_actions }}</p>{% endif %}<small>{{ veterinary_dashboard.latest_handoff.created_by_name }}</small></div>{% endif %}
                 <form action="/dashboard/handoff" method="post" class="vet-handoff-form">
@@ -44,7 +97,7 @@
                     <label><span>Pendientes críticos</span><input name="pending_actions" placeholder="Paciente, lote o acción pendiente"></label>
                     <button class="action-button" type="submit">Guardar entrega</button>
                 </form>
-            </details>
+            </details>{% endif %}
 
         </div>
     </div>
@@ -56,15 +109,38 @@
     let seconds = 0;
     const label = board.querySelector('[data-dashboard-updated]');
     setInterval(() => { seconds += 1; if (label) label.textContent = seconds < 60 ? `Actualizado hace ${seconds} s` : `Actualizado hace ${Math.floor(seconds / 60)} min`; }, 1000);
+    const connection = board.querySelector('[data-dashboard-connection]');
+    const setConnection = (state, text) => { if (!connection) return; connection.classList.toggle('is-syncing', state === 'syncing'); connection.classList.toggle('is-offline', state === 'offline'); connection.textContent = text; };
     setInterval(async () => {
         if (document.hidden) return;
+        setConnection('syncing', 'Actualizando…');
         try {
             const response = await fetch(window.location.href, {headers: {'X-Dashboard-Refresh': '1'}});
-            if (!response.ok) return;
+            if (!response.ok) throw new Error('refresh');
             const copy = new DOMParser().parseFromString(await response.text(), 'text/html');
-            copy.querySelectorAll('[data-live-section]').forEach(fresh => { const current = board.querySelector(`[data-live-section="${fresh.dataset.liveSection}"]`); if (current) current.innerHTML = fresh.innerHTML; });
-            seconds = 0; if (label) label.textContent = 'Actualizado ahora';
-        } catch (_) { /* Se conserva el último estado visible si se pierde conexión. */ }
+            copy.querySelectorAll('[data-live-section]').forEach(fresh => { if (fresh.dataset.liveSection === 'shift-handoff') return; const current = board.querySelector(`[data-live-section="${fresh.dataset.liveSection}"]`); if (current) current.innerHTML = fresh.innerHTML; });
+            seconds = 0; setConnection('online', 'En línea'); if (label) label.textContent = `Actualizado a las ${new Intl.DateTimeFormat('es-CO', {hour:'2-digit', minute:'2-digit'}).format(new Date())}`;
+        } catch (_) { setConnection('offline', 'Sin conexión · se conserva la última información'); }
     }, 30000);
+    const periodSelect = board.querySelector('[data-period-select]');
+    if (periodSelect) periodSelect.addEventListener('change', () => board.querySelectorAll('.vet-period-range').forEach(field => { field.hidden = periodSelect.value !== 'range'; }));
+    board.querySelectorAll('[data-dashboard-view-button]').forEach(button => button.addEventListener('click', () => {
+        const view = button.dataset.dashboardViewButton;
+        board.dataset.dashboardView = view;
+        board.querySelectorAll('[data-preference-view]').forEach(input => { input.value = view; });
+        board.querySelectorAll('[data-dashboard-view-button]').forEach(item => {
+            const active = item === button;
+            item.classList.toggle('is-active', active);
+            item.setAttribute('aria-pressed', String(active));
+        });
+        fetch('/dashboard/preferences', {method: 'POST', headers: {'Content-Type': 'application/x-www-form-urlencoded'}, body: new URLSearchParams({selected_view: view, view_only: '1'})}).catch(() => setConnection('offline', 'Sin conexión · vista sin guardar'));
+    }));
+    board.querySelectorAll('.vet-task-manager').forEach((panel) => {
+        document.addEventListener('click', (event) => {
+            if (panel.open && !panel.contains(event.target)) panel.removeAttribute('open');
+        });
+    });
+    window.addEventListener('offline', () => setConnection('offline', 'Sin conexión · se conserva la última información'));
+    window.addEventListener('online', () => setConnection('online', 'En línea'));
 })();
 </script>

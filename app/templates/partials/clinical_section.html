@@ -4,43 +4,41 @@
          ENCABEZADO
          ===================================================== -->
 
-    <div class="section-heading split-heading vet-patients-header">
+    <div class="section-heading split-heading vet-patients-header{% if patient_history_view %} vet-history-page-header{% endif %}">
 
         <div>
-            <p class="eyebrow">Clínica veterinaria</p>
-
+            {% if patient_history_view %}
+            <p class="eyebrow">Historial clínico</p>
+            <h2 class="page-title">Historial de {{ selected_patient.display_name }}</h2>
+            {% else %}
             <h2 class="page-title">
                 Pacientes
             </h2>
 
             <p class="lead compact">
-                Gestiona las mascotas de la sede, consulta su información y revisa sus atenciones clínicas.
+                Gestiona mascotas y atenciones.
             </p>
+            {% endif %}
         </div>
 
-
-        {% if permissions.manage_clinical %}
-
-        <div class="vet-patient-actions">
-
-            <button
-                type="button"
-                class="btn btn-primary"
-                data-open-modal="patient-modal"
+        {% if patient_history_view %}
+        <div class="vet-history-page-actions">
+            <a class="action-button vet-history-download" href="/pacientes/{{ selected_patient.id }}/historial/descargar?{{ scope_query }}">↓ Descargar PDF</a>
+            {% if permissions.manage_clinical and clinical_records %}
+            <form
+                method="post"
+                action="/pacientes/{{ selected_patient.id }}/historial/delete"
+                class="vet-history-delete-form"
+                data-delete-history
+                data-delete-label="el historial clínico de «{{ selected_patient.display_name }}»"
             >
-                + Registrar mascota
-            </button>
-
-            <button
-                type="button"
-                class="btn btn-secondary"
-                data-open-modal="record-modal"
-            >
-                + Registrar nota
-            </button>
-
+                <input type="hidden" name="organization_id" value="{{ scope.organization_id }}">
+                <input type="hidden" name="location_id" value="{{ scope.location_id }}">
+                <button type="submit" class="vet-history-delete">Eliminar historial</button>
+            </form>
+            {% endif %}
+            <a class="action-button vet-history-back" href="/clinica?{{ scope_query }}">← Volver a pacientes</a>
         </div>
-
         {% endif %}
 
     </div>
@@ -57,7 +55,6 @@
     </div>
 
     {% endif %}
-
 
     {% if record_saved %}
 
@@ -77,26 +74,35 @@
     {% endif %}
 
 
+    {% if not patient_history_view %}
     <!-- =====================================================
          MÉTRICAS
          ===================================================== -->
 
-    <div class="inventory-metrics vet-patient-metrics">
+    <div class="vet-patient-overview" aria-label="Resumen de pacientes">
 
-        <div class="metric-chip">
-            Pacientes: {{ clinical_summary.patients_total }}
+        <div class="vet-overview-item">
+            <span>Pacientes</span>
+            <strong>{{ clinical_summary.patients_total }}</strong>
+            <small>registrados en la sede</small>
         </div>
 
-        <div class="metric-chip">
-            Atenciones: {{ clinical_summary.records_total }}
+        <div class="vet-overview-item">
+            <span>Atenciones</span>
+            <strong>{{ clinical_summary.records_total }}</strong>
+            <small>historial clínico</small>
         </div>
 
-        <div class="metric-chip metric-chip-yellow">
-            Seguimientos: {{ clinical_summary.follow_up }}
+        <div class="vet-overview-item vet-overview-item-follow-up">
+            <span>Seguimientos</span>
+            <strong>{{ clinical_summary.follow_up }}</strong>
+            <small>por atender</small>
         </div>
 
-        <div class="metric-chip metric-chip-red">
-            Casos abiertos: {{ clinical_summary.open_cases }}
+        <div class="vet-overview-item vet-overview-item-open">
+            <span>Casos abiertos</span>
+            <strong>{{ clinical_summary.open_cases }}</strong>
+            <small>requieren revisión</small>
         </div>
 
     </div>
@@ -108,40 +114,50 @@
 
     <article class="panel-card vet-patient-search-card">
 
-        <div class="section-heading">
+        <div class="vet-search-copy">
 
             <p class="eyebrow">
-                Consulta rápida
+                Búsqueda rápida
             </p>
 
             <h3>
-                Buscar mascota
+                Encuentra una mascota
             </h3>
+
+            <p>Busca por nombre, tutor, teléfono, microchip, especie o raza y combina filtros clínicos.</p>
 
         </div>
 
 
         <form
+            action="/clinica"
+            method="get"
             class="filter-bar vet-patient-search"
-            data-patient-search-form
-            onsubmit="return false;"
         >
+            <input type="hidden" name="organization_id" value="{{ scope.organization_id }}">
+            <input type="hidden" name="location_id" value="{{ scope.location_id }}">
 
             <label>
 
-                <span>
+                <span class="visually-hidden">
                     Buscar paciente
                 </span>
 
                 <input
                     type="search"
                     id="patient-search"
-                    data-patient-search
-                    placeholder="Nombre, especie o raza..."
+                    name="q"
+                    value="{{ patient_filters.q }}"
+                    placeholder="Nombre, tutor, teléfono, especie, raza o microchip..."
                     autocomplete="off"
                 >
 
             </label>
+
+            <label class="vet-patient-filter"><span>Estado</span><select name="patient_status"><option value="">Todos</option><option value="active"{% if patient_filters.status == 'active' %} selected{% endif %}>Activos</option><option value="inactive"{% if patient_filters.status == 'inactive' %} selected{% endif %}>Inactivos</option></select></label>
+            <label class="vet-patient-filter"><span>Especie</span><select name="species"><option value="">Todas</option>{% for species_name in patient_species_options %}<option value="{{ species_name }}"{% if patient_filters.species|lower == species_name|lower %} selected{% endif %}>{{ species_name }}</option>{% endfor %}</select></label>
+            <label class="vet-patient-filter"><span>Control preventivo</span><select name="prevention"><option value="">Todos</option><option value="vaccine"{% if patient_filters.prevention == 'vaccine' %} selected{% endif %}>Vacunas pendientes / próximas</option><option value="deworming"{% if patient_filters.prevention == 'deworming' %} selected{% endif %}>Desparasitación pendiente</option></select></label>
+            <label class="vet-patient-alert-filter"><input type="checkbox" name="alerts" value="1"{% if patient_filters.alerts %} checked{% endif %}><span>Con alertas o alergias</span></label>
 
 
             <div class="filter-actions">
@@ -149,45 +165,35 @@
                 <button
                     type="submit"
                     class="btn btn-secondary"
-                    data-patient-search-button
                 >
                     🔎 Buscar
                 </button>
 
 
-                <button
-                    type="button"
-                    class="btn btn-secondary"
-                    data-patient-search-clear
-                >
-                    Limpiar
-                </button>
+                <a class="btn btn-secondary" href="/clinica?organization_id={{ scope.organization_id }}&location_id={{ scope.location_id }}">Limpiar</a>
 
             </div>
 
         </form>
 
 
-        <p
-            class="vet-search-result"
-            data-patient-search-result
-            aria-live="polite"
-        ></p>
-
     </article>
+
+    {% endif %}
 
 
     <!-- =====================================================
          PACIENTES + ATENCIONES
          ===================================================== -->
 
-    <div class="vet-patients-layout">
+    <div class="vet-patients-layout{% if selected_patient %} is-showing-history{% endif %}">
 
 
         <!-- =================================================
              LISTADO DE PACIENTES
              ================================================= -->
 
+        {% if not patient_history_view %}
         <article class="panel-card vet-patient-list-card">
 
             <div class="split-heading vet-card-heading">
@@ -205,19 +211,28 @@
                 </div>
 
 
-                <strong class="vet-list-count">
-                    {{ clinical_summary.patients_total }}
-                </strong>
+                <div class="vet-card-heading-actions">
+                    {% if permissions.manage_clinical %}
+                    <button
+                        type="button"
+                        class="btn btn-primary"
+                        data-open-modal="patient-modal"
+                    >
+                        + Registrar mascota
+                    </button>
+                    {% endif %}
+                </div>
 
             </div>
 
 
+            <p class="vet-patient-count">{{ patient_directory_total }} paciente{% if patient_directory_total != 1 %}s{% endif %}{% if patient_directory_total != patients|length %} encontrados{% endif %} · página {{ patient_directory_page }} de {{ patient_directory_pages }}</p>
             <div
                 class="vet-patient-list"
                 data-patient-list
             >
 
-                {% for patient in patients %}
+                {% for patient in patient_directory %}
 
                 <div
                     class="vet-patient-item"
@@ -265,21 +280,8 @@
                             </p>
 
 
-                            <p class="vet-patient-secondary">
-
-                                {% if patient.sex %}
-                                    {{ patient.sex }}
-                                {% endif %}
-
-                                {% if patient.sex and patient.birth_date %}
-                                    ·
-                                {% endif %}
-
-                                {% if patient.birth_date %}
-                                    {{ patient.birth_date }}
-                                {% endif %}
-
-                            </p>
+                            <p class="vet-patient-secondary">{{ patient.sex or "Sexo sin registrar" }} · {{ patient.age_label }}{% if patient.birth_date %} · Nacimiento {{ patient.birth_date }}{% endif %}</p>
+                            {% if patient.allergies_actionable or patient.clinical_alert_actionable or patient.conditions_actionable %}<div class="vet-patient-alerts">{% if patient.allergies_actionable %}<span class="vet-patient-alert-chip" title="{{ patient.allergies }}">Alergia · {{ patient.allergies }}</span>{% endif %}{% if patient.clinical_alert_actionable %}<span class="vet-patient-alert-chip is-critical" title="{{ patient.clinical_alert }}">Alerta · {{ patient.clinical_alert }}</span>{% endif %}{% if patient.conditions_actionable %}<span class="vet-patient-alert-chip" title="{{ patient.preexisting_conditions }}">Antecedente · {{ patient.preexisting_conditions }}</span>{% endif %}</div>{% endif %}
 
                         </div>
 
@@ -288,77 +290,86 @@
 
                     <div class="vet-patient-info">
 
-                        <span>
+                        <div class="vet-patient-status">
+                            <span class="vet-patient-weight">
 
-                            {% if patient.weight_kg %}
-                                {{ patient.weight_kg }} kg
-                            {% else %}
-                                Sin peso
-                            {% endif %}
+                                {% if patient.weight_kg %}
+                                    {{ patient.weight_kg }} kg
+                                {% else %}
+                                    Sin peso
+                                {% endif %}
 
-                        </span>
-
-
-                        <span
-                            class="table-badge table-badge-green"
-                        >
-                            {{ patient.vaccine_status or "Sin esquema" }}
-                        </span>
+                            </span>
 
 
-                        <span>
-                            Última atención:
-                            {{ patient.last_visit or "Sin atenciones" }}
+                            <span class="table-badge {% if patient.vaccine_due_state == 'overdue' %}table-badge-red{% elif patient.vaccine_due_state == 'upcoming' %}table-badge-yellow{% elif patient.vaccine_pending %}table-badge-red{% else %}table-badge-green{% endif %}">
+                                {{ patient.vaccine_status or "Sin esquema" }}
+                            </span>
+                            <span class="vet-patient-state{% if patient.patient_status|lower == 'inactive' %} is-inactive{% endif %}">{{ "Inactivo" if patient.patient_status|lower == "inactive" else "Activo" }}</span>
+                        </div>
+                        <div class="vet-patient-prevention">{% if patient.vaccine_due_state == 'overdue' %}<span class="is-overdue">Vacuna vencida · {{ patient.next_vaccine_due }}</span>{% elif patient.vaccine_due_state == 'upcoming' %}<span class="is-upcoming">Próxima vacuna · {{ patient.next_vaccine_due }}</span>{% endif %}{% if patient.deworming_due_state == 'overdue' %}<span class="is-overdue">Desparasitación vencida · {{ patient.next_deworming_due }}</span>{% elif patient.deworming_due_state == 'upcoming' %}<span class="is-upcoming">Próxima desparasitación · {{ patient.next_deworming_due }}</span>{% elif patient.deworming_pending %}<span class="is-overdue">Desparasitación pendiente{% if patient.deworming_status %} · {{ patient.deworming_status }}{% endif %}</span>{% elif patient.deworming_date %}<span>Última desparasitación · {{ patient.deworming_date }}</span>{% elif patient.deworming_status %}<span>Desparasitación · {{ patient.deworming_status }}</span>{% endif %}</div>
+
+                        <span class="vet-patient-last-visit">
+                            Última atención: {{ patient.last_visit or "Sin atenciones" }}
                         </span>
 
 
                         {% if permissions.manage_clinical %}
-                        <button
-                            type="button"
-                            class="action-button"
-                            data-edit-patient
-                            data-patient-id="{{ patient.id }}"
-                            data-patient-name="{{ patient.display_name|default('', true) }}"
-                            data-patient-species="{{ patient.species|default('', true) }}"
-                            data-patient-breed="{{ patient.breed|default('', true) }}"
-                            data-patient-sex="{{ patient.sex|default('', true) }}"
-                            data-patient-birth-date="{{ patient.birth_date|default('', true) }}"
-                            data-patient-weight="{{ patient.weight_kg|default('', true) }}"
-                            data-patient-vaccine="{{ patient.vaccine_status|default('No aplica', true) }}"
-                            data-patient-owner="{{ patient.owner_name|default('', true) }}"
-                            data-patient-phone="{{ patient.phone|default('', true) }}"
-                            data-patient-microchip="{{ patient.microchip|default('', true) }}"
-                        >
-                            Actualizar
-                        </button>
-
-                        <form
-                            action="/patients/{{ patient.id }}/delete"
-                            method="post"
-                            class="inline-form"
-                            onsubmit="return confirm('¿Deseas eliminar esta mascota?');"
-                        >
-
-                            <input
-                                type="hidden"
-                                name="organization_id"
-                                value="{{ scope.organization_id }}"
-                            >
-
-                            <input
-                                type="hidden"
-                                name="location_id"
-                                value="{{ scope.location_id }}"
-                            >
-
+                        <div class="vet-patient-row-actions">
+                            <button type="button" class="action-button vet-patient-record-action" data-open-modal="record-modal" data-record-patient-id="{{ patient.id }}">Registrar atención</button>
+                            {% if permissions.manage_agenda %}<a class="action-button" href="/agenda?organization_id={{ scope.organization_id }}&location_id={{ scope.location_id }}&patient_id={{ patient.id }}&new=1">Crear cita</a>{% endif %}
+                            {% if permissions.view_clinical %}<a class="action-button" href="/pacientes/{{ patient.id }}/historial?organization_id={{ scope.organization_id }}&location_id={{ scope.location_id }}">Historial</a>{% endif %}
                             <button
-                                class="action-button action-danger"
-                                type="submit"
+                                type="button"
+                                class="action-button"
+                                data-edit-patient
+                                data-patient-id="{{ patient.id }}"
+                                data-patient-name="{{ patient.display_name|default('', true) }}"
+                                data-patient-species="{{ patient.species|default('', true) }}"
+                                data-patient-breed="{{ patient.breed|default('', true) }}"
+                                data-patient-sex="{{ patient.sex|default('', true) }}"
+                                data-patient-birth-date="{{ patient.birth_date|default('', true) }}"
+                                data-patient-weight="{{ patient.weight_kg|default('', true) }}"
+                                data-patient-vaccine="{{ patient.vaccine_status|default('No aplica', true) }}"
+                                data-patient-deworming-status="{{ patient.deworming_status|default('', true) }}"
+                                data-patient-deworming-date="{{ patient.deworming_date|default('', true) }}"
+                                data-patient-next-deworming="{{ patient.next_deworming_due|default('', true) }}"
+                                data-patient-owner="{{ patient.owner_name|default('', true) }}"
+                                data-patient-phone="{{ patient.phone|default('', true) }}"
+                                data-patient-microchip="{{ patient.microchip|default('', true) }}"
                             >
-                                Eliminar
+                                Actualizar
                             </button>
 
-                        </form>
+                            <form
+                                action="/patients/{{ patient.id }}/delete"
+                                method="post"
+                                class="inline-form"
+                                data-delete-patient
+                                data-patient-name="{{ patient.display_name }}"
+                            >
+
+                                <input
+                                    type="hidden"
+                                    name="organization_id"
+                                    value="{{ scope.organization_id }}"
+                                >
+
+                                <input
+                                    type="hidden"
+                                    name="location_id"
+                                    value="{{ scope.location_id }}"
+                                >
+
+                                <button
+                                    class="action-button action-danger"
+                                    type="submit"
+                                >
+                                    Eliminar
+                                </button>
+
+                            </form>
+                        </div>
 
                         {% endif %}
 
@@ -376,11 +387,11 @@
                     </div>
 
                     <strong>
-                        No hay mascotas registradas
+                        {{ "No hay pacientes que coincidan con estos filtros" if patient_directory_total == 0 and patients else "No hay mascotas registradas" }}
                     </strong>
 
                     <p>
-                        Utiliza "Registrar mascota" para agregar el primer paciente.
+                        {% if patients %}Prueba cambiando o limpiando los filtros.{% else %}Utiliza "Registrar mascota" para agregar el primer paciente.{% endif %}
                     </p>
 
                 </div>
@@ -388,40 +399,59 @@
                 {% endfor %}
 
 
-                <div
-                    class="vet-empty-state is-hidden"
-                    data-patient-no-results
-                >
-
-                    <div class="vet-empty-icon">
-                        🔎
-                    </div>
-
-                    <strong>
-                        No se encontraron mascotas
-                    </strong>
-
-                    <p>
-                        Prueba con otro nombre, especie o raza.
-                    </p>
-
-                </div>
-
             </div>
 
+            {% if patient_directory_pages > 1 %}<nav class="vet-patient-pagination" aria-label="Paginación de pacientes">{% if patient_directory_page > 1 %}<a href="/clinica?{{ scope_query }}{% if patient_directory_query %}&{{ patient_directory_query }}{% endif %}&page={{ patient_directory_page - 1 }}" aria-label="Página anterior">← Anterior</a>{% else %}<span class="is-disabled">← Anterior</span>{% endif %}<span>Página {{ patient_directory_page }} de {{ patient_directory_pages }}</span>{% if patient_directory_page < patient_directory_pages %}<a href="/clinica?{{ scope_query }}{% if patient_directory_query %}&{{ patient_directory_query }}{% endif %}&page={{ patient_directory_page + 1 }}" aria-label="Página siguiente">Siguiente →</a>{% else %}<span class="is-disabled">Siguiente →</span>{% endif %}</nav>{% endif %}
+
         </article>
+        {% endif %}
 
 
         <!-- =================================================
              ATENCIONES RECIENTES
              ================================================= -->
 
-        <article class="panel-card vet-recent-card">
+        <article class="panel-card vet-recent-card{% if selected_patient %} is-patient-history{% endif %}" id="historial-clinico">
+
+            {% if patient_history_view and selected_patient %}
+            <section class="vet-history-patient-card" aria-label="Ficha resumida de {{ selected_patient.display_name }}">
+                <div class="vet-history-summary-heading">
+                    <div>
+                        <p class="eyebrow">Perfil del paciente</p>
+                        <h3>Datos de referencia</h3>
+                    </div>
+                    {% if selected_patient.clinical_alert %}
+                    <span class="table-badge table-badge-red">Alerta clínica</span>
+                    {% endif %}
+                </div>
+                <dl class="vet-history-patient-details">
+                    <div><dt>Especie y raza</dt><dd>{{ selected_patient.species or "-" }}{% if selected_patient.breed %} · {{ selected_patient.breed }}{% endif %}</dd></div>
+                    <div><dt>Tutor</dt><dd>{{ selected_patient.owner_name or "Sin registrar" }}{% if selected_patient.phone %}<small>{{ selected_patient.phone }}</small>{% endif %}</dd></div>
+                    <div><dt>Edad / sexo</dt><dd>{{ selected_patient_age }}{% if selected_patient.sex %} · {{ selected_patient.sex }}{% endif %}{% if selected_patient.birth_date %}<small>Nacimiento: {{ selected_patient.birth_date }}</small>{% endif %}</dd></div>
+                    <div><dt>Peso registrado</dt><dd>{% if selected_patient.weight_kg %}{{ selected_patient.weight_kg }} kg{% else %}Sin registrar{% endif %}</dd></div>
+                    <div><dt>Vacunación</dt><dd>{{ selected_patient.vaccine_status or "Sin registrar" }}</dd></div>
+                    <div><dt>Microchip</dt><dd>{{ selected_patient.microchip or "Sin registrar" }}</dd></div>
+                </dl>
+                {% if selected_patient.allergies or selected_patient.preexisting_conditions or selected_patient.medical_history or selected_patient.clinical_alert %}
+                <div class="vet-history-patient-alerts">
+                    {% if selected_patient.allergies %}<p><strong>Alergias:</strong> {{ selected_patient.allergies }}</p>{% endif %}
+                    {% if selected_patient.preexisting_conditions %}<p><strong>Condiciones previas:</strong> {{ selected_patient.preexisting_conditions }}</p>{% endif %}
+                    {% if selected_patient.medical_history %}<p><strong>Antecedentes:</strong> {{ selected_patient.medical_history }}</p>{% endif %}
+                    {% if selected_patient.clinical_alert %}<p><strong>Alerta:</strong> {{ selected_patient.clinical_alert }}</p>{% endif %}
+                </div>
+                {% endif %}
+            </section>
+            {% if patient_weight_points %}<section class="vet-patient-weight-chart" aria-label="Evolución del peso de {{ selected_patient.display_name }}"><div><p class="eyebrow">Evolución</p><h4>Peso en el tiempo</h4><span>{{ patient_weight_points[-1].weight }} kg · {{ patient_weight_points[-1].date }}</span></div><svg viewBox="0 0 400 132" role="img" aria-label="Gráfico de peso registrado en atenciones"> <path class="vet-weight-gridline" d="M24 36H376 M24 70H376 M24 104H376"/><polyline points="{% for point in patient_weight_points %}{{ point.x }},{{ point.y }} {% endfor %}"/>{% for point in patient_weight_points %}<circle cx="{{ point.x }}" cy="{{ point.y }}" r="4"><title>{{ point.date }}: {{ point.weight }} kg</title></circle>{% endfor %}</svg><div class="vet-patient-weight-labels"><span>{{ patient_weight_points[0].date }}</span><span>{{ patient_weight_points[-1].date }}</span></div></section>{% endif %}
+            {% endif %}
 
             <div class="split-heading vet-card-heading">
 
                 <div>
 
+                    {% if selected_patient %}
+                    <p class="eyebrow">Registro clínico</p>
+                    <h3>Atenciones clínicas</h3>
+                    {% else %}
                     <p class="eyebrow">
                         Historial reciente
                     </p>
@@ -429,13 +459,31 @@
                     <h3>
                         Atenciones recientes
                     </h3>
+                    {% endif %}
 
                 </div>
 
 
-                <strong class="vet-list-count">
-                    {{ clinical_summary.records_total }}
-                </strong>
+                <div class="vet-card-heading-actions">
+                    {% if permissions.manage_clinical and not patient_history_view %}
+                    <button
+                        type="button"
+                        class="btn btn-secondary"
+                        data-open-modal="record-modal"
+                    >
+                        + Registrar nota
+                    </button>
+                    {% endif %}
+
+                    {% if selected_patient and not patient_history_view %}
+                    <a
+                        class="action-button vet-history-action"
+                        href="/clinica?{{ scope_query }}#historial-clinico"
+                    >
+                        Ver todas
+                    </a>
+                    {% endif %}
+                </div>
 
             </div>
 
@@ -444,27 +492,39 @@
 
                 {% for record in clinical_records %}
 
-                <div class="vet-recent-item">
+                <div class="vet-recent-item{% if selected_patient %} vet-history-record{% endif %}">
 
                     <div class="vet-recent-main">
 
+                        {% if not selected_patient %}
                         <div class="vet-recent-icon">
                             🩺
                         </div>
+                        {% endif %}
 
 
                         <div>
 
                             <strong>
-                                {{ record.display_name }}
+                                {% if selected_patient %}
+                                    {{ record.reason or "Atención clínica" }}
+                                {% else %}
+                                    {{ record.display_name }}
+                                {% endif %}
                             </strong>
 
+                            {% if selected_patient and record.professional %}
+                            <p class="vet-history-visit-professional">Atendido por {{ record.professional }}</p>
+                            {% endif %}
+
+                            {% if not selected_patient %}
                             <p>
                                 {{ record.reason }}
                             </p>
+                            {% endif %}
 
 
-                            {% if record.service_performed %}
+                            {% if record.service_performed and record.service_performed != record.reason %}
 
                             <p class="vet-recent-detail">
                                 {{ record.service_performed }}
@@ -473,9 +533,41 @@
                             {% endif %}
 
 
+                            {% if selected_patient %}
+                            <p class="vet-history-summary-label">Motivo y observaciones</p>
+                            {% endif %}
+
                             <p class="vet-recent-note">
                                 {{ record.note }}
                             </p>
+
+                            {% if selected_patient %}
+                            <dl class="vet-history-record-details">
+                                {% if record.vital_signs %}
+                                <div><dt>Evaluación</dt><dd>{{ record.vital_signs }}</dd></div>
+                                {% endif %}
+                                {% if record.diagnosis %}
+                                <div><dt>Valoración clínica</dt><dd>{{ record.diagnosis }}</dd></div>
+                                {% endif %}
+                                {% if record.treatment_plan or record.prescription %}
+                                <div><dt>Plan de manejo</dt><dd>{{ record.treatment_plan or record.prescription }}</dd></div>
+                                {% endif %}
+                            </dl>
+                            {% if record.specialty or (record.current_weight_kg and record.current_weight_kg != selected_patient.weight_kg) or record.allergies or (record.prescription and record.prescription != record.treatment_plan) or record.discharge_notes or record.next_vaccine_due or record.dental_chart %}
+                            <section class="vet-history-followup-details" aria-label="Seguimiento clínico">
+                                <p class="vet-history-summary-label">Seguimiento clínico</p>
+                                    <dl class="vet-history-record-details vet-history-extra-details">
+                                        {% if record.specialty %}<div><dt>Especialidad</dt><dd>{{ record.specialty }}</dd></div>{% endif %}
+                                        {% if record.current_weight_kg and record.current_weight_kg != selected_patient.weight_kg %}<div><dt>Peso durante esta atención</dt><dd>{{ record.current_weight_kg }} kg</dd></div>{% endif %}
+                                        {% if record.allergies %}<div><dt>Alergias registradas</dt><dd>{{ record.allergies }}</dd></div>{% endif %}
+                                        {% if record.prescription and record.prescription != record.treatment_plan %}<div><dt>Prescripción</dt><dd>{{ record.prescription }}</dd></div>{% endif %}
+                                        {% if record.discharge_notes %}<div><dt>Indicaciones de salida</dt><dd>{{ record.discharge_notes }}</dd></div>{% endif %}
+                                        {% if record.next_vaccine_due %}<div><dt>Próxima vacuna</dt><dd>{{ record.next_vaccine_due }}</dd></div>{% endif %}
+                                        {% if record.dental_chart %}<div><dt>Odontograma</dt><dd>{{ record.dental_chart }}</dd></div>{% endif %}
+                                    </dl>
+                            </section>
+                            {% endif %}
+                            {% endif %}
 
                         </div>
 
@@ -502,6 +594,30 @@
                             Control: {{ record.follow_up_date }}
                         </small>
 
+                        {% endif %}
+
+                        {% if permissions.manage_clinical and selected_patient and patient_history_view %}
+                        <form
+                            method="post"
+                            action="/clinical-records/{{ record.id }}/delete"
+                            class="vet-history-record-delete-form"
+                            data-delete-record
+                            data-delete-label="la atención «{{ record.reason or 'Atención clínica' }}»"
+                        >
+                            <input type="hidden" name="organization_id" value="{{ scope.organization_id }}">
+                            <input type="hidden" name="location_id" value="{{ scope.location_id }}">
+                            <input type="hidden" name="patient_id" value="{{ selected_patient.id }}">
+                            <button type="submit" class="vet-history-record-delete">Eliminar atención</button>
+                        </form>
+                        {% endif %}
+
+                        {% if permissions.view_clinical and not selected_patient %}
+                        <a
+                            class="action-button vet-history-action"
+                            href="/pacientes/{{ record.patient_id }}/historial?{{ scope_query }}#historial-clinico"
+                        >
+                            Ver historial
+                        </a>
                         {% endif %}
 
                     </div>
@@ -828,6 +944,22 @@
 
                     </select>
 
+                </label>
+
+                <div class="form-grid">
+                    <label>
+                        <span>Estado / producto de desparasitación</span>
+                        <input type="text" name="deworming_status" placeholder="Ej. Aplicada · producto">
+                    </label>
+                    <label>
+                        <span>Última desparasitación</span>
+                        <input type="date" name="deworming_date">
+                    </label>
+                </div>
+                <label>
+                    <span>Próxima desparasitación indicada</span>
+                    <input type="date" name="next_deworming_due">
+                    <small>Registra la fecha indicada por el profesional; no se asume un intervalo automático.</small>
                 </label>
 
 
@@ -1276,282 +1408,37 @@
 
     </div>
 
+    <div
+        class="vet-modal is-hidden"
+        id="delete-patient-modal"
+        data-modal
+    >
+        <div class="vet-modal-backdrop" data-close-modal></div>
+
+        <div
+            class="vet-modal-content vet-delete-modal-content"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="delete-patient-title"
+            aria-describedby="delete-patient-description"
+        >
+            <div class="vet-delete-icon" aria-hidden="true">!</div>
+            <p class="eyebrow">Acción irreversible</p>
+            <h3 id="delete-patient-title" data-delete-title>¿Eliminar mascota?</h3>
+            <p id="delete-patient-description" data-delete-description>
+                Eliminarás a <strong data-delete-patient-name></strong> y su historial clínico. Esta acción no se puede deshacer.
+            </p>
+            <div class="vet-modal-actions vet-delete-actions">
+                <button type="button" class="btn btn-secondary" data-close-modal>Cancelar</button>
+                <button type="button" class="btn vet-delete-confirm" data-confirm-delete data-delete-confirm>Eliminar mascota</button>
+            </div>
+        </div>
+
+    </div>
+
     {% endif %}
 
 </section>
-
-<style>
-/* =========================================================
-   PACIENTES VETERINARIA - DISEÑO FINAL
-   ========================================================= */
-
-/* -------------------------
-   PACIENTES + ATENCIONES
-   ------------------------- */
-
-.vet-patients-layout {
-    display: grid !important;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
-    gap: 14px !important;
-    width: 100% !important;
-    align-items: stretch !important;
-}
-
-.vet-patient-list-card,
-.vet-recent-card {
-    width: 100% !important;
-    min-width: 0 !important;
-    height: 300px !important;
-    max-height: 300px !important;
-    overflow: hidden !important;
-    box-sizing: border-box !important;
-}
-
-/* Contenido desplazable dentro de cada cuadro */
-
-.vet-patient-list,
-.vet-recent-list {
-    max-height: 220px !important;
-    overflow-y: auto !important;
-    overflow-x: hidden !important;
-    padding-right: 5px !important;
-}
-
-/* -------------------------
-   PANEL LATERAL
-   ------------------------- */
-
-.vet-modal {
-    position: fixed !important;
-    inset: 0 !important;
-    width: 100vw !important;
-    height: 100vh !important;
-
-    display: flex !important;
-    justify-content: flex-end !important;
-    align-items: stretch !important;
-
-    z-index: 99999 !important;
-
-    background: transparent !important;
-
-    opacity: 1 !important;
-    visibility: visible !important;
-    pointer-events: auto !important;
-
-    margin: 0 !important;
-    padding: 0 !important;
-
-    box-sizing: border-box !important;
-}
-
-/* MODAL CERRADO */
-
-.vet-modal.is-hidden {
-    display: none !important;
-    opacity: 0 !important;
-    visibility: hidden !important;
-    pointer-events: none !important;
-}
-
-/* Fondo oscuro */
-
-.vet-modal-backdrop {
-    position: absolute !important;
-    inset: 0 !important;
-
-    background: rgba(2, 12, 14, 0.72) !important;
-    backdrop-filter: blur(2px) !important;
-
-    cursor: pointer !important;
-}
-
-/* -------------------------
-   PANEL DERECHO
-   ------------------------- */
-
-.vet-modal-content {
-    position: relative !important;
-    z-index: 2 !important;
-
-    width: 560px !important;
-    max-width: 48vw !important;
-    min-width: 500px !important;
-
-    height: 100vh !important;
-    max-height: 100vh !important;
-
-    margin: 0 !important;
-
-    padding: 24px !important;
-
-    box-sizing: border-box !important;
-
-    overflow-y: auto !important;
-    overflow-x: hidden !important;
-
-    background: #102528 !important;
-
-    border-left: 1px solid rgba(105, 188, 177, 0.45) !important;
-
-    box-shadow:
-        -20px 0 50px rgba(0, 0, 0, 0.40) !important;
-
-    transform: translateX(0) !important;
-
-    animation: vetPanelEntrada 0.25s ease-out !important;
-}
-
-@keyframes vetPanelEntrada {
-    from {
-        transform: translateX(100%);
-    }
-
-    to {
-        transform: translateX(0);
-    }
-}
-
-/* -------------------------
-   CABECERA DEL PANEL
-   ------------------------- */
-
-.vet-modal-header {
-    display: flex !important;
-    align-items: flex-start !important;
-    justify-content: space-between !important;
-
-    gap: 20px !important;
-
-    padding-bottom: 16px !important;
-    margin-bottom: 18px !important;
-
-    border-bottom: 1px solid rgba(105, 188, 177, 0.18) !important;
-}
-
-.vet-modal-header h3 {
-    margin-top: 3px !important;
-    margin-bottom: 5px !important;
-}
-
-/* Botón X */
-
-.vet-modal-close {
-    width: 36px !important;
-    height: 36px !important;
-
-    min-width: 36px !important;
-
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-
-    border: 1px solid rgba(105, 188, 177, 0.35) !important;
-    border-radius: 9px !important;
-
-    background: rgba(30, 67, 70, 0.75) !important;
-
-    color: #e9f3f1 !important;
-
-    font-size: 22px !important;
-    line-height: 1 !important;
-
-    cursor: pointer !important;
-}
-
-.vet-modal-close:hover {
-    background: rgba(55, 105, 108, 0.9) !important;
-}
-
-/* -------------------------
-   FORMULARIOS
-   ------------------------- */
-
-.vet-modal-form {
-    width: 100% !important;
-    box-sizing: border-box !important;
-}
-
-.vet-modal-form input,
-.vet-modal-form select,
-.vet-modal-form textarea {
-    box-sizing: border-box !important;
-    width: 100% !important;
-}
-
-.vet-modal-actions {
-    display: flex !important;
-    justify-content: flex-end !important;
-    align-items: center !important;
-
-    gap: 10px !important;
-
-    margin-top: 18px !important;
-    padding-top: 16px !important;
-
-    border-top: 1px solid rgba(105, 188, 177, 0.18) !important;
-}
-
-/* -------------------------
-   BÚSQUEDA
-   ------------------------- */
-
-.vet-patient-search input[type="search"] {
-    background: #0b3034 !important;
-
-    border: 1px solid rgba(74, 161, 164, 0.55) !important;
-    border-radius: 10px !important;
-
-    padding: 0 13px !important;
-
-    min-height: 42px !important;
-
-    color: #e8f3f1 !important;
-
-    outline: none !important;
-
-    box-sizing: border-box !important;
-}
-
-.vet-patient-search input[type="search"]::placeholder {
-    color: rgba(200, 224, 220, 0.60) !important;
-}
-
-.vet-patient-search input[type="search"]:focus {
-    border-color: #69bcb1 !important;
-
-    background: #0e363a !important;
-
-    box-shadow:
-        0 0 0 3px rgba(105, 188, 177, 0.10) !important;
-}
-
-/* -------------------------
-   MÓVIL
-   ------------------------- */
-
-@media (max-width: 900px) {
-
-    .vet-patients-layout {
-        grid-template-columns: 1fr !important;
-    }
-
-    .vet-modal-content {
-        width: 90vw !important;
-        max-width: 90vw !important;
-        min-width: 0 !important;
-    }
-}
-
-@media (max-width: 600px) {
-
-    .vet-modal-content {
-        width: 100vw !important;
-        max-width: 100vw !important;
-    }
-}
-</style>
-
 
 <script>
 /* =========================================================
@@ -1568,6 +1455,13 @@ document.addEventListener("DOMContentLoaded", function () {
     const openButtons = document.querySelectorAll("[data-open-modal]");
     const closeButtons = document.querySelectorAll("[data-close-modal]");
     const modals = document.querySelectorAll("[data-modal]");
+    const deleteModal = document.getElementById("delete-patient-modal");
+    const deleteConfirm = document.querySelector("[data-confirm-delete]");
+    const deletePatientName = document.querySelector("[data-delete-patient-name]");
+    const deleteTitle = document.querySelector("[data-delete-title]");
+    const deleteDescription = document.querySelector("[data-delete-description]");
+    let pendingDeleteForm = null;
+    let confirmedDeleteForm = null;
 
 
     /* Abrir modal */
@@ -1595,6 +1489,12 @@ document.addEventListener("DOMContentLoaded", function () {
 
             /* Abrir el seleccionado */
 
+            const recordPatientId = button.getAttribute("data-record-patient-id");
+            if (recordPatientId) {
+                const patientSelect = modal.querySelector('select[name="patient_id"]');
+                if (patientSelect) patientSelect.value = recordPatientId;
+            }
+
             modal.classList.remove("is-hidden");
 
             document.body.style.overflow = "hidden";
@@ -1616,6 +1516,96 @@ document.addEventListener("DOMContentLoaded", function () {
         });
 
     });
+
+    document.querySelectorAll("[data-delete-patient]").forEach(function (form) {
+        form.addEventListener("submit", function (event) {
+            if (form === confirmedDeleteForm) {
+                confirmedDeleteForm = null;
+                return;
+            }
+
+            event.preventDefault();
+            pendingDeleteForm = form;
+
+            if (deletePatientName) {
+                deletePatientName.textContent = form.getAttribute("data-patient-name") || "esta mascota";
+            }
+
+            if (deleteTitle) deleteTitle.textContent = "¿Eliminar mascota?";
+            if (deleteDescription) {
+                deleteDescription.innerHTML = "Eliminarás a <strong data-delete-patient-name></strong> y su historial clínico. Esta acción no se puede deshacer.";
+                const patientName = deleteDescription.querySelector("[data-delete-patient-name]");
+                if (patientName) patientName.textContent = form.getAttribute("data-patient-name") || "esta mascota";
+            }
+            if (deleteConfirm) deleteConfirm.textContent = "Eliminar mascota";
+
+            if (deleteModal) {
+                deleteModal.classList.remove("is-hidden");
+                document.body.style.overflow = "hidden";
+            }
+        });
+    });
+
+    document.querySelectorAll("[data-delete-record]").forEach(function (form) {
+        form.addEventListener("submit", function (event) {
+            if (form === confirmedDeleteForm) {
+                confirmedDeleteForm = null;
+                return;
+            }
+
+            event.preventDefault();
+            pendingDeleteForm = form;
+            const label = form.getAttribute("data-delete-label") || "esta atención";
+
+            if (deleteTitle) deleteTitle.textContent = "¿Eliminar atención?";
+            if (deleteDescription) {
+                deleteDescription.textContent = "Eliminarás " + label + ". La mascota y el resto de su historial se conservarán. Esta acción no se puede deshacer.";
+            }
+            if (deleteConfirm) deleteConfirm.textContent = "Eliminar atención";
+
+            if (deleteModal) {
+                deleteModal.classList.remove("is-hidden");
+                document.body.style.overflow = "hidden";
+            }
+        });
+    });
+
+    document.querySelectorAll("[data-delete-history]").forEach(function (form) {
+        form.addEventListener("submit", function (event) {
+            if (form === confirmedDeleteForm) {
+                confirmedDeleteForm = null;
+                return;
+            }
+
+            event.preventDefault();
+            pendingDeleteForm = form;
+            const label = form.getAttribute("data-delete-label") || "este historial clínico";
+
+            if (deleteTitle) deleteTitle.textContent = "¿Eliminar historial clínico?";
+            if (deleteDescription) {
+                deleteDescription.textContent = "Eliminarás todas las atenciones de " + label + ". La ficha de la mascota se conservará. Esta acción no se puede deshacer.";
+            }
+            if (deleteConfirm) deleteConfirm.textContent = "Eliminar historial";
+
+            if (deleteModal) {
+                deleteModal.classList.remove("is-hidden");
+                document.body.style.overflow = "hidden";
+            }
+        });
+    });
+
+    if (deleteConfirm) {
+        deleteConfirm.addEventListener("click", function () {
+            if (!pendingDeleteForm) return;
+
+            const form = pendingDeleteForm;
+            pendingDeleteForm = null;
+            confirmedDeleteForm = form;
+            deleteModal.classList.add("is-hidden");
+            document.body.style.overflow = "";
+            form.requestSubmit();
+        });
+    }
 
 
     /* Cerrar modal */
@@ -1893,6 +1883,9 @@ document.addEventListener("DOMContentLoaded", function () {
     const birthDateInput = patientForm.querySelector('[name="birth_date"]');
     const weightInput = patientForm.querySelector('[name="weight_kg"]');
     const vaccineInput = patientForm.querySelector('[name="vaccine_status"]');
+    const dewormingStatusInput = patientForm.querySelector('[name="deworming_status"]');
+    const dewormingDateInput = patientForm.querySelector('[name="deworming_date"]');
+    const nextDewormingInput = patientForm.querySelector('[name="next_deworming_due"]');
     const ownerInput = patientForm.querySelector('[name="owner_name"]');
     const phoneInput = patientForm.querySelector('[name="phone"]');
     const microchipInput = patientForm.querySelector('[name="microchip"]');
@@ -1954,6 +1947,10 @@ document.addEventListener("DOMContentLoaded", function () {
 
         vaccineInput.value =
             button.dataset.patientVaccine || "No aplica";
+
+        if (dewormingStatusInput) dewormingStatusInput.value = button.dataset.patientDewormingStatus || "";
+        if (dewormingDateInput) dewormingDateInput.value = button.dataset.patientDewormingDate || "";
+        if (nextDewormingInput) nextDewormingInput.value = button.dataset.patientNextDeworming || "";
 
         ownerInput.value =
             button.dataset.patientOwner || "";

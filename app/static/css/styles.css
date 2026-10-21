@@ -1,47 +1,109 @@
 :root {
-    /* Dark, low-glare palette: cool charcoal base with muted eucalyptus accents. */
-    --surface: rgba(22, 34, 36, 0.9);
-    --surface-strong: #21383a;
-    --surface-deep: #111b1d;
-    --text: #e7f0ec;
-    --muted: #aabbb5;
-    --accent: #5eb6a5;
-    --accent-soft: rgba(94, 182, 165, 0.16);
-    --accent-deep: #a9ded0;
-    --border: rgba(154, 198, 185, 0.18);
-    --shadow: 0 22px 56px rgba(5, 12, 13, 0.32);
-    --danger: #e58b8b;
-    --danger-soft: rgba(229, 139, 139, 0.14);
-    --warning: #dfbd76;
-    --warning-soft: rgba(223, 189, 118, 0.14);
-    --safe: #70c7b5;
-    --safe-soft: rgba(112, 199, 181, 0.14);
+    /* Graphite clínica: low-glare neutrals with restrained botanical signals. */
+    --primary: #A7B7A0;
+    --primary-hover: #C3D0BA;
+    --secondary: #B6A8C8;
+    --accent: #D7BA83;
+    --background: #171A1F;
+    --surface: #222730;
+    --surface-strong: #2C333E;
+    --surface-deep: #171A1F;
+    --surface-2: #2C333E;
+    --text: #F4F7F9;
+    --muted: #C7CFD8;
+    --border: #78869A;
+    --danger: #E59A9A;
+    --danger-soft: rgba(229, 154, 154, 0.14);
+    --warning: #E2C77B;
+    --warning-soft: rgba(226, 199, 123, 0.14);
+    --safe: #A8C896;
+    --safe-soft: rgba(168, 200, 150, 0.14);
+    --accent-soft: rgba(215, 186, 131, 0.14);
+    --accent-deep: #E5CB9C;
+    --shadow: 0 18px 42px rgba(0, 0, 0, 0.30);
 }
 
 html[data-theme="light"] {
     color-scheme: light;
-    --surface: rgba(255, 255, 255, 0.88);
-    --surface-strong: #0f766e;
-    --surface-deep: #ffffff;
-    --text: #1f2937;
-    --muted: #60717a;
-    --accent: #0f766e;
-    --accent-soft: rgba(15, 118, 110, 0.11);
-    --accent-deep: #0b5f59;
-    --border: rgba(15, 118, 110, 0.18);
-    --shadow: 0 18px 48px rgba(15, 76, 71, 0.11);
-    --danger: #f97360;
-    --danger-soft: rgba(249, 115, 96, 0.12);
-    --warning: #c07a18;
-    --warning-soft: rgba(245, 158, 11, 0.13);
-    --safe: #0f766e;
-    --safe-soft: #ccfbf1;
+    --primary: #3E6658;
+    --primary-hover: #2F5145;
+    --secondary: #625F86;
+    --accent: #946B32;
+    --background: #F5F6F3;
+    --surface: #FFFFFF;
+    --surface-strong: #EDF0EB;
+    --surface-deep: #FFFFFF;
+    --surface-2: #EDF0EB;
+    --text: #19212B;
+    --muted: #506070;
+    --border: #66758A;
+    --danger: #A0444B;
+    --danger-soft: rgba(160, 68, 75, 0.12);
+    --warning: #85611C;
+    --warning-soft: rgba(133, 97, 28, 0.13);
+    --safe: #3B704F;
+    --safe-soft: rgba(59, 112, 79, 0.12);
+    --accent-soft: rgba(148, 107, 50, 0.11);
+    --accent-deep: #6F4F24;
+    --shadow: 0 18px 48px rgba(15, 23, 42, 0.10);
 }
 
 html[data-theme="dark"] { color-scheme: dark; }
 
 .legal-consent { display: grid; grid-template-columns: 18px 1fr; gap: 10px; align-items: start; color: var(--muted); font-size: .8rem; line-height: 1.45; }
 .legal-consent input { width: 18px; height: 18px; margin-top: 1px; accent-color: var(--primary); }
+.login-shell-rich .legal-consent {
+    grid-template-columns: 18px minmax(0, 1fr);
+    column-gap: 10px;
+    cursor: pointer;
+}
+
+.login-shell-rich .legal-checkbox {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.login-shell-rich .legal-box {
+    position: relative;
+    grid-column: 1;
+    width: 18px;
+    height: 18px;
+    border: 1px solid rgba(84, 214, 198, 0.26);
+    border-radius: 5px;
+    background: rgba(6, 17, 22, 0.55);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.login-shell-rich .legal-box::after {
+    content: "";
+    position: absolute;
+    left: 5px;
+    top: 1.5px;
+    width: 4px;
+    height: 8px;
+    border-right: 2px solid transparent;
+    border-bottom: 2px solid transparent;
+    transform: rotate(45deg);
+}
+
+.login-shell-rich .legal-checkbox:checked + .legal-box {
+    border-color: rgba(84, 214, 198, 0.48);
+    background: rgba(25, 152, 157, 0.88);
+    box-shadow: 0 0 0 3px rgba(84, 214, 198, 0.12);
+}
+
+.login-shell-rich .legal-checkbox:checked + .legal-box::after {
+    border-right-color: #F4FFFF;
+    border-bottom-color: #F4FFFF;
+}
+
+.login-shell-rich .legal-checkbox:focus-visible + .legal-box {
+    outline: 2px solid rgba(84, 214, 198, 0.9);
+    outline-offset: 3px;
+}
 .legal-consent a, .login-legal-links a, .app-legal-footer a { color: var(--accent); text-decoration: none; }
 .login-legal-links, .app-legal-footer { display: flex; flex-wrap: wrap; gap: 14px; justify-content: center; font-size: .76rem; color: var(--muted); }
 .login-legal-links { margin-top: 16px; }
@@ -75,16 +137,16 @@ body {
     font-family: "Segoe UI", sans-serif;
     color: var(--text);
     background:
-        radial-gradient(circle at top left, rgba(94, 182, 165, 0.12), transparent 28%),
-        radial-gradient(circle at 90% 18%, rgba(92, 144, 153, 0.1), transparent 22%),
-        linear-gradient(160deg, #10191b 0%, #16292b 52%, #1c3537 100%);
+        radial-gradient(circle at top left, rgba(167, 183, 160, 0.05), transparent 28%),
+        radial-gradient(circle at 90% 18%, rgba(182, 168, 200, 0.04), transparent 22%),
+        var(--background);
 }
 
 html[data-theme="light"] body {
     background:
-        radial-gradient(circle at 92% 4%, rgba(204, 251, 241, 0.92), transparent 32rem),
-        radial-gradient(circle at 5% 28%, rgba(15, 118, 110, 0.08), transparent 28rem),
-        linear-gradient(150deg, #f7fffd 0%, #eefbf8 48%, #e5f7f2 100%);
+        radial-gradient(circle at 92% 4%, rgba(98, 95, 134, 0.06), transparent 32rem),
+        radial-gradient(circle at 5% 28%, rgba(62, 102, 88, 0.05), transparent 28rem),
+        var(--background);
 }
 
 .theme-switcher {
@@ -139,6 +201,42 @@ html[data-theme="light"] body {
 
 .theme-toggle[aria-checked="true"] { background: #0f766e; border-color: #0f766e; }
 .theme-toggle[aria-checked="true"] span { transform: translateX(18px); }
+
+/* Enlaces secundarios del panel veterinario: presentes sin competir con la operación. */
+.vet-sidebar-legal {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 5px 11px;
+    margin-top: auto;
+    padding: 12px 2px 0;
+    border-top: 1px solid var(--border);
+}
+
+.vet-sidebar-legal-label {
+    flex-basis: 100%;
+    color: var(--muted);
+    font-size: 0.64rem;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.vet-sidebar-legal a {
+    color: var(--muted);
+    font-size: 0.72rem;
+    font-weight: 650;
+    line-height: 1.3;
+    text-decoration: none;
+    transition: color .16s ease;
+}
+
+.vet-sidebar-legal a:hover,
+.vet-sidebar-legal a:focus-visible {
+    color: var(--accent);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
 
 html[data-theme="light"] .theme-switcher { background: rgba(204, 251, 241, .48); }
 html[data-theme="light"] .sidebar-user,
@@ -1188,6 +1286,11 @@ textarea:focus-visible {
 }
 
 .login-shell-rich {
+    /* El acceso usa un acento propio, sereno y clínico: no compite con la
+       interfaz ni convierte los textos auxiliares en advertencias visuales. */
+    --accent: #B9D8D1;
+    --accent-deep: #D7ECE6;
+    --accent-soft: rgba(96, 179, 168, 0.16);
     position: relative;
     overflow: hidden;
     min-height: 100vh;
@@ -1196,6 +1299,142 @@ textarea:focus-visible {
         linear-gradient(135deg, #0a2d31 0%, #0b373c 46%, #156c74 100%);
     transition: background 320ms ease;
     isolation: isolate;
+}
+
+.login-appearance {
+    position: absolute;
+    z-index: 4;
+    top: 20px;
+    right: 20px;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px 8px 12px;
+    border: 1px solid rgba(143, 224, 215, 0.22);
+    border-radius: 999px;
+    background: rgba(4, 29, 34, 0.44);
+    color: #c6dfdf;
+    box-shadow: 0 8px 22px rgba(2, 22, 26, 0.12);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+}
+
+.login-appearance-copy {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    font-size: .78rem;
+    font-weight: 650;
+}
+
+.login-appearance-copy > span:first-child {
+    color: #b9d8a0;
+    font-size: 1.05rem;
+    line-height: 1;
+}
+
+.login-theme-toggle {
+    flex-basis: 40px;
+    width: 40px;
+    height: 23px;
+}
+
+.login-theme-toggle span {
+    width: 17px;
+    height: 17px;
+}
+
+.login-theme-toggle[aria-checked="true"] span { transform: translateX(17px); }
+
+.login-shell-rich .btn-primary {
+    background: #267D78;
+    color: #F7FCFB;
+}
+
+.login-shell-rich .btn-primary:hover {
+    background: #328D87;
+}
+
+html[data-theme="light"] .login-shell-rich {
+    --accent: #197b78;
+    --accent-deep: #105f5d;
+    --accent-soft: rgba(25, 123, 120, 0.12);
+    background:
+        radial-gradient(circle at 15% 14%, rgba(77, 198, 185, 0.18), transparent 21%),
+        radial-gradient(circle at 85% 78%, rgba(45, 157, 151, 0.12), transparent 24%),
+        linear-gradient(135deg, #f8fdfc 0%, #edf8f5 48%, #d9f1ec 100%);
+}
+
+html[data-theme="light"] .login-shell-rich::before {
+    opacity: .42;
+    background: radial-gradient(circle, rgba(31, 155, 147, .18), transparent 70%);
+}
+
+html[data-theme="light"] .login-shell-rich::after {
+    opacity: .36;
+    background: radial-gradient(circle, rgba(26, 138, 133, .16), transparent 66%);
+}
+
+html[data-theme="light"] .login-appearance {
+    border-color: rgba(18, 105, 101, .2);
+    background: rgba(255, 255, 255, .76);
+    color: #285957;
+    box-shadow: 0 8px 22px rgba(20, 92, 87, .09);
+}
+
+html[data-theme="light"] .login-appearance-copy > span:first-child { color: #177f7b; }
+
+html[data-theme="light"] .login-visual,
+html[data-theme="light"] .login-panel {
+    border-color: rgba(18, 105, 101, .19);
+    background: rgba(255, 255, 255, .82);
+    box-shadow: 0 24px 56px rgba(20, 92, 87, .12);
+}
+
+html[data-theme="light"] .login-panel {
+    background: linear-gradient(180deg, rgba(255,255,255,.94), rgba(239,249,246,.9));
+}
+
+html[data-theme="light"] .login-visual::before {
+    background:
+        linear-gradient(135deg, rgba(52, 178, 166, .12), transparent 34%),
+        radial-gradient(circle at 85% 12%, rgba(37, 151, 144, .14), transparent 24%);
+}
+
+html[data-theme="light"] .login-shell-rich .btn-primary {
+    background: #147d78;
+    color: #fff;
+}
+
+html[data-theme="light"] .login-shell-rich .btn-primary:hover { background: #0f6965; }
+
+html[data-theme="light"] .entry-card-rich {
+    border-color: rgba(18, 105, 101, .22);
+    background: linear-gradient(180deg, rgba(255, 255, 255, .96), rgba(229, 246, 242, .9));
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .86), 0 10px 22px rgba(18, 105, 101, .06);
+}
+
+html[data-theme="light"] .entry-card-rich.is-unavailable,
+html[data-theme="light"] .entry-card-rich.is-unavailable:hover {
+    opacity: .76;
+    filter: none;
+    background: linear-gradient(180deg, rgba(248, 252, 251, .94), rgba(235, 244, 241, .9));
+}
+
+html[data-theme="light"] .entry-card-rich:not(.is-unavailable) {
+    border-color: rgba(18, 126, 120, .34);
+    background: linear-gradient(180deg, rgba(221, 247, 242, .98), rgba(193, 234, 227, .94));
+}
+
+html[data-theme="light"] .entry-card-rich .entry-tag {
+    background: rgba(18, 126, 120, .12);
+    color: #146963;
+}
+
+html[data-theme="light"] .entry-card-rich .entry-index-rich {
+    border-color: rgba(18, 105, 101, .18);
+    background: rgba(255, 255, 255, .56);
+    color: #176a65;
 }
 
 .login-shell-rich::before,
@@ -1417,6 +1656,53 @@ textarea:focus-visible {
     max-width: 560px;
     margin: 0 auto;
     min-height: auto;
+    grid-template-columns: minmax(0, 1fr);
+}
+
+.flow-selection-experience {
+    grid-template-columns: minmax(0, 1fr);
+    max-width: 1240px;
+}
+
+.flow-selection-experience .login-visual {
+    min-height: min(700px, calc(100vh - 48px));
+    align-content: start;
+    gap: 22px;
+}
+
+.flow-selection-experience .entry-grid-rich {
+    margin-top: 22px;
+}
+
+.entry-card-rich {
+    color: inherit;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.entry-card-rich.is-unavailable {
+    cursor: not-allowed;
+}
+
+.login-access-experience {
+    min-height: calc(100vh - 48px);
+    align-items: center;
+}
+
+.login-access-experience .login-panel-standalone {
+    margin: 0 auto;
+}
+
+.login-flow-back {
+    justify-self: start;
+    color: var(--muted);
+    font-size: .88rem;
+    text-decoration: none;
+}
+
+.login-flow-back:hover,
+.login-flow-back:focus-visible {
+    color: var(--accent);
 }
 
 .login-panel-standalone {
@@ -1543,6 +1829,20 @@ textarea:focus-visible {
     width: 114px;
     height: 114px;
     border-radius: 32px;
+}
+
+.velmorax-brand-mark {
+    padding: 12px;
+    border-color: rgba(133, 231, 220, 0.42);
+    background:
+        radial-gradient(circle at 50% 38%, rgba(105, 221, 210, 0.18), transparent 58%),
+        linear-gradient(145deg, rgba(10, 72, 77, 0.98), rgba(5, 38, 43, 0.98));
+}
+
+.velmorax-brand-mark img {
+    width: 100%;
+    height: 100%;
+    filter: drop-shadow(0 7px 12px rgba(0, 10, 13, 0.38));
 }
 
 .brand-group-sidebar .brand-mark-logo {
@@ -4452,6 +4752,45 @@ html[data-theme="light"] .vet-modal-backdrop {
 
 }
 
+/* Acceso claro: conserva el turquesa clínico, con superficies legibles. */
+html[data-theme="light"] .login-shell-rich .login-experience[data-selected-intent] .login-panel {
+    border-color: rgba(18, 105, 101, .2);
+    background: linear-gradient(180deg, rgba(255, 255, 255, .97), rgba(235, 248, 244, .94));
+    box-shadow: 0 24px 56px rgba(20, 92, 87, .13);
+}
+
+html[data-theme="light"] .login-shell-rich .login-form label,
+html[data-theme="light"] .login-shell-rich .login-panel-text,
+html[data-theme="light"] .login-shell-rich .remember-inline-text,
+html[data-theme="light"] .login-shell-rich .login-inline-link,
+html[data-theme="light"] .login-shell-rich .legal-consent,
+html[data-theme="light"] .login-shell-rich .login-flow-back,
+html[data-theme="light"] .login-shell-rich .login-legal-links {
+    color: #365d5d;
+}
+
+html[data-theme="light"] .login-shell-rich .inventory-form input:not([type="hidden"]) {
+    background: rgba(255, 255, 255, .94);
+    border-color: rgba(18, 105, 101, .28);
+    color: #173f3e;
+}
+
+html[data-theme="light"] .login-shell-rich .inventory-form input:not([type="hidden"])::placeholder {
+    color: #71918f;
+}
+
+html[data-theme="light"] .login-shell-rich .login-state-note.is-ready {
+    color: #176a65;
+    border-color: rgba(18, 126, 120, .22);
+    background: rgba(18, 126, 120, .10);
+}
+
+html[data-theme="light"] .login-shell-rich .remember-box,
+html[data-theme="light"] .login-shell-rich .legal-box {
+    border-color: rgba(18, 105, 101, .34);
+    background: #fff;
+}
+
 
 @media (max-width: 500px) {
 
@@ -4953,6 +5292,49 @@ html[data-theme="light"] .vet-modal-backdrop {
     }
 }
 
+/* Las reglas históricas del módulo usaban verde azulado fijo en modo oscuro.
+   Esta capa final conserva la misma superficie de Velmorax en cada pieza de
+   Pacientes y mantiene los bordes perceptibles durante sesiones largas. */
+html[data-theme="dark"] .vet-patients-module :is(
+    .vet-patient-item,
+    .vet-recent-card,
+    .vet-recent-item,
+    .vet-modal-content
+) {
+    background: var(--surface) !important;
+    background-color: var(--surface) !important;
+    color: var(--text) !important;
+    border-color: var(--border) !important;
+}
+
+html[data-theme="dark"] .vet-patients-module :is(
+    .vet-patient-item,
+    .vet-recent-item
+) {
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 8px 20px rgba(0, 0, 0, 0.12) !important;
+}
+
+html[data-theme="dark"] .vet-patients-module :is(
+    .vet-patient-item p,
+    .vet-patient-item span,
+    .vet-recent-card p,
+    .vet-recent-card span,
+    .vet-recent-card small,
+    .vet-recent-item p,
+    .vet-recent-item span,
+    .vet-recent-item small
+) {
+    color: var(--muted) !important;
+}
+
+html[data-theme="dark"] .vet-patients-module :is(
+    .vet-patient-item strong,
+    .vet-recent-card strong,
+    .vet-recent-item strong
+) {
+    color: var(--text) !important;
+}
+
 
 @media (max-width: 640px) {
 
@@ -5430,4 +5812,1275 @@ html[data-theme="dark"] .vet-attention-item p,
 html[data-theme="dark"] .vet-attention-item span,
 html[data-theme="dark"] .vet-attention-item small {
     color: #b7c8ca !important;
+}
+
+/* Dark mode — long-session accessibility layer.
+   Surfaces, borders and inset edges work together so cards remain identifiable
+   without requiring users to distinguish hue alone. */
+html[data-theme="dark"] :is(
+    .site-header,
+    .hero-copy,
+    .hero-summary,
+    .sidebar,
+    .kpi-card,
+    .panel-card,
+    .sources-section,
+    .login-panel,
+    .reset-panel,
+    .reset-form-card,
+    .queue-card,
+    .movement-item,
+    .timeline-row,
+    .module-card
+) {
+    background: var(--surface);
+    border-color: var(--border);
+    box-shadow: inset 0 1px 0 rgba(244, 247, 249, .06), 0 8px 20px rgba(0, 0, 0, .18);
+}
+
+html[data-theme="dark"] :is(.sidebar-link, .sidebar-user, .theme-switcher, .quick-card) {
+    border-color: var(--border);
+    background: var(--surface-strong);
+}
+
+html[data-theme="dark"] .sidebar-link:hover,
+html[data-theme="dark"] .sidebar-link.is-active {
+    color: var(--text);
+    border-color: var(--primary);
+    background: #303842;
+    box-shadow: inset 3px 0 0 var(--primary);
+}
+
+html[data-theme="dark"] :is(input, select, textarea) {
+    color: var(--text);
+    border-color: var(--border);
+    background: #1D222A;
+}
+
+html[data-theme="dark"] :is(input, select, textarea):focus-visible,
+html[data-theme="dark"] :is(a, button):focus-visible {
+    outline: 3px solid var(--primary-hover);
+    outline-offset: 3px;
+}
+
+html[data-theme="dark"] .btn-primary {
+    color: #171A1F;
+    background: var(--primary);
+}
+
+html[data-theme="dark"] .btn-primary:hover { background: var(--primary-hover); }
+
+/* Light mode — warm paper background, white cards, and borders that remain
+   distinguishable for low-vision users without relying on color alone. */
+html[data-theme="light"] :is(
+    .site-header,
+    .hero-copy,
+    .hero-summary,
+    .sidebar,
+    .kpi-card,
+    .panel-card,
+    .sources-section,
+    .login-panel,
+    .reset-panel,
+    .reset-form-card,
+    .queue-card,
+    .movement-item,
+    .timeline-row,
+    .module-card
+) {
+    background: var(--surface);
+    border-color: var(--border);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .82), 0 7px 18px rgba(25, 33, 43, .07);
+}
+
+html[data-theme="light"] :is(.sidebar-link, .sidebar-user, .theme-switcher, .quick-card) {
+    border-color: var(--border);
+    background: var(--surface-strong);
+}
+
+html[data-theme="light"] .sidebar-link:hover,
+html[data-theme="light"] .sidebar-link.is-active {
+    color: var(--text);
+    border-color: var(--primary);
+    background: #E5E9E2;
+    box-shadow: inset 3px 0 0 var(--primary);
+}
+
+html[data-theme="light"] :is(input, select, textarea) {
+    color: var(--text);
+    border-color: var(--border);
+    background: var(--surface);
+}
+
+html[data-theme="light"] :is(input, select, textarea):focus-visible,
+html[data-theme="light"] :is(a, button):focus-visible {
+    outline: 3px solid var(--primary);
+    outline-offset: 3px;
+}
+
+html[data-theme="light"] .btn-primary {
+    color: #FFFFFF;
+    background: var(--primary);
+}
+
+html[data-theme="light"] .btn-primary:hover { background: var(--primary-hover); }
+
+/* Pacientes veterinarios: se integra con la paleta global de Velmorax.
+   Estas reglas se colocan después de la rama para evitar que los colores
+   heredados del prototipo contradigan los modos claro y oscuro actuales. */
+.vet-patients-module :is(.vet-patient-search, .vet-patient-item, .vet-recent-card, .vet-recent-item, .vet-modal-content) {
+    background: var(--surface) !important;
+    color: var(--text) !important;
+    border-color: var(--border) !important;
+}
+
+.vet-patients-module :is(.vet-patient-search, .vet-patient-item, .vet-recent-card, .vet-recent-item) {
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 8px 20px rgba(0, 0, 0, 0.12) !important;
+}
+
+.vet-patients-module :is(.vet-patient-main strong, .vet-recent-main strong, .vet-card-heading h3, .vet-modal-header h3) {
+    color: var(--text) !important;
+}
+
+.vet-patients-module :is(.vet-patient-description, .vet-patient-secondary, .vet-patient-info, .vet-recent-item p, .vet-recent-meta, .vet-modal-header p, .vet-search-result) {
+    color: var(--muted) !important;
+}
+
+.vet-patients-module .vet-patient-search label,
+.vet-patients-module .vet-modal-form label,
+.vet-patients-module .vet-modal-form label > span {
+    color: var(--text) !important;
+}
+
+.vet-patients-module :is(.vet-patient-search input, .vet-modal-form input:not([type="hidden"]), .vet-modal-form select, .vet-modal-form textarea) {
+    background: var(--surface-deep) !important;
+    color: var(--text) !important;
+    border-color: var(--border) !important;
+}
+
+.vet-patients-module :is(.vet-patient-search input, .vet-modal-form input:not([type="hidden"]), .vet-modal-form select, .vet-modal-form textarea)::placeholder {
+    color: var(--muted) !important;
+}
+
+.vet-patients-module :is(.vet-patient-search input, .vet-modal-form input:not([type="hidden"]), .vet-modal-form select, .vet-modal-form textarea):focus {
+    border-color: var(--primary) !important;
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 22%, transparent) !important;
+}
+
+.vet-patients-module .vet-patient-icon,
+.vet-patients-module .vet-recent-icon,
+.vet-patients-module .vet-list-count {
+    background: var(--accent-soft) !important;
+    color: var(--accent-deep) !important;
+    border-color: var(--border) !important;
+}
+
+.vet-patients-module .action-button {
+    color: var(--primary) !important;
+    border-color: var(--border) !important;
+    background: var(--surface-strong) !important;
+}
+
+.vet-patients-module .action-danger {
+    color: var(--danger) !important;
+}
+
+html[data-theme="dark"] .vet-patients-module .vet-modal-backdrop {
+    background: rgba(0, 0, 0, 0.58) !important;
+}
+
+html[data-theme="light"] .vet-patients-module :is(.vet-patient-search, .vet-patient-item, .vet-recent-card, .vet-recent-item, .vet-modal-content) {
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.82), 0 7px 18px rgba(25, 33, 43, 0.07) !important;
+}
+
+/* Pacientes — jerarquía de trabajo.
+   La mascota es la pieza principal: el resumen orienta, el buscador filtra y
+   el historial queda disponible como contexto, sin competir con el listado. */
+.vet-patients-module {
+    display: grid;
+    gap: 20px;
+    max-width: 1520px;
+}
+
+.vet-patients-header {
+    gap: 24px;
+    padding-bottom: 2px;
+}
+
+.vet-patients-header .lead {
+    max-width: 62ch;
+}
+
+.vet-patient-overview {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.vet-overview-item {
+    position: relative;
+    display: grid;
+    align-content: center;
+    gap: 2px;
+    min-height: 92px;
+    padding: 14px 16px 14px 19px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: var(--surface-strong);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.vet-overview-item::before {
+    position: absolute;
+    inset: 14px auto 14px 0;
+    width: 3px;
+    border-radius: 0 999px 999px 0;
+    background: var(--primary);
+    content: "";
+}
+
+.vet-overview-item-follow-up::before { background: var(--warning); }
+.vet-overview-item-open::before { background: var(--danger); }
+
+.vet-overview-item > span {
+    color: var(--muted);
+    font-size: 0.78rem;
+    font-weight: 700;
+}
+
+.vet-overview-item > strong {
+    color: var(--text);
+    font-size: 1.45rem;
+    line-height: 1;
+}
+
+.vet-overview-item > small {
+    color: var(--muted);
+    font-size: 0.72rem;
+}
+
+.vet-patient-search-card {
+    display: grid;
+    grid-template-columns: minmax(180px, 0.4fr) minmax(0, 1fr);
+    column-gap: 24px;
+    row-gap: 8px;
+    align-items: end;
+    padding: 17px 20px;
+}
+
+.vet-search-copy .eyebrow,
+.vet-card-heading .eyebrow {
+    margin-bottom: 3px;
+}
+
+.vet-search-copy h3,
+.vet-card-heading h3 {
+    margin: 0;
+}
+
+.vet-search-copy > p:last-child {
+    margin: 5px 0 0;
+    color: var(--muted);
+    font-size: 0.82rem;
+}
+
+.vet-patient-search {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 10px;
+    align-items: end;
+    padding: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+}
+
+.vet-patient-search input[type="search"] {
+    min-height: 44px;
+    border-radius: 11px;
+}
+
+.vet-patient-search .filter-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    min-height: 36px;
+}
+
+.vet-patient-search .filter-actions .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    width: auto;
+    height: 36px;
+    min-height: 36px;
+    padding: 7px 11px;
+    border-radius: 10px;
+    font-size: 0.78rem;
+    line-height: 1;
+}
+
+.vet-patient-search-card .vet-search-result {
+    grid-column: 2;
+    min-height: 0;
+    margin: 0;
+}
+
+.vet-patients-layout {
+    grid-template-columns: minmax(0, 1.4fr) minmax(310px, 0.9fr);
+    gap: 16px;
+    align-items: start;
+}
+
+.vet-patients-layout.is-showing-history {
+    grid-template-columns: 1fr;
+}
+
+.vet-patients-layout.is-showing-history .vet-recent-card {
+    max-width: 980px;
+    width: 100%;
+    justify-self: center;
+}
+
+.vet-history-page-header {
+    max-width: 980px;
+    margin: 0 auto 22px;
+    align-items: center;
+}
+
+.vet-history-back {
+    flex: 0 0 auto;
+    text-decoration: none;
+}
+
+.vet-patients-layout.is-showing-history .vet-patient-list-card {
+    max-height: 360px;
+}
+
+.vet-recent-card.is-patient-history {
+    border-color: var(--primary) !important;
+}
+
+.vet-history-patient-summary {
+    margin: 5px 0 0;
+    color: var(--muted);
+    font-size: 0.82rem;
+}
+
+.vet-history-record {
+    align-items: flex-start;
+}
+
+.vet-history-record .vet-recent-note {
+    display: block;
+    overflow: visible;
+    color: var(--text) !important;
+}
+
+.vet-history-record-details {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 8px 16px;
+    margin: 12px 0 0;
+}
+
+.vet-history-record-details div {
+    min-width: 0;
+}
+
+.vet-history-record-details dt {
+    color: var(--muted);
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.vet-history-record-details dd {
+    margin: 3px 0 0;
+    color: var(--text);
+    font-size: 0.84rem;
+    line-height: 1.42;
+}
+
+/* Vista de historial: una lectura breve y enfocada, sin repetir la
+   información de la mascota ni estirar la ficha a todo el escritorio. */
+body.veterinary-patient-history-view .vet-patients-module {
+    gap: 12px;
+}
+
+body.veterinary-patient-history-view .vet-history-page-header,
+body.veterinary-patient-history-view .vet-patients-layout.is-showing-history {
+    width: min(100%, 940px) !important;
+    max-width: 940px !important;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+body.veterinary-patient-history-view .vet-history-page-header {
+    margin-bottom: 6px;
+}
+
+body.veterinary-patient-history-view .vet-history-page-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+body.veterinary-patient-history-view .vet-history-download {
+    background: var(--primary) !important;
+    border-color: var(--primary) !important;
+    color: #fff !important;
+}
+
+body.veterinary-patient-history-view .vet-history-patient-card {
+    margin: 0 0 18px;
+    padding: 0 0 18px;
+    border-bottom: 1px solid var(--border);
+}
+
+body.veterinary-patient-history-view .vet-history-summary-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+
+body.veterinary-patient-history-view .vet-history-summary-heading h3 {
+    margin: 3px 0 0;
+    font-size: 1.1rem;
+}
+
+body.veterinary-patient-history-view .vet-history-patient-details {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+    margin: 0;
+}
+
+body.veterinary-patient-history-view .vet-history-patient-details div {
+    min-width: 0;
+    padding: 9px 14px 9px 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+}
+
+body.veterinary-patient-history-view .vet-history-patient-details dt,
+body.veterinary-patient-history-view .vet-history-patient-alerts strong {
+    color: var(--muted);
+    font-size: 0.7rem;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+body.veterinary-patient-history-view .vet-history-patient-details dd {
+    margin: 4px 0 0;
+    color: var(--text);
+    font-size: 0.9rem;
+    line-height: 1.35;
+}
+
+body.veterinary-patient-history-view .vet-history-patient-details small {
+    display: block;
+    margin-top: 3px;
+    color: var(--muted);
+    font-size: 0.78rem;
+}
+
+body.veterinary-patient-history-view .vet-history-patient-alerts {
+    display: grid;
+    gap: 6px;
+    margin-top: 12px;
+    padding: 11px 13px;
+    border-left: 3px solid var(--accent);
+    border-radius: 0 10px 10px 0;
+    background: var(--surface-strong);
+}
+
+body.veterinary-patient-history-view .vet-history-patient-alerts p {
+    margin: 0;
+    color: var(--text);
+    font-size: 0.86rem;
+    line-height: 1.4;
+}
+
+body.veterinary-patient-history-view .vet-patients-layout.is-showing-history {
+    display: block;
+}
+
+body.veterinary-patient-history-view .vet-patients-layout.is-showing-history .vet-recent-card {
+    width: 100% !important;
+    max-width: none !important;
+    min-height: 0 !important;
+    padding: 18px 20px;
+}
+
+body.veterinary-patient-history-view .vet-recent-card .vet-card-heading {
+    min-height: 0;
+    margin-bottom: 14px;
+}
+
+body.veterinary-patient-history-view .vet-history-record {
+    gap: 24px;
+    padding: 22px 0 6px;
+    border: 0;
+    border-top: 1px solid var(--border);
+    border-radius: 0;
+    background: transparent;
+}
+
+body.veterinary-patient-history-view .vet-recent-list {
+    max-height: none;
+    padding-right: 0;
+}
+
+body.veterinary-patient-history-view .vet-history-record .vet-recent-main {
+    gap: 0;
+}
+
+body.veterinary-patient-history-view .vet-recent-card.is-patient-history .vet-recent-item.vet-history-record::before {
+    display: none;
+    content: none;
+}
+
+body.veterinary-patient-history-view .vet-history-record .vet-recent-main strong {
+    font-size: 1.15rem;
+    line-height: 1.25;
+}
+
+body.veterinary-patient-history-view .vet-history-summary-label {
+    margin: 16px 0 5px !important;
+    color: var(--muted) !important;
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+body.veterinary-patient-history-view .vet-history-record .vet-recent-note {
+    max-width: 760px;
+    font-size: 0.96rem;
+    line-height: 1.55;
+}
+
+body.veterinary-patient-history-view .vet-history-record-details {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+    margin-top: 18px;
+}
+
+body.veterinary-patient-history-view .vet-history-record-details div {
+    min-height: 0;
+    padding: 8px 14px 8px 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+}
+
+body.veterinary-patient-history-view .vet-history-record-details dt {
+    font-size: 0.68rem;
+}
+
+body.veterinary-patient-history-view .vet-history-record-details dd {
+    font-size: 0.92rem;
+    line-height: 1.38;
+}
+
+body.veterinary-patient-history-view .vet-history-more-details {
+    margin-top: 14px;
+    border-top: 1px solid var(--border);
+}
+
+body.veterinary-patient-history-view .vet-history-more-details summary {
+    padding: 12px 0 0;
+    color: var(--primary);
+    cursor: pointer;
+    font-size: 0.84rem;
+    font-weight: 800;
+}
+
+body.veterinary-patient-history-view .vet-history-extra-details {
+    margin-top: 12px;
+}
+
+body.veterinary-patient-history-view .vet-history-record .vet-recent-meta {
+    min-width: 146px;
+    gap: 8px;
+    padding: 4px 0;
+    font-size: 0.84rem;
+}
+
+/* Contraste de lectura para jornadas largas: cada nivel conserva un fondo
+   oscuro, pero texto, ficha y datos clínicos ya no compiten entre sí. */
+html[data-theme="dark"] body.veterinary-patient-history-view .vet-recent-card.is-patient-history {
+    background: #202C38 !important;
+    border-color: #718197 !important;
+}
+
+html[data-theme="dark"] body.veterinary-patient-history-view .vet-history-record {
+    background: transparent !important;
+    border-color: #718197 !important;
+}
+
+html[data-theme="dark"] body.veterinary-patient-history-view .vet-history-summary-label,
+html[data-theme="dark"] body.veterinary-patient-history-view .vet-history-record-details dt {
+    color: #C9D4DF !important;
+}
+
+html[data-theme="dark"] body.veterinary-patient-history-view .vet-history-record .vet-recent-note,
+html[data-theme="dark"] body.veterinary-patient-history-view .vet-history-record-details dd,
+html[data-theme="dark"] body.veterinary-patient-history-view .vet-history-record .vet-recent-meta {
+    color: #F1F5F8 !important;
+}
+
+html[data-theme="dark"] body.veterinary-patient-history-view .vet-history-record-details div {
+    background: transparent;
+    border-color: transparent;
+}
+
+html[data-theme="dark"] body.veterinary-patient-history-view .vet-history-patient-card {
+    border-color: #718197 !important;
+}
+
+html[data-theme="dark"] body.veterinary-patient-history-view .vet-history-patient-details div,
+html[data-theme="dark"] body.veterinary-patient-history-view .vet-history-patient-alerts {
+    background: transparent !important;
+    border-color: #8193A9 !important;
+}
+
+html[data-theme="dark"] body.veterinary-patient-history-view .vet-history-patient-details dt,
+html[data-theme="dark"] body.veterinary-patient-history-view .vet-history-patient-alerts strong {
+    color: #C9D4DF !important;
+}
+
+html[data-theme="dark"] body.veterinary-patient-history-view .vet-history-patient-details dd,
+html[data-theme="dark"] body.veterinary-patient-history-view .vet-history-patient-alerts p {
+    color: #F1F5F8 !important;
+}
+
+/* Composición única y compacta para que el historial se lea como una ficha,
+   no como una pila de módulos independientes. */
+body.veterinary-patient-history-view .vet-history-page-header,
+body.veterinary-patient-history-view .vet-patients-layout.is-showing-history {
+    width: min(100%, 1080px) !important;
+    max-width: 1080px !important;
+}
+
+body.veterinary-patient-history-view .vet-patients-layout.is-showing-history .vet-recent-card {
+    padding: 24px 28px !important;
+}
+
+body.veterinary-patient-history-view .vet-history-patient-card {
+    margin-bottom: 14px;
+    padding-bottom: 14px;
+}
+
+body.veterinary-patient-history-view .vet-history-patient-details {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    align-content: start;
+    gap: 8px 28px;
+}
+
+body.veterinary-patient-history-view .vet-history-patient-details div {
+    padding: 6px 0;
+}
+
+body.veterinary-patient-history-view .vet-recent-card .vet-card-heading {
+    margin-bottom: 0;
+    padding: 0 0 12px;
+}
+
+body.veterinary-patient-history-view .vet-history-record {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) 150px;
+    gap: 22px;
+    margin: 0 !important;
+    padding: 18px 0 6px !important;
+    border-top: 0 !important;
+    border-bottom: 0 !important;
+    min-height: 0 !important;
+}
+
+body.veterinary-patient-history-view .vet-history-record .vet-recent-main > div:last-child {
+    display: grid;
+    gap: 4px;
+}
+
+body.veterinary-patient-history-view .vet-history-record .vet-history-summary-label {
+    margin: 8px 0 0 !important;
+}
+
+body.veterinary-patient-history-view .vet-history-record-details {
+    gap: 6px 26px;
+    margin-top: 10px;
+}
+
+body.veterinary-patient-history-view .vet-history-record-details div {
+    padding: 5px 0;
+}
+
+body.veterinary-patient-history-view .vet-history-more-details {
+    width: fit-content;
+    margin-top: 12px;
+    border-top: 0;
+}
+
+body.veterinary-patient-history-view .vet-history-more-details summary {
+    display: inline-flex;
+    align-items: center;
+    min-height: 34px;
+    padding: 7px 11px;
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    background: var(--surface-strong);
+    color: var(--primary);
+    list-style: none;
+}
+
+body.veterinary-patient-history-view .vet-history-more-details summary::-webkit-details-marker {
+    display: none;
+}
+
+body.veterinary-patient-history-view .vet-history-more-details summary::before {
+    content: "⌄";
+    margin-right: 7px;
+    font-size: 1rem;
+    line-height: 1;
+}
+
+body.veterinary-patient-history-view .vet-history-more-details[open] summary::before {
+    transform: rotate(180deg);
+}
+
+button.vet-history-more-details {
+    display: inline-flex;
+    align-items: center;
+    min-height: 34px;
+    padding: 7px 11px;
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    background: var(--surface-strong);
+    color: var(--primary);
+    cursor: pointer;
+    font: inherit;
+    font-size: 0.82rem;
+    font-weight: 800;
+}
+
+button.vet-history-more-details::before {
+    content: "↗";
+    margin-right: 7px;
+    font-size: 0.95rem;
+}
+
+body.veterinary-patient-history-view .vet-history-followup-action {
+    min-height: 30px;
+    padding: 5px 8px;
+    border: 0;
+    border-radius: 7px;
+    background: transparent;
+    color: var(--primary);
+    cursor: pointer;
+    font: inherit;
+    font-size: 0.76rem;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+body.veterinary-patient-history-view .vet-history-followup-action:hover,
+body.veterinary-patient-history-view .vet-history-followup-action:focus-visible {
+    background: var(--surface-strong);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+
+.vet-record-details-dialog {
+    width: min(620px, calc(100vw - 32px)) !important;
+    max-height: min(680px, calc(100vh - 32px));
+    overflow: auto;
+}
+
+.vet-record-details-modal {
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 16px;
+}
+
+.vet-record-details-modal .vet-record-details-dialog,
+.vet-record-details-modal.is-hidden .vet-record-details-dialog {
+    height: auto !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 16px;
+    box-shadow: 0 24px 56px rgba(0, 0, 0, 0.36);
+    transform: none !important;
+    transition: none !important;
+}
+
+.vet-record-details-dialog .vet-history-extra-details {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px 22px;
+    margin: 18px 0 0;
+}
+
+.vet-record-details-dialog .vet-history-extra-details div {
+    min-width: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+}
+
+@media (max-width: 560px) {
+    .vet-record-details-dialog .vet-history-extra-details {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 760px) {
+    body.veterinary-patient-history-view .vet-history-patient-details,
+    body.veterinary-patient-history-view .vet-history-record-details {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    body.veterinary-patient-history-view .vet-history-record {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+
+    body.veterinary-patient-history-view .vet-history-record .vet-recent-meta {
+        align-items: flex-start;
+    }
+}
+
+/* Buscador de Pacientes: gris grafito neutro y controles de la misma altura. */
+html[data-theme="dark"] .vet-patients-module .vet-patient-search {
+    align-items: center !important;
+    background: transparent !important;
+}
+
+html[data-theme="dark"] .vet-patients-module .vet-patient-search input[type="search"] {
+    height: 44px !important;
+    min-height: 44px !important;
+    padding: 0 14px !important;
+    background: #263545 !important;
+    border: 2px solid #8FA4B8 !important;
+    color: #F1F5F8 !important;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08) !important;
+}
+
+html[data-theme="dark"] .vet-patients-module .vet-patient-search input[type="search"]::placeholder {
+    color: #C3CED9 !important;
+}
+
+html[data-theme="dark"] .vet-patients-module .vet-patient-search .filter-actions {
+    align-self: center;
+    align-items: center !important;
+    min-height: 44px;
+}
+
+html[data-theme="dark"] .vet-patients-module .vet-patient-search .filter-actions .btn {
+    height: 44px !important;
+    min-height: 44px !important;
+    padding: 0 14px !important;
+    line-height: 1 !important;
+    background: #2A3948 !important;
+    color: #F3F6F8 !important;
+    border: 2px solid #8FA4B8 !important;
+}
+
+.vet-delete-modal-content {
+    width: min(440px, calc(100vw - 32px)) !important;
+    min-width: 0 !important;
+    padding: 28px !important;
+    border-radius: 18px !important;
+    text-align: center;
+    transform: none !important;
+}
+
+.vet-delete-icon {
+    display: grid;
+    width: 42px;
+    height: 42px;
+    margin: 0 auto 14px;
+    place-items: center;
+    border-radius: 50%;
+    background: var(--danger-soft);
+    color: var(--danger);
+    font-size: 1.2rem;
+    font-weight: 800;
+}
+
+.vet-delete-modal-content h3 {
+    margin: 0;
+    color: var(--text);
+}
+
+.vet-delete-modal-content > p:not(.eyebrow) {
+    margin: 10px 0 0;
+    color: var(--muted);
+    line-height: 1.5;
+}
+
+.vet-delete-actions {
+    justify-content: center;
+    margin-top: 22px;
+}
+
+.vet-delete-confirm {
+    background: var(--danger) !important;
+    color: #fff !important;
+}
+
+@media (max-width: 720px) {
+    body.veterinary-patient-history-view .vet-history-record-details {
+        grid-template-columns: 1fr;
+    }
+}
+
+.vet-patient-list-card,
+.vet-recent-card {
+    min-height: 0;
+    max-height: none;
+    height: auto;
+    padding: 18px 20px;
+    overflow: visible;
+}
+
+.vet-patient-list-card .vet-card-heading,
+.vet-recent-card .vet-card-heading {
+    min-height: 44px;
+    margin-bottom: 12px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+}
+
+.vet-card-heading-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.vet-patients-module .vet-card-heading-actions .btn {
+    min-height: 34px;
+    padding: 7px 10px;
+    border-radius: 10px;
+    font-size: 0.76rem;
+    white-space: nowrap;
+}
+
+.vet-patients-module .vet-history-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 31px;
+    padding: 6px 9px;
+    color: var(--primary) !important;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.vet-list-count {
+    min-width: 36px;
+    height: 36px;
+    font-size: 0.9rem;
+}
+
+.vet-patient-list,
+.vet-recent-list {
+    max-height: min(59vh, 560px);
+    padding-right: 6px;
+}
+
+.vet-patient-item,
+.vet-recent-item {
+    display: grid;
+    margin: 0;
+    border-width: 1px;
+    border-radius: 12px;
+}
+
+.vet-patient-item {
+    grid-template-columns: minmax(0, 1fr) minmax(205px, 0.62fr);
+    gap: 18px;
+    padding: 14px;
+}
+
+.vet-patient-info {
+    display: grid;
+    grid-template-columns: auto auto;
+    justify-content: end;
+    align-content: center;
+    gap: 7px 8px;
+    max-width: none;
+}
+
+.vet-patient-status {
+    display: flex;
+    grid-column: 1 / -1;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 7px;
+}
+
+.vet-patient-weight,
+.vet-patient-last-visit {
+    color: var(--muted);
+    font-size: 0.72rem;
+}
+
+.vet-patient-last-visit {
+    grid-column: 1 / -1;
+}
+
+.vet-patient-row-actions {
+    display: flex;
+    grid-column: 1 / -1;
+    justify-content: flex-end;
+    gap: 7px;
+    margin-top: 2px;
+}
+
+.vet-patient-row-actions .inline-form {
+    display: inline-flex;
+}
+
+.vet-patient-row-actions .action-button {
+    min-height: 31px;
+    padding: 6px 9px;
+    font-size: 0.72rem;
+}
+
+.vet-recent-item {
+    padding: 13px 14px;
+}
+
+.vet-recent-meta {
+    min-width: 92px;
+}
+
+.vet-empty-state {
+    min-height: 210px;
+    align-content: center;
+    background: var(--surface-strong);
+}
+
+@media (max-width: 1050px) {
+    .vet-patient-overview {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .vet-patients-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .vet-patient-list,
+    .vet-recent-list {
+        max-height: 440px;
+    }
+}
+
+@media (max-width: 720px) {
+    .vet-patients-module {
+        gap: 16px;
+    }
+
+    .vet-patient-search-card {
+        grid-template-columns: 1fr;
+        padding: 16px;
+    }
+
+    .vet-patient-search-card .vet-search-result {
+        grid-column: auto;
+    }
+
+    .vet-patient-search {
+        grid-template-columns: 1fr;
+    }
+
+    .vet-patient-search .filter-actions {
+        width: auto;
+        justify-content: flex-start;
+    }
+
+    .vet-patient-search .filter-actions .btn {
+        flex: 0 0 auto;
+    }
+
+    .vet-patient-item {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+
+    .vet-patient-list-card .vet-card-heading,
+    .vet-recent-card .vet-card-heading {
+        align-items: flex-start;
+    }
+
+    .vet-card-heading-actions {
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    .vet-patient-info,
+    .vet-patient-status,
+    .vet-patient-row-actions {
+        justify-content: flex-start;
+        text-align: left;
+    }
+}
+
+@media (max-width: 500px) {
+    .vet-patient-overview {
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+    }
+
+    .vet-overview-item {
+        min-height: 86px;
+        padding: 12px 12px 12px 16px;
+    }
+
+    .vet-overview-item > strong {
+        font-size: 1.25rem;
+    }
+
+    .vet-patient-list-card,
+    .vet-recent-card {
+        padding: 16px;
+    }
+}
+
+/* Ajuste final: el historial de una mascota se lee como una ficha central,
+   con una retícula compacta que conserva el orden en pantallas anchas. */
+.vet-patients-module .vet-patients-layout.is-showing-history {
+    display: block !important;
+    width: min(100%, 1040px) !important;
+    max-width: 1040px !important;
+    margin: 0 auto !important;
+}
+
+.vet-patients-module .vet-history-page-header {
+    width: min(100%, 1040px) !important;
+    max-width: 1040px !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+}
+
+.vet-patients-module .vet-patients-layout.is-showing-history .vet-recent-card {
+    width: 100% !important;
+    max-width: none !important;
+    padding: 24px 28px !important;
+}
+
+.vet-patients-module .vet-patients-layout.is-showing-history .vet-history-patient-details {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 12px 28px !important;
+}
+
+.vet-patients-module .vet-patients-layout.is-showing-history .vet-history-patient-details div {
+    padding: 6px 0 !important;
+}
+
+.vet-patients-module .vet-patients-layout.is-showing-history .vet-history-record {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) 145px !important;
+    gap: 22px !important;
+    padding: 18px 0 6px !important;
+    margin: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+}
+
+.vet-patients-module .vet-patients-layout.is-showing-history .vet-history-record-details {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 8px 22px !important;
+    margin-top: 12px !important;
+}
+
+/* El seguimiento forma parte de la misma atención: se separa con una línea,
+   no con una tarjeta, modal o interacción adicional. */
+.vet-patients-module .vet-patients-layout.is-showing-history .vet-history-followup-details {
+    margin-top: 16px;
+    padding-top: 14px;
+    border-top: 1px solid var(--border);
+}
+
+.vet-patients-module .vet-patients-layout.is-showing-history .vet-history-followup-details .vet-history-summary-label {
+    margin: 0 !important;
+}
+
+.vet-patients-module .vet-patients-layout.is-showing-history .vet-history-followup-details .vet-history-extra-details {
+    margin-top: 8px !important;
+}
+
+.vet-patients-module .vet-patients-layout.is-showing-history .vet-history-visit-professional {
+    margin: 0 !important;
+    color: var(--muted) !important;
+    font-size: 0.8rem;
+    font-weight: 650;
+}
+
+.vet-patients-module .vet-history-record-delete-form {
+    margin: 2px 0 0;
+}
+
+.vet-patients-module .vet-history-record-delete {
+    border: 1px solid color-mix(in srgb, var(--danger) 68%, var(--border));
+    border-radius: 8px;
+    background: transparent;
+    color: var(--danger);
+    cursor: pointer;
+    font: inherit;
+    font-size: 0.76rem;
+    font-weight: 700;
+    padding: 6px 8px;
+}
+
+.vet-patients-module .vet-history-record-delete:hover,
+.vet-patients-module .vet-history-record-delete:focus-visible {
+    background: color-mix(in srgb, var(--danger) 12%, transparent);
+}
+
+.vet-patients-module .vet-history-delete-form {
+    margin: 0;
+}
+
+.vet-patients-module .vet-history-delete {
+    min-height: 34px;
+    border: 1px solid color-mix(in srgb, var(--danger) 68%, var(--border));
+    border-radius: 9px;
+    background: transparent;
+    color: var(--danger);
+    cursor: pointer;
+    font: inherit;
+    font-size: 0.8rem;
+    font-weight: 700;
+    padding: 7px 10px;
+}
+
+.vet-patients-module .vet-history-delete:hover,
+.vet-patients-module .vet-history-delete:focus-visible {
+    background: color-mix(in srgb, var(--danger) 12%, transparent);
+}
+
+@media (max-width: 760px) {
+    .vet-patients-module .vet-patients-layout.is-showing-history .vet-history-patient-details,
+    .vet-patients-module .vet-patients-layout.is-showing-history .vet-history-record-details {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+
+    .vet-patients-module .vet-patients-layout.is-showing-history .vet-history-record {
+        grid-template-columns: 1fr !important;
+        gap: 10px !important;
+    }
 }
