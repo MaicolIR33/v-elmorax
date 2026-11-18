@@ -8,6 +8,7 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import date, datetime, timedelta
 from pathlib import Path
 from uuid import uuid4
+from urllib.parse import unquote
 
 
 TEST_DB = Path("data") / "velmorax-test.db"
@@ -670,7 +671,7 @@ class VelmoraxWebTests(unittest.TestCase):
                   "organization_id": target["organization_id"], "location_id": target["location_id"],
                   "full_name": target["full_name"]}, follow_redirects=False,
         )
-        self.assertIn("user_updated=1", customized.headers["location"])
+        self.assertIn("permissions_saved=1", customized.headers["location"])
         permissions = effective_permissions(get_user_by_id(target["id"]))
         self.assertTrue(permissions["consume_inventory"])
         self.assertFalse(permissions["manage_inventory"])
@@ -794,17 +795,127 @@ class VelmoraxWebTests(unittest.TestCase):
         self.assertEqual(health.json()["database_status"], "ok")
         backup = self.client.get("/admin/backup")
         self.assertEqual(backup.status_code, 200)
-        self.assertTrue(backup.content.startswith(b"SQLite format 3"))
-        with tempfile.NamedTemporaryFile(suffix=".db") as restored:
-            restored.write(backup.content)
-            restored.flush()
-            with sqlite3.connect(restored.name) as connection:
-                integrity = connection.execute("PRAGMA integrity_check").fetchone()[0]
-                inventory_tables = connection.execute(
-                    "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name IN ('inventory_items','inventory_movements')"
-                ).fetchone()[0]
-            self.assertEqual(integrity, "ok")
-            self.assertEqual(inventory_tables, 2)
+        backup_data = json.loads(backup.content)
+        self.assertEqual(backup_data["organization_id"], 1)
+        self.assertIn("organizations", backup_data["data"])
+        self.assertIn("users", backup_data["data"])
+        self.assertTrue(all(item["organization_id"] == 1 for item in backup_data["data"].get("inventory_items", [])))
+
+    def test_admin_workspace_supports_scoped_settings_services_schedule_and_site_growth(self):
+        self.client.post("/logout")
+        self.client.post("/login", data={"intent": "veterinaria", "email": "admin@velmorax.local", "password": "velmorax123"})
+        self.client.post("/login/push-approval", data={"approve": "1"})
+        page = self.client.get("/admin")
+        self.assertEqual(page.status_code, 200)
+        for text in ("Organización", "Equipo", "Agenda y servicios", "Auditoría", "Administración de la clínica"):
+            self.assertIn(text, page.text)
+        self.assertNotIn("Cargar catálogo odontológico", page.text)
+        self.assertNotIn("Preparación y conexiones", page.text)
+
+        created = self.client.post("/admin/users", data={
+            "full_name": "Usuario Administración QA", "email": "admin-module-qa@example.test",
+            "password": "Temporal-QA-1234", "role": "inventory", "organization_id": 1,
+            "location_id": 2, "specialty": "Inventario",
+        }, follow_redirects=False)
+        self.assertIn("user_saved=1", created.headers["location"])
+        created_user = next(item for item in list_users() if item["email"] == "admin-module-qa@example.test")
+        self.assertEqual(created_user["role"], "inventory")
+        disabled = self.client.post(f"/admin/users/{created_user['id']}/toggle", data={
+            "is_active": 1, "organization_id": 1, "location_id": 2, "full_name": created_user["full_name"],
+        }, follow_redirects=False)
+        self.assertIn("user_updated=1", disabled.headers["location"])
+        disabled_user = next(item for item in list_users() if item["id"] == created_user["id"])
+        self.assertFalse(disabled_user["is_active"])
+        reactivated = self.client.post(f"/admin/users/{created_user['id']}/toggle", data={
+            "is_active": 0, "organization_id": 1, "location_id": 2, "full_name": created_user["full_name"],
+        }, follow_redirects=False)
+        self.assertIn("user_updated=1", reactivated.headers["location"])
+        self.assertTrue(next(item for item in list_users() if item["id"] == created_user["id"])["is_active"])
+
+        prefs = self.client.post("/admin/settings", data={
+            "agenda_slot_minutes": 15, "appointment_reminder_hours": 48,
+            "low_stock_threshold": 8, "password_min_length": 12, "recovery_channel": "admin",
+        }, follow_redirects=False)
+        self.assertIn("settings_saved=1", prefs.headers["location"])
+        service = self.client.post("/admin/services", data={"name": "Vacunación QA", "duration_minutes": 45}, follow_redirects=False)
+        self.assertIn("service_saved=1", service.headers["location"])
+        with get_connection() as connection:
+            saved_service = connection.execute("SELECT id FROM clinic_services WHERE organization_id=1 AND name='Vacunación QA'").fetchone()
+            settings = connection.execute("SELECT settings_json FROM organization_preferences WHERE organization_id=1").fetchone()
+        self.assertIsNotNone(saved_service)
+        self.assertEqual(json.loads(settings["settings_json"])["password_min_length"], 12)
+
+        member = next(item for item in list_users() if item["email"] == "clinica@velmorax.local")
+        schedule = self.client.post(f"/admin/users/{member['id']}/schedule", data={
+            "working_days": ["0", "1", "2", "3", "4"], "work_start": "08:00", "work_end": "17:00",
+            "break_start": "12:00", "break_end": "13:00", "unavailable_dates": "2026-12-24",
+            "organization_id": member["organization_id"], "location_id": member["location_id"],
+        }, follow_redirects=False)
+        self.assertIn("schedule_saved=1", schedule.headers["location"])
+        updated = next(item for item in list_users() if item["id"] == member["id"])
+        self.assertEqual(updated["working_days"], "0,1,2,3,4")
+        self.assertEqual(updated["unavailable_dates"], "2026-12-24")
+
+        second_site = self.client.post("/admin/locations", data={
+            "organization_id": 1, "name": "Sede QA Norte", "city": "Bogotá", "address": "Calle QA",
+            "catalog_kind": "veterinaria",
+        }, follow_redirects=False)
+        self.assertIn("location_saved=1", second_site.headers["location"])
+        self.assertIn("Configuración multisede activa", self.client.get("/admin").text)
+        with get_connection() as connection:
+            new_site = connection.execute("SELECT id FROM locations WHERE organization_id=1 AND name='Sede QA Norte'").fetchone()
+        deactivated_site = self.client.post(f"/admin/locations/{new_site['id']}/toggle", data={
+            "is_active": 1, "organization_id": 1, "name": "Sede QA Norte",
+        }, follow_redirects=False)
+        self.assertIn("location_updated=1", deactivated_site.headers["location"])
+        self.assertNotIn("Configuración multisede activa", self.client.get("/admin").text)
+        export = self.client.get("/admin/auditoria/export")
+        self.assertEqual(export.status_code, 200)
+        self.assertIn("Vacunación QA", export.text)
+        with get_connection() as connection:
+            connection.execute("DELETE FROM clinic_services WHERE name='Vacunación QA' AND organization_id=1")
+            connection.execute("DELETE FROM users WHERE email='admin-module-qa@example.test'")
+            connection.execute("DELETE FROM audit_events WHERE entity_label IN ('Vacunación QA','Sede QA Norte')")
+            connection.execute("DELETE FROM locations WHERE name='Sede QA Norte' AND organization_id=1")
+            connection.execute("DELETE FROM organization_preferences WHERE organization_id=1")
+            connection.execute("UPDATE users SET working_days='0,1,2,3,4,5', work_start='08:00', work_end='18:00', break_start='12:00', break_end='13:00', unavailable_dates='' WHERE id=?", (member["id"],))
+            connection.commit()
+
+    def test_admin_rejects_cross_organization_changes_and_protects_own_access(self):
+        self.client.post("/logout")
+        self.client.post("/login", data={"intent": "veterinaria", "email": "admin@velmorax.local", "password": "velmorax123"})
+        self.client.post("/login/push-approval", data={"approve": "1"})
+        with get_connection() as connection:
+            connection.execute("INSERT INTO organizations (id,name,country,timezone) VALUES (90,'QA externa','Colombia','America/Bogota')")
+            connection.execute("INSERT INTO locations (id,organization_id,name,city,address,catalog_kind) VALUES (90,90,'Sede externa','Cali','Dirección QA','veterinaria')")
+            connection.execute("INSERT INTO users (id,full_name,email,password_hash,role,organization_id,location_id) VALUES (90,'Usuario externo QA','externo-qa@example.test','hash','clinical',90,90)")
+            connection.commit()
+        try:
+            page = self.client.get("/admin")
+            self.assertNotIn("Usuario externo QA", page.text)
+            rejected = self.client.post("/admin/users/90", data={
+                "full_name": "Intento QA", "email": "externo-qa@example.test", "role": "clinical",
+                "organization_id": 90, "location_id": 90,
+            }, follow_redirects=False)
+            self.assertIn("/admin", rejected.headers["location"])
+            self.assertEqual(next(item for item in list_users() if item["id"] == 90)["full_name"], "Usuario externo QA")
+            self_admin = next(item for item in list_users() if item["email"] == "admin@velmorax.local")
+            disable_self = self.client.post(f"/admin/users/{self_admin['id']}/toggle", data={
+                "is_active": 1, "organization_id": self_admin["organization_id"],
+            }, follow_redirects=False)
+            self.assertIn("No puedes desactivar tu propio acceso", unquote(disable_self.headers["location"]))
+            custom_self = self.client.post(f"/admin/users/{self_admin['id']}/permissions", data={
+                "permission_mode": "custom", "allowed_permissions": ["view_agenda"],
+                "organization_id": self_admin["organization_id"], "location_id": self_admin["location_id"],
+            }, follow_redirects=False)
+            self.assertIn("No puedes retirar tu propio acceso administrativo", unquote(custom_self.headers["location"]))
+            self.assertTrue(effective_permissions(get_user_by_id(self_admin["id"]))["manage_admin"])
+        finally:
+            with get_connection() as connection:
+                connection.execute("DELETE FROM users WHERE id=90")
+                connection.execute("DELETE FROM locations WHERE id=90")
+                connection.execute("DELETE FROM organizations WHERE id=90")
+                connection.commit()
 
     def test_veterinary_dashboard_is_visual_and_uses_veterinary_scope(self):
         self.client.post("/logout")

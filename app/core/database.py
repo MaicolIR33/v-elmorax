@@ -662,6 +662,22 @@ def build_schema_sql(dialect: str) -> str:
             created_at {created_at_type} NOT NULL DEFAULT CURRENT_TIMESTAMP
         );
 
+        CREATE TABLE IF NOT EXISTS organization_preferences (
+            organization_id INTEGER PRIMARY KEY,
+            settings_json TEXT NOT NULL DEFAULT '{{}}',
+            FOREIGN KEY (organization_id) REFERENCES organizations (id)
+        );
+
+        CREATE TABLE IF NOT EXISTS clinic_services (
+            id {id_column},
+            organization_id INTEGER NOT NULL,
+            name TEXT NOT NULL,
+            duration_minutes INTEGER NOT NULL DEFAULT 30,
+            is_active INTEGER NOT NULL DEFAULT 1,
+            created_at {created_at_type} NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (organization_id) REFERENCES organizations (id)
+        );
+
         CREATE TABLE IF NOT EXISTS audit_events (
             id {id_column},
             user_id INTEGER,

@@ -41,6 +41,8 @@ from app.services.auth import (
     create_user,
     create_password_reset_token,
     get_user_by_id,
+    get_user_by_email,
+    legacy_sha256_hash,
     login_lock_message,
     list_users,
     mark_password_change_completed,
@@ -278,6 +280,19 @@ def align_scope_to_entry_intent(
 
 def encoded_message(value: str) -> str:
     return quote(value, safe="")
+
+
+def minimum_password_length(organization_id: int, *, default: int = 10) -> int:
+    with get_connection() as connection:
+        row = connection.execute(
+            "SELECT settings_json FROM organization_preferences WHERE organization_id = ?",
+            (organization_id,),
+        ).fetchone()
+    try:
+        value = int(json.loads(row["settings_json"]).get("password_min_length", default)) if row and row["settings_json"] else default
+    except (TypeError, ValueError, AttributeError):
+        value = default
+    return value if value in {10, 12, 14} else default
 
 
 def context_for_authenticated_user(
@@ -1027,6 +1042,22 @@ async def password_reset_request_action(
     enabled_intents = {flow["id"] for flow in entry_flows() if flow.get("enabled", True)}
     selected_intent = intent if intent in enabled_intents else ""
     intent_suffix = f"&intent={selected_intent}" if selected_intent else ""
+    requested_user = get_user_by_email(email.strip())
+    if requested_user is not None:
+        with get_connection() as connection:
+            preference_row = connection.execute(
+                "SELECT settings_json FROM organization_preferences WHERE organization_id = ?",
+                (int(requested_user["organization_id"]),),
+            ).fetchone()
+        try:
+            recovery_channel = json.loads(preference_row["settings_json"]).get("recovery_channel", "email") if preference_row else "email"
+        except (TypeError, ValueError):
+            recovery_channel = "email"
+        if recovery_channel == "admin":
+            return RedirectResponse(
+                url=f"/password-reset?success={encoded_message('Si la cuenta existe, un administrador autorizado podrá ayudar a restablecer el acceso.')}{intent_suffix}",
+                status_code=303,
+            )
     token = create_password_reset_token(email.strip())
     if token is None:
         return RedirectResponse(
@@ -1130,6 +1161,15 @@ async def password_reset_confirm_page(
     error: str = "",
     success: str = "",
 ) -> HTMLResponse:
+    password_min_length = 10
+    if token:
+        with get_connection() as connection:
+            row = connection.execute(
+                "SELECT users.organization_id FROM password_reset_tokens JOIN users ON users.id = password_reset_tokens.user_id WHERE password_reset_tokens.token_hash = ? AND password_reset_tokens.used_at = '' ORDER BY password_reset_tokens.id DESC LIMIT 1",
+                (legacy_sha256_hash(token),),
+            ).fetchone()
+        if row:
+            password_min_length = minimum_password_length(int(row["organization_id"]))
     return templates.TemplateResponse(
         request=request,
         name="password_reset_form.html",
@@ -1138,6 +1178,7 @@ async def password_reset_confirm_page(
             "error": error,
             "success": success,
             "token": token,
+            "password_min_length": password_min_length,
         },
     )
 
@@ -1149,9 +1190,17 @@ async def password_reset_confirm_action(
     password: str = Form(...),
     password_confirm: str = Form(...),
 ) -> RedirectResponse:
-    if len(password) < 8:
+    password_min_length = 10
+    with get_connection() as connection:
+        row = connection.execute(
+            "SELECT users.organization_id FROM password_reset_tokens JOIN users ON users.id = password_reset_tokens.user_id WHERE password_reset_tokens.token_hash = ? AND password_reset_tokens.used_at = '' ORDER BY password_reset_tokens.id DESC LIMIT 1",
+            (legacy_sha256_hash(token),),
+        ).fetchone()
+    if row:
+        password_min_length = minimum_password_length(int(row["organization_id"]))
+    if len(password) < password_min_length:
         return RedirectResponse(
-            url=f"/password-reset/confirm?token={token}&error={encoded_message('La clave debe tener al menos 8 caracteres.')}",
+            url=f"/password-reset/confirm?token={token}&error={encoded_message(f'La clave debe tener al menos {password_min_length} caracteres.')}",
             status_code=303,
         )
     if password != password_confirm:
@@ -1877,6 +1926,8 @@ async def admin_page(
     catalog_veterinary_synced: int = 0,
     settings_saved: int = 0,
     catalog_error: str = "",
+    settings_error: str = "",
+    service_error: str = "",
     organization_id: str = Query(default=""),
     location_id: str = Query(default=""),
 ):
@@ -1891,27 +1942,43 @@ async def admin_page(
     if not user["permissions"]["manage_admin"]:
         return redirect_to_module_with_error("/", "Tu rol no puede administrar la red.")
 
-    admin_locations = list_locations(include_inactive=True)
-    admin_organizations = list_organizations()
-    admin_users = list_users()
+    organization_id = int(user["organization_id"])
+    admin_organizations = [item for item in list_organizations() if int(item["id"]) == organization_id]
+    admin_locations = list_locations(str(organization_id), include_inactive=True)
+    admin_users = [item for item in list_users() if int(item.get("organization_id") or 0) == organization_id]
+    if context["is_veterinary_flow"]:
+        admin_locations = [item for item in admin_locations if item.get("catalog_kind") == "veterinaria"]
+        veterinary_location_ids = {int(item["id"]) for item in admin_locations}
+        admin_users = [item for item in admin_users if int(item.get("location_id") or 0) in veterinary_location_ids]
+    admin_self_hidden = not any(int(item["id"]) == int(user["id"]) for item in admin_users)
     for item in admin_users:
         item["effective_permissions"] = effective_permissions(item)
-    if context["is_veterinary_flow"]:
-        admin_locations = [
-            item for item in admin_locations if item.get("catalog_kind") == "veterinaria"
-        ]
-        veterinary_organization_ids = {
-            item["organization_id"] for item in admin_locations
-        }
-        veterinary_location_ids = {item["id"] for item in admin_locations}
-        admin_organizations = [
-            item for item in admin_organizations if item["id"] in veterinary_organization_ids
-        ]
-        admin_users = [
-            item
-            for item in admin_users
-            if item.get("location_id") in veterinary_location_ids or item["id"] == user["id"]
-        ]
+    context["scope"]["organization_id"] = str(organization_id)
+    context["scope"]["locations"] = admin_locations
+    context["scope"]["location_id"] = str(user.get("location_id") or "")
+    organization = admin_organizations[0] if admin_organizations else {}
+    allowed_site_names = {item["name"] for item in admin_locations}
+    admin_audit_events = [
+        item for item in list_recent_activity(limit=100, organization_id=str(organization_id))
+        if item.get("location_name") in allowed_site_names or item.get("location_name") == "-"
+    ][:40]
+    defaults = {
+        "currency": "COP", "agenda_slot_minutes": 30, "appointment_reminder_hours": 24,
+        "low_stock_threshold": 5, "password_min_length": 10, "recovery_channel": "email",
+    }
+    with get_connection() as connection:
+        row = connection.execute(
+            "SELECT settings_json FROM organization_preferences WHERE organization_id = ?",
+            (organization_id,),
+        ).fetchone()
+        service_rows = connection.execute(
+            "SELECT id, name, duration_minutes, is_active FROM clinic_services WHERE organization_id = ? ORDER BY name COLLATE NOCASE",
+            (organization_id,),
+        ).fetchall()
+    try:
+        defaults.update(json.loads(row["settings_json"]) if row and row["settings_json"] else {})
+    except (TypeError, ValueError):
+        pass
 
     context.update(
         {
@@ -1926,23 +1993,19 @@ async def admin_page(
             "catalog_synced": catalog_synced,
             "catalog_veterinary_synced": catalog_veterinary_synced,
             "settings_saved": settings_saved,
+            "settings_error": settings_error,
+            "service_error": service_error,
             "catalog_error": catalog_error,
             "admin_users": admin_users,
+            "admin_self_hidden": admin_self_hidden,
             "admin_organizations": admin_organizations,
             "admin_locations": admin_locations,
+            "admin_active_locations": [item for item in admin_locations if item.get("is_active")],
+            "active_site_count": sum(1 for item in admin_locations if item.get("is_active")),
             "app_settings": get_app_settings(),
-            "audit_events": list_recent_activity(limit=24),
-            "database_mode": get_database_dialect(),
-            "database_url_masked": get_database_url().split("@")[-1] if "@" in get_database_url() else get_database_url(),
-            "entry_flows": entry_flows(),
-            "admin_highlights": [
-                "Bloqueo por intentos fallidos, cambio forzado de clave temporal y recuperacion por token.",
-                "RBAC por rol y sede disminuye errores de acceso y privilegios excesivos.",
-                "La app soporta SQLite y PostgreSQL por DATABASE_URL, con auditoria y exportaciones operativas.",
-            ],
-            "subscription": organization_subscription(int(user["organization_id"])),
-            "integration_readiness": integration_readiness(),
-            "integration_outbox": integration_outbox_summary(int(user["organization_id"])),
+            "clinic_settings": defaults,
+            "admin_services": [dict(item) for item in service_rows],
+            "audit_events": admin_audit_events,
         }
     )
     return templates.TemplateResponse(request=request, name="admin.html", context=context)
@@ -1951,10 +2014,11 @@ async def admin_page(
 @router.post("/admin/settings")
 async def update_admin_settings(
     request: Request,
-    support_email: str = Form(""),
-    support_phone: str = Form(""),
-    security_note: str = Form(""),
-    deployment_note: str = Form(""),
+    agenda_slot_minutes: int = Form(30),
+    appointment_reminder_hours: int = Form(24),
+    low_stock_threshold: int = Form(5),
+    password_min_length: int = Form(10),
+    recovery_channel: str = Form("email"),
 ) -> RedirectResponse:
     user = user_with_permissions(request)
     if user is None:
@@ -1962,24 +2026,92 @@ async def update_admin_settings(
     if not user["permissions"]["manage_admin"]:
         return redirect_to_module_with_error("/", "Tu rol no puede actualizar ajustes.")
 
-    save_app_settings(
-        {
-            "support_email": support_email,
-            "support_phone": support_phone,
-            "security_note": security_note,
-            "deployment_note": deployment_note,
-        }
-    )
+    if agenda_slot_minutes not in {15, 30, 45, 60} or appointment_reminder_hours not in {2, 24, 48}:
+        return RedirectResponse(url="/admin?settings_error=Revisa+los+intervalos+seleccionados.", status_code=303)
+    if not 1 <= low_stock_threshold <= 1000 or password_min_length not in {10, 12, 14} or recovery_channel not in {"email", "admin"}:
+        return RedirectResponse(url="/admin?settings_error=Revisa+los+parámetros+de+acceso+e+inventario.", status_code=303)
+    values = {
+        "agenda_slot_minutes": agenda_slot_minutes,
+        "appointment_reminder_hours": appointment_reminder_hours,
+        "low_stock_threshold": low_stock_threshold,
+        "password_min_length": password_min_length,
+        "recovery_channel": recovery_channel,
+    }
+    org_id = int(user["organization_id"])
+    with get_connection() as connection:
+        row = connection.execute("SELECT settings_json FROM organization_preferences WHERE organization_id = ?", (org_id,)).fetchone()
+        try:
+            settings = json.loads(row["settings_json"]) if row and row["settings_json"] else {}
+        except (TypeError, ValueError):
+            settings = {}
+        settings.update(values)
+        connection.execute(
+            "INSERT INTO organization_preferences (organization_id, settings_json) VALUES (?, ?) ON CONFLICT(organization_id) DO UPDATE SET settings_json=excluded.settings_json",
+            (org_id, json.dumps(settings, ensure_ascii=False)),
+        )
+        connection.commit()
     log_audit_event(
         user_id=user["id"],
-        organization_id=None,
+        organization_id=org_id,
         location_id=None,
         action="Actualizacion",
         entity_type="Configuracion",
-        entity_label="Ajustes globales",
-        detail="Se actualizaron datos de soporte, seguridad y despliegue",
+        entity_label="Preferencias de la clínica",
+        detail="Agenda, avisos, inventario y recuperación de acceso",
     )
-    return RedirectResponse(url="/admin?settings_saved=1", status_code=303)
+    return RedirectResponse(url="/admin?settings_saved=1&panel=admin-operations", status_code=303)
+
+
+@router.post("/admin/services")
+async def create_admin_service(
+    request: Request,
+    name: str = Form(...),
+    duration_minutes: int = Form(30),
+) -> RedirectResponse:
+    user = user_with_permissions(request)
+    if user is None:
+        return redirect_to_login()
+    if not user["permissions"]["manage_admin"]:
+        return redirect_to_module_with_error("/", "Solo los administradores pueden gestionar servicios.")
+    name = name.strip()
+    if not name or len(name) > 100 or duration_minutes not in {15, 30, 45, 60, 90, 120}:
+        return RedirectResponse(url="/admin?service_error=Revisa+el+nombre+y+la+duración.&panel=admin-services", status_code=303)
+    org_id = int(user["organization_id"])
+    with get_connection() as connection:
+        duplicate = connection.execute("SELECT id FROM clinic_services WHERE organization_id = ? AND lower(name) = lower(?)", (org_id, name)).fetchone()
+        if duplicate:
+            return RedirectResponse(url="/admin?service_error=Ya+existe+un+servicio+con+ese+nombre.&panel=admin-services", status_code=303)
+        connection.execute("INSERT INTO clinic_services (organization_id, name, duration_minutes) VALUES (?, ?, ?)", (org_id, name, duration_minutes))
+        connection.commit()
+    log_audit_event(user_id=user["id"], organization_id=org_id, location_id=None, action="Creación", entity_type="Servicio", entity_label=name, detail=f"Duración {duration_minutes} min")
+    return RedirectResponse(url="/admin?service_saved=1&panel=admin-services", status_code=303)
+
+
+@router.post("/admin/services/{service_id}")
+async def update_admin_service(
+    request: Request,
+    service_id: int,
+    name: str = Form(...),
+    duration_minutes: int = Form(30),
+    is_active: int = Form(0),
+) -> RedirectResponse:
+    user = user_with_permissions(request)
+    if user is None:
+        return redirect_to_login()
+    if not user["permissions"]["manage_admin"]:
+        return redirect_to_module_with_error("/", "Solo los administradores pueden gestionar servicios.")
+    org_id = int(user["organization_id"])
+    name = name.strip()
+    if not name or len(name) > 100 or duration_minutes not in {15, 30, 45, 60, 90, 120}:
+        return RedirectResponse(url="/admin?service_error=Revisa+el+nombre+y+la+duración.&panel=admin-services", status_code=303)
+    with get_connection() as connection:
+        row = connection.execute("SELECT id FROM clinic_services WHERE id = ? AND organization_id = ?", (service_id, org_id)).fetchone()
+        if row is None:
+            return redirect_to_module_with_error("/admin", "Ese servicio no pertenece a tu organización.")
+        connection.execute("UPDATE clinic_services SET name = ?, duration_minutes = ?, is_active = ? WHERE id = ? AND organization_id = ?", (name, duration_minutes, int(bool(is_active)), service_id, org_id))
+        connection.commit()
+    log_audit_event(user_id=user["id"], organization_id=org_id, location_id=None, action="Actualización", entity_type="Servicio", entity_label=name, detail=f"Duración {duration_minutes} min")
+    return RedirectResponse(url="/admin?service_saved=1&panel=admin-services", status_code=303)
 
 
 @router.get("/admin/auditoria/export")
@@ -1989,7 +2121,14 @@ async def export_audit_activity(request: Request):
         return redirect_to_login()
     if not user["permissions"]["manage_admin"]:
         return redirect_to_module_with_error("/", "Tu rol no puede exportar auditoria.")
-    csv_content = build_activity_csv(list_recent_activity(limit=500))
+    events = list_recent_activity(limit=500, organization_id=str(user["organization_id"]))
+    if request.session.get("entry_intent") == "veterinaria":
+        veterinary_site_names = {
+            item["name"] for item in list_locations(str(user["organization_id"]), include_inactive=True)
+            if item.get("catalog_kind") == "veterinaria"
+        }
+        events = [item for item in events if item.get("location_name") in veterinary_site_names or item.get("location_name") == "-"]
+    csv_content = build_activity_csv(events)
     return Response(
         content=csv_content,
         media_type="text/csv; charset=utf-8",
@@ -2005,24 +2144,48 @@ async def export_backup_snapshot(request: Request):
     if not user["permissions"]["manage_admin"]:
         return redirect_to_module_with_error("/", "Tu rol no puede descargar respaldos.")
 
-    if get_database_dialect() == "sqlite":
-        db_path = sqlite_db_path()
-        if db_path.exists():
-            with tempfile.NamedTemporaryFile(suffix=".db") as snapshot:
-                with sqlite3.connect(db_path) as source, sqlite3.connect(snapshot.name) as destination:
-                    source.backup(destination)
-                snapshot_bytes = Path(snapshot.name).read_bytes()
-            return Response(
-                content=snapshot_bytes,
-                media_type="application/octet-stream",
-                headers={"Content-Disposition": f'attachment; filename="{db_path.name}"'},
-            )
-
-    return Response(
-        content=build_backup_snapshot(),
-        media_type="application/json; charset=utf-8",
-        headers={"Content-Disposition": 'attachment; filename="velmorax-backup.json"'},
-    )
+    org_id = int(user["organization_id"])
+    if user.get("role") not in {"admin", "owner"}:
+        return redirect_to_module_with_error("/admin", "Solo los administradores autorizados pueden descargar respaldos.")
+    # Create a tenant-scoped snapshot: never return the shared database file to an organization admin.
+    tables = ["organizations", "locations", "users", "organization_preferences", "clinic_services",
+              "patients", "appointments", "clinical_records", "inventory_items", "inventory_movements",
+              "alerts", "audit_events"]
+    snapshot: dict[str, list[dict]] = {}
+    with get_connection() as connection:
+        for table in tables:
+            if get_database_dialect() == "sqlite":
+                columns = [row["name"] for row in connection.execute(f"PRAGMA table_info({table})").fetchall()]
+            else:
+                columns = [row["column_name"] for row in connection.execute(
+                    "SELECT column_name FROM information_schema.columns WHERE table_name = ? AND table_schema = current_schema()",
+                    (table,),
+                ).fetchall()]
+            if not columns:
+                continue
+            if "organization_id" in columns:
+                rows = connection.execute(f"SELECT * FROM {table} WHERE organization_id = ?", (org_id,)).fetchall()
+            elif table == "organizations":
+                rows = connection.execute("SELECT * FROM organizations WHERE id = ?", (org_id,)).fetchall()
+            elif table == "locations":
+                rows = connection.execute("SELECT * FROM locations WHERE organization_id = ?", (org_id,)).fetchall()
+            elif table == "users":
+                rows = connection.execute("SELECT * FROM users WHERE organization_id = ?", (org_id,)).fetchall()
+            elif table == "organization_preferences":
+                rows = connection.execute("SELECT * FROM organization_preferences WHERE organization_id = ?", (org_id,)).fetchall()
+            elif table == "clinic_services":
+                rows = connection.execute("SELECT * FROM clinic_services WHERE organization_id = ?", (org_id,)).fetchall()
+            elif table == "audit_events":
+                rows = connection.execute("SELECT * FROM audit_events WHERE organization_id = ?", (org_id,)).fetchall()
+            else:
+                continue
+            snapshot[table] = [
+                {key: value for key, value in dict(item).items() if key not in {"password_hash", "failed_login_attempts", "locked_until"}}
+                for item in rows
+            ]
+    data = json.dumps({"organization_id": org_id, "created_at": datetime.now(UTC).isoformat(), "data": snapshot}, ensure_ascii=False, default=str)
+    return Response(content=data, media_type="application/json; charset=utf-8",
+                     headers={"Content-Disposition": 'attachment; filename="velmorax-respaldo-organizacion.json"'})
 
 
 @router.post("/admin/catalogs/import/odontology")
@@ -2213,12 +2376,17 @@ async def update_existing_organization(
     timezone: str = Form(...),
     contact_email: str = Form(""),
     contact_phone: str = Form(""),
+    currency: str = Form("COP"),
 ) -> RedirectResponse:
     user = user_with_permissions(request)
     if user is None:
         return redirect_to_login()
     if not user["permissions"]["manage_admin"]:
         return redirect_to_module_with_error("/", "Tu rol no puede editar organizaciones.")
+    if organization_id != int(user["organization_id"]):
+        return redirect_to_module_with_error("/admin", "Esa organización no está disponible para tu acceso.")
+    if currency not in {"COP", "MXN", "PEN", "USD", "CLP", "ARS"}:
+        return RedirectResponse(url="/admin?settings_error=Selecciona+una+moneda+válida.&panel=admin-organization", status_code=303)
 
     update_organization(
         organization_id,
@@ -2230,14 +2398,26 @@ async def update_existing_organization(
             "contact_phone": contact_phone.strip(),
         },
     )
+    with get_connection() as connection:
+        row = connection.execute("SELECT settings_json FROM organization_preferences WHERE organization_id = ?", (organization_id,)).fetchone()
+        try:
+            preferences = json.loads(row["settings_json"]) if row and row["settings_json"] else {}
+        except (TypeError, ValueError):
+            preferences = {}
+        preferences["currency"] = currency
+        connection.execute(
+            "INSERT INTO organization_preferences (organization_id, settings_json) VALUES (?, ?) ON CONFLICT(organization_id) DO UPDATE SET settings_json=excluded.settings_json",
+            (organization_id, json.dumps(preferences, ensure_ascii=False)),
+        )
+        connection.commit()
     log_audit_event(
         user_id=user["id"],
         organization_id=organization_id,
-        location_id=None,
+        location_id=user.get("location_id"),
         action="Actualizacion",
         entity_type="Organizacion",
         entity_label=name.strip(),
-        detail=f"{country.strip()} | {timezone.strip()} | {contact_email.strip()}",
+        detail=f"{country.strip()} | {timezone.strip()} | {contact_email.strip()} | {currency}",
     )
     return RedirectResponse(url="/admin?organization_updated=1", status_code=303)
 
@@ -2259,12 +2439,11 @@ async def create_new_location(
         return redirect_to_login()
     if not user["permissions"]["manage_admin"]:
         return redirect_to_module_with_error("/", "Tu rol no puede crear sedes.")
+    if organization_id != int(user["organization_id"]):
+        return redirect_to_module_with_error("/admin", "No puedes agregar sedes a otra organización.")
 
-    try:
-        assert_capacity(organization_id, "locations")
-    except ValueError as exc:
-        return RedirectResponse(url=f"/admin?permission_error={encoded_message(str(exc))}", status_code=303)
-
+    if not name.strip() or not city.strip() or not address.strip():
+        return RedirectResponse(url="/admin?permission_error=Completa+nombre%2C+ciudad+y+dirección.&panel=admin-organization", status_code=303)
     create_location(
         {
             "organization_id": organization_id,
@@ -2280,7 +2459,7 @@ async def create_new_location(
     log_audit_event(
         user_id=user["id"],
         organization_id=organization_id,
-        location_id=None,
+        location_id=user.get("location_id"),
         action="Creacion",
         entity_type="Sede",
         entity_label=name.strip(),
@@ -2306,6 +2485,10 @@ async def update_existing_location(
         return redirect_to_login()
     if not user["permissions"]["manage_admin"]:
         return redirect_to_module_with_error("/", "Tu rol no puede editar sedes.")
+    existing_location = get_location_by_id(str(location_id))
+    if (existing_location is None or int(existing_location["organization_id"]) != int(user["organization_id"])
+            or organization_id != int(user["organization_id"])):
+        return redirect_to_module_with_error("/admin", "Esa sede no pertenece a tu organización.")
 
     update_location(
         location_id,
@@ -2345,11 +2528,16 @@ async def toggle_location(
     if not user["permissions"]["manage_admin"]:
         return redirect_to_module_with_error("/", "Tu rol no puede desactivar sedes.")
 
+    target_location = get_location_by_id(str(location_id))
+    if target_location is None or int(target_location["organization_id"]) != int(user["organization_id"]):
+        return redirect_to_module_with_error("/admin", "Esa sede no pertenece a tu organización.")
+    if is_active and sum(1 for loc in list_locations(str(user["organization_id"])) if loc["is_active"]) <= 1:
+        return redirect_to_module_with_error("/admin", "Mantén al menos una sede activa.")
     next_state = not bool(is_active)
     set_location_active(location_id, next_state)
     log_audit_event(
         user_id=user["id"],
-        organization_id=organization_id or None,
+        organization_id=int(user["organization_id"]),
         location_id=location_id,
         action="Actualizacion",
         entity_type="Sede",
@@ -2376,12 +2564,15 @@ async def create_new_user(
     if not user["permissions"]["manage_admin"]:
         return redirect_to_module_with_error("/", "Tu rol no puede crear usuarios.")
 
+    if organization_id != int(user["organization_id"]) or not inventory_scope_allowed(user, organization_id, location_id):
+        return redirect_to_module_with_error("/admin", "Asigna al usuario a una sede de tu organización.")
+    if role not in {"admin", "clinical", "inventory"}:
+        return RedirectResponse(url="/admin?permission_error=Selecciona+un+rol+válido.&panel=admin-team", status_code=303)
+    password_min_length = minimum_password_length(organization_id)
+    if len(password) < password_min_length:
+        return RedirectResponse(url=f"/admin?permission_error={encoded_message(f'La clave temporal debe tener al menos {password_min_length} caracteres.')}&panel=admin-team", status_code=303)
     try:
-        assert_capacity(organization_id, "users")
-    except ValueError as exc:
-        return RedirectResponse(url=f"/admin?permission_error={encoded_message(str(exc))}", status_code=303)
-
-    create_user(
+        create_user(
         {
             "full_name": full_name.strip(),
             "email": email.strip().lower(),
@@ -2391,7 +2582,11 @@ async def create_new_user(
             "location_id": location_id,
             "specialty": specialty.strip(),
         }
-    )
+        )
+    except Exception as exc:
+        if "unique" in str(exc).lower():
+            return RedirectResponse(url="/admin?permission_error=Ya+existe+un+usuario+con+ese+correo.&panel=admin-team", status_code=303)
+        raise
     log_audit_event(
         user_id=user["id"],
         organization_id=organization_id,
@@ -2421,8 +2616,21 @@ async def update_existing_user(
         return redirect_to_login()
     if not user["permissions"]["manage_admin"]:
         return redirect_to_module_with_error("/", "Tu rol no puede editar usuarios.")
+    target_user = next((item for item in list_users() if int(item["id"]) == user_id), None)
+    if (target_user is None or int(target_user.get("organization_id") or 0) != int(user["organization_id"])
+            or organization_id != int(user["organization_id"])
+            or not inventory_scope_allowed(user, organization_id, location_id)):
+        return redirect_to_module_with_error("/admin", "Ese usuario o sede no pertenece a tu organización.")
+    if role not in {"admin", "clinical", "inventory"}:
+        return RedirectResponse(url="/admin?permission_error=Selecciona+un+rol+válido.&panel=admin-team", status_code=303)
+    password_min_length = minimum_password_length(organization_id)
+    if password and len(password) < password_min_length:
+        return RedirectResponse(url=f"/admin?permission_error={encoded_message(f'La clave debe tener al menos {password_min_length} caracteres.')}&panel=admin-team", status_code=303)
+    if user_id == user["id"] and role != "admin":
+        return redirect_to_module_with_error("/admin", "No puedes quitarte tu propio rol de administrador.")
 
-    update_user(
+    try:
+        update_user(
         user_id,
         {
             "full_name": full_name.strip(),
@@ -2433,7 +2641,11 @@ async def update_existing_user(
             "location_id": location_id,
             "specialty": specialty.strip(),
         },
-    )
+        )
+    except Exception as exc:
+        if "unique" in str(exc).lower():
+            return RedirectResponse(url="/admin?permission_error=Ya+existe+un+usuario+con+ese+correo.&panel=admin-team", status_code=303)
+        raise
     log_audit_event(
         user_id=user["id"],
         organization_id=organization_id,
@@ -2443,7 +2655,7 @@ async def update_existing_user(
         entity_label=full_name.strip(),
         detail=f"{role.strip()} | {specialty.strip()}" + (" | clave reiniciada" if password.strip() else ""),
     )
-    return RedirectResponse(url="/admin?user_updated=1", status_code=303)
+    return RedirectResponse(url="/admin?user_updated=1&panel=admin-team", status_code=303)
 
 
 @router.post("/admin/users/{user_id}/toggle")
@@ -2460,19 +2672,23 @@ async def toggle_user(
         return redirect_to_login()
     if not user["permissions"]["manage_admin"]:
         return redirect_to_module_with_error("/", "Tu rol no puede activar o desactivar usuarios.")
-
+    target_user = next((item for item in list_users() if int(item["id"]) == user_id), None)
+    if target_user is None or int(target_user.get("organization_id") or 0) != int(user["organization_id"]):
+        return redirect_to_module_with_error("/admin", "Ese usuario no pertenece a tu organización.")
+    if user_id == user["id"] and is_active:
+        return redirect_to_module_with_error("/admin", "No puedes desactivar tu propio acceso.")
     next_state = not bool(is_active)
     set_user_active(user_id, next_state)
     log_audit_event(
         user_id=user["id"],
-        organization_id=organization_id or None,
-        location_id=location_id or None,
+        organization_id=int(target_user["organization_id"]),
+        location_id=int(target_user["location_id"]),
         action="Actualizacion",
         entity_type="Usuario",
         entity_label=full_name or f"Usuario #{user_id}",
         detail="Activado" if next_state else "Desactivado",
     )
-    return RedirectResponse(url="/admin?user_updated=1", status_code=303)
+    return RedirectResponse(url="/admin?user_updated=1&panel=admin-team", status_code=303)
 
 
 @router.post("/admin/users/{user_id}/permissions")
@@ -2490,11 +2706,12 @@ async def update_existing_user_permissions(
         return redirect_to_login()
     if not user["permissions"]["manage_admin"]:
         return redirect_to_module_with_error("/", "Tu rol no puede configurar permisos.")
-    target_user = get_user_by_id(user_id)
+    target_user = next((item for item in list_users() if int(item["id"]) == user_id), None)
     if (
         target_user is None
         or int(target_user.get("organization_id") or 0) != int(user.get("organization_id") or 0)
         or int(target_user.get("organization_id") or 0) != organization_id
+        or not inventory_scope_allowed(user, organization_id, location_id)
     ):
         return redirect_to_module_with_error("/admin", "Ese usuario no pertenece a tu organizacion.")
 
@@ -2514,7 +2731,50 @@ async def update_existing_user_permissions(
         entity_label=full_name or f"Usuario #{user_id}",
         detail="Perfil del rol" if not overrides else "Permisos personalizados",
     )
-    return RedirectResponse(url="/admin?user_updated=1", status_code=303)
+    return RedirectResponse(url="/admin?permissions_saved=1&panel=admin-team", status_code=303)
+
+
+@router.post("/admin/users/{user_id}/schedule")
+async def save_admin_user_schedule(
+    request: Request,
+    user_id: int,
+    working_days: list[str] = Form(default=[]),
+    work_start: str = Form(...),
+    work_end: str = Form(...),
+    break_start: str = Form(""),
+    break_end: str = Form(""),
+    unavailable_dates: str = Form(""),
+    organization_id: int = Form(...),
+    location_id: int = Form(...),
+) -> RedirectResponse:
+    user = user_with_permissions(request)
+    if user is None:
+        return redirect_to_login()
+    target = next((item for item in list_users() if int(item["id"]) == user_id), None)
+    if (not user["permissions"]["manage_admin"] or target is None
+            or int(target.get("organization_id") or 0) != int(user["organization_id"])
+            or organization_id != int(user["organization_id"])
+            or int(target.get("location_id") or 0) != location_id
+            or not inventory_scope_allowed(user, organization_id, location_id)):
+        return redirect_to_module_with_error("/admin", "No puedes cambiar la disponibilidad de ese usuario.")
+    if (not working_days or any(day not in {"0", "1", "2", "3", "4", "5", "6"} for day in working_days)
+            or work_start >= work_end or bool(break_start) != bool(break_end)
+            or (break_start and not (work_start <= break_start < break_end <= work_end))):
+        return RedirectResponse(url="/admin?permission_error=Revisa+días%2C+horario+y+descanso.&panel=admin-team", status_code=303)
+    dates = [value.strip() for value in unavailable_dates.split(",") if value.strip()]
+    try:
+        for value in dates:
+            date.fromisoformat(value)
+    except ValueError:
+        return RedirectResponse(url="/admin?permission_error=Usa+fechas+válidas+AAAA-MM-DD+para+las+ausencias.&panel=admin-team", status_code=303)
+    update_user_schedule(user_id, {
+        "working_days": ",".join(sorted(set(working_days))), "work_start": work_start, "work_end": work_end,
+        "break_start": break_start, "break_end": break_end, "unavailable_dates": ",".join(dates),
+    })
+    log_audit_event(user_id=user["id"], organization_id=organization_id, location_id=location_id,
+                    action="Actualización", entity_type="Disponibilidad profesional", entity_label=target["full_name"],
+                    detail=f"{work_start}–{work_end} | descanso {break_start or 'sin descanso'}")
+    return RedirectResponse(url="/admin?schedule_saved=1&panel=admin-team", status_code=303)
 
 
 @router.post("/alerts")
