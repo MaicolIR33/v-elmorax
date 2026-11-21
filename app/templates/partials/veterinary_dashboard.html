@@ -1,8 +1,14 @@
 <section class="vet-dashboard vet-control-board{% if 'agenda' not in veterinary_dashboard.preferences.visible_cards %} dashboard-hide-agenda{% endif %}{% if 'tasks' not in veterinary_dashboard.preferences.visible_cards %} dashboard-hide-tasks{% endif %}{% if 'resources' not in veterinary_dashboard.preferences.visible_cards %} dashboard-hide-resources{% endif %}" data-veterinary-dashboard data-dashboard-view="{{ veterinary_dashboard.preferences.selected_view }}">
     <header class="vet-dashboard-topbar vet-dashboard-topbar-compact">
-        <div class="vet-dashboard-user">
+        <div class="vet-topbar-actions">
+        {% if permissions.manage_admin %}<a class="vet-dashboard-user vet-profile-admin-link" href="/admin{% if scope_query %}?{{ scope_query }}{% endif %}" title="Abrir administración" aria-label="Abrir administración">
             <span class="vet-dashboard-avatar" aria-hidden="true">{{ current_user.full_name[:1] }}</span>
             <span><strong>{{ current_user.full_name }}</strong><small>{{ current_user.role_label }}</small></span>
+        </a>{% else %}<div class="vet-dashboard-user">
+            <span class="vet-dashboard-avatar" aria-hidden="true">{{ current_user.full_name[:1] }}</span>
+            <span><strong>{{ current_user.full_name }}</strong><small>{{ current_user.role_label }}</small></span>
+        </div>{% endif %}
+        <form action="/logout" method="post" class="vet-topbar-logout-form"><button class="vet-topbar-logout" type="submit" title="Cerrar sesión" aria-label="Cerrar sesión"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 4H4v16h6M14 8l4 4-4 4M8 12h10"></path></svg><span>Cerrar sesión</span></button></form>
         </div>
     </header>
     <header class="vet-dashboard-heading">

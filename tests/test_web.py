@@ -807,8 +807,15 @@ class VelmoraxWebTests(unittest.TestCase):
         self.client.post("/login/push-approval", data={"approve": "1"})
         page = self.client.get("/admin")
         self.assertEqual(page.status_code, 200)
-        for text in ("Organización", "Equipo", "Agenda y servicios", "Auditoría", "Administración de la clínica"):
+        for text in ("Organización", "Equipo", "Agenda y servicios", "Ajustes", "Actividad", "Administración de la clínica", "data-admin-confirm-modal", "Eliminar de la operación"):
             self.assertIn(text, page.text)
+        self.assertIn("Velmorax", page.text)
+        self.assertIn("Cerrar sesión", page.text)
+        self.assertNotIn("Volver a Insumos", page.text)
+        for field in ("agenda_slot_minutes", "appointment_reminder_hours", "low_stock_threshold", "password_min_length", "recovery_channel"):
+            self.assertIn(f'name="{field}" type="', page.text)
+        self.assertIn("placeholder=\"Escribe los minutos\"", page.text)
+        self.assertIn("placeholder=\"Correo de contacto o administrador autorizado\"", page.text)
         self.assertNotIn("Cargar catálogo odontológico", page.text)
         self.assertNotIn("Preparación y conexiones", page.text)
 
@@ -823,27 +830,52 @@ class VelmoraxWebTests(unittest.TestCase):
         disabled = self.client.post(f"/admin/users/{created_user['id']}/toggle", data={
             "is_active": 1, "organization_id": 1, "location_id": 2, "full_name": created_user["full_name"],
         }, follow_redirects=False)
-        self.assertIn("user_updated=1", disabled.headers["location"])
+        self.assertIn("member_removed=1", disabled.headers["location"])
         disabled_user = next(item for item in list_users() if item["id"] == created_user["id"])
         self.assertFalse(disabled_user["is_active"])
         reactivated = self.client.post(f"/admin/users/{created_user['id']}/toggle", data={
             "is_active": 0, "organization_id": 1, "location_id": 2, "full_name": created_user["full_name"],
         }, follow_redirects=False)
-        self.assertIn("user_updated=1", reactivated.headers["location"])
+        self.assertIn("member_restored=1", reactivated.headers["location"])
         self.assertTrue(next(item for item in list_users() if item["id"] == created_user["id"])["is_active"])
+        self.client.post(f"/admin/users/{created_user['id']}/toggle", data={
+            "is_active": 1, "organization_id": 1, "location_id": 2, "full_name": created_user["full_name"],
+        }, follow_redirects=False)
+        permanently_deleted = self.client.post(f"/admin/users/{created_user['id']}/delete", follow_redirects=False)
+        self.assertIn("member_deleted=1", permanently_deleted.headers["location"])
+        self.assertFalse(any(item["id"] == created_user["id"] for item in list_users()))
 
         prefs = self.client.post("/admin/settings", data={
-            "agenda_slot_minutes": 15, "appointment_reminder_hours": 48,
-            "low_stock_threshold": 8, "password_min_length": 12, "recovery_channel": "admin",
+            "agenda_slot_minutes": 37, "appointment_reminder_hours": 36,
+            "low_stock_threshold": 8, "password_min_length": 11, "recovery_channel": "Correo de contacto",
         }, follow_redirects=False)
         self.assertIn("settings_saved=1", prefs.headers["location"])
+        unchanged_prefs = self.client.post("/admin/settings", data={
+            "agenda_slot_minutes": "", "appointment_reminder_hours": "",
+            "low_stock_threshold": "", "password_min_length": "", "recovery_channel": "",
+        }, follow_redirects=False)
+        self.assertIn("settings_saved=1", unchanged_prefs.headers["location"])
+        invalid_prefs = self.client.post("/admin/settings", data={
+            "agenda_slot_minutes": 2, "appointment_reminder_hours": 36,
+            "low_stock_threshold": 8, "password_min_length": 11, "recovery_channel": "Correo de contacto",
+        }, follow_redirects=False)
+        self.assertIn("settings_error=", invalid_prefs.headers["location"])
         service = self.client.post("/admin/services", data={"name": "Vacunación QA", "duration_minutes": 45}, follow_redirects=False)
         self.assertIn("service_saved=1", service.headers["location"])
         with get_connection() as connection:
             saved_service = connection.execute("SELECT id FROM clinic_services WHERE organization_id=1 AND name='Vacunación QA'").fetchone()
             settings = connection.execute("SELECT settings_json FROM organization_preferences WHERE organization_id=1").fetchone()
         self.assertIsNotNone(saved_service)
-        self.assertEqual(json.loads(settings["settings_json"])["password_min_length"], 12)
+        saved_preferences = json.loads(settings["settings_json"])
+        self.assertEqual(saved_preferences["agenda_slot_minutes"], 37)
+        self.assertEqual(saved_preferences["appointment_reminder_hours"], 36)
+        self.assertEqual(saved_preferences["password_min_length"], 11)
+        self.assertEqual(saved_preferences["recovery_channel"], "email")
+        deleted_service = self.client.post(f"/admin/services/{saved_service['id']}/delete", follow_redirects=False)
+        self.assertIn("service_deleted=1", deleted_service.headers["location"])
+        with get_connection() as connection:
+            removed_service = connection.execute("SELECT id FROM clinic_services WHERE id=? AND organization_id=1", (saved_service["id"],)).fetchone()
+        self.assertIsNone(removed_service)
 
         member = next(item for item in list_users() if item["email"] == "clinica@velmorax.local")
         schedule = self.client.post(f"/admin/users/{member['id']}/schedule", data={
@@ -867,7 +899,7 @@ class VelmoraxWebTests(unittest.TestCase):
         deactivated_site = self.client.post(f"/admin/locations/{new_site['id']}/toggle", data={
             "is_active": 1, "organization_id": 1, "name": "Sede QA Norte",
         }, follow_redirects=False)
-        self.assertIn("location_updated=1", deactivated_site.headers["location"])
+        self.assertIn("location_removed=1", deactivated_site.headers["location"])
         self.assertNotIn("Configuración multisede activa", self.client.get("/admin").text)
         export = self.client.get("/admin/auditoria/export")
         self.assertEqual(export.status_code, 200)
@@ -903,7 +935,7 @@ class VelmoraxWebTests(unittest.TestCase):
             disable_self = self.client.post(f"/admin/users/{self_admin['id']}/toggle", data={
                 "is_active": 1, "organization_id": self_admin["organization_id"],
             }, follow_redirects=False)
-            self.assertIn("No puedes desactivar tu propio acceso", unquote(disable_self.headers["location"]))
+            self.assertIn("No puedes eliminar tu propio acceso administrativo", unquote(disable_self.headers["location"]))
             custom_self = self.client.post(f"/admin/users/{self_admin['id']}/permissions", data={
                 "permission_mode": "custom", "allowed_permissions": ["view_agenda"],
                 "organization_id": self_admin["organization_id"], "location_id": self_admin["location_id"],

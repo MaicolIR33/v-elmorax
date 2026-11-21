@@ -11,9 +11,9 @@
             document.documentElement.dataset.theme = savedTheme === "dark" ? "dark" : "light";
         }());
     </script>
-    <link rel="stylesheet" href="{{ url_for('static', path='/css/styles.css') }}?v=admin-panel-1">
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/styles.css') }}?v=admin-panel-4">
     {% if is_veterinary_flow %}
-<link rel="stylesheet" href="{{ url_for('static', path='/css/veterinary-dashboard.css') }}?v=vet-patients-1">
+<link rel="stylesheet" href="{{ url_for('static', path='/css/veterinary-dashboard.css') }}?v=vet-shell-4">
     {% endif %}
 </head>
 <body{% if is_veterinary_flow %} class="veterinary-dashboard-page veterinary-shared-shell{% if active_path in ['/', '/agenda', '/inventario', '/alertas'] %} veterinary-workspace{% endif %}{% if active_path == '/clinica' %} veterinary-clinical-shell{% endif %}{% if is_veterinary_dashboard %} veterinary-dashboard-home{% endif %}{% if patient_history_view %} veterinary-patient-history-view{% endif %}"{% endif %}>
@@ -24,9 +24,15 @@
         <div class="main-shell">
             {% if is_veterinary_flow and not is_veterinary_dashboard %}
             <header class="vet-workspace-topbar vet-workspace-topbar-compact">
-                <div class="vet-dashboard-user">
+                <div class="vet-topbar-actions">
+                {% if permissions.manage_admin %}<a class="vet-dashboard-user vet-profile-admin-link" href="/admin{% if scope_query %}?{{ scope_query }}{% endif %}" title="Abrir administración" aria-label="Abrir administración">
                     <span class="vet-dashboard-avatar" aria-hidden="true">{{ current_user.full_name[:1] }}</span>
                     <span><strong>{{ current_user.full_name }}</strong><small>{{ current_user.role_label }}</small></span>
+                </a>{% else %}<div class="vet-dashboard-user">
+                    <span class="vet-dashboard-avatar" aria-hidden="true">{{ current_user.full_name[:1] }}</span>
+                    <span><strong>{{ current_user.full_name }}</strong><small>{{ current_user.role_label }}</small></span>
+                </div>{% endif %}
+                <form action="/logout" method="post" class="vet-topbar-logout-form"><button class="vet-topbar-logout" type="submit" title="Cerrar sesión" aria-label="Cerrar sesión"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 4H4v16h6M14 8l4 4-4 4M8 12h10"></path></svg><span>Cerrar sesión</span></button></form>
                 </div>
             </header>
             {% endif %}

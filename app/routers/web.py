@@ -1928,6 +1928,7 @@ async def admin_page(
     catalog_error: str = "",
     settings_error: str = "",
     service_error: str = "",
+    member_delete_error: str = "",
     organization_id: str = Query(default=""),
     location_id: str = Query(default=""),
 ):
@@ -1995,6 +1996,7 @@ async def admin_page(
             "settings_saved": settings_saved,
             "settings_error": settings_error,
             "service_error": service_error,
+            "member_delete_error": member_delete_error,
             "catalog_error": catalog_error,
             "admin_users": admin_users,
             "admin_self_hidden": admin_self_hidden,
@@ -2014,11 +2016,11 @@ async def admin_page(
 @router.post("/admin/settings")
 async def update_admin_settings(
     request: Request,
-    agenda_slot_minutes: int = Form(30),
-    appointment_reminder_hours: int = Form(24),
-    low_stock_threshold: int = Form(5),
-    password_min_length: int = Form(10),
-    recovery_channel: str = Form("email"),
+    agenda_slot_minutes: str = Form(""),
+    appointment_reminder_hours: str = Form(""),
+    low_stock_threshold: str = Form(""),
+    password_min_length: str = Form(""),
+    recovery_channel: str = Form(""),
 ) -> RedirectResponse:
     user = user_with_permissions(request)
     if user is None:
@@ -2026,10 +2028,38 @@ async def update_admin_settings(
     if not user["permissions"]["manage_admin"]:
         return redirect_to_module_with_error("/", "Tu rol no puede actualizar ajustes.")
 
-    if agenda_slot_minutes not in {15, 30, 45, 60} or appointment_reminder_hours not in {2, 24, 48}:
-        return RedirectResponse(url="/admin?settings_error=Revisa+los+intervalos+seleccionados.", status_code=303)
-    if not 1 <= low_stock_threshold <= 1000 or password_min_length not in {10, 12, 14} or recovery_channel not in {"email", "admin"}:
-        return RedirectResponse(url="/admin?settings_error=Revisa+los+parámetros+de+acceso+e+inventario.", status_code=303)
+    org_id = int(user["organization_id"])
+    preference_defaults = {
+        "agenda_slot_minutes": 30, "appointment_reminder_hours": 24,
+        "low_stock_threshold": 5, "password_min_length": 10, "recovery_channel": "email",
+    }
+    with get_connection() as connection:
+        row = connection.execute("SELECT settings_json FROM organization_preferences WHERE organization_id = ?", (org_id,)).fetchone()
+    try:
+        existing_settings = json.loads(row["settings_json"]) if row and row["settings_json"] else {}
+    except (TypeError, ValueError):
+        existing_settings = {}
+    existing_settings = {**preference_defaults, **existing_settings}
+
+    try:
+        agenda_slot_minutes = int(agenda_slot_minutes.strip()) if agenda_slot_minutes.strip() else int(existing_settings["agenda_slot_minutes"])
+        appointment_reminder_hours = int(appointment_reminder_hours.strip()) if appointment_reminder_hours.strip() else int(existing_settings["appointment_reminder_hours"])
+        low_stock_threshold = int(low_stock_threshold.strip()) if low_stock_threshold.strip() else int(existing_settings["low_stock_threshold"])
+        password_min_length = int(password_min_length.strip()) if password_min_length.strip() else int(existing_settings["password_min_length"])
+    except (AttributeError, TypeError, ValueError):
+        return RedirectResponse(url=f"/admin?settings_error={encoded_message('Escribe números válidos en los campos de preferencias.')}", status_code=303)
+    if not 5 <= agenda_slot_minutes <= 240 or not 1 <= appointment_reminder_hours <= 720:
+        return RedirectResponse(url=f"/admin?settings_error={encoded_message('El intervalo de agenda debe ser de 5 a 240 minutos y el aviso de 1 a 720 horas.')}", status_code=303)
+    if not 1 <= low_stock_threshold <= 1000 or not 8 <= password_min_length <= 128:
+        return RedirectResponse(url=f"/admin?settings_error={encoded_message('El inventario debe estar entre 1 y 1000 y la clave entre 8 y 128 caracteres.')}", status_code=303)
+    recovery_value = recovery_channel.strip().casefold() or str(existing_settings["recovery_channel"]).casefold()
+    recovery_aliases = {
+        "email": "email", "correo": "email", "correo electrónico": "email", "correo electronico": "email", "correo de contacto": "email",
+        "admin": "admin", "administrador": "admin", "administrador autorizado": "admin",
+    }
+    recovery_channel = recovery_aliases.get(recovery_value, "")
+    if not recovery_channel:
+        return RedirectResponse(url=f"/admin?settings_error={encoded_message('En canal de recuperación escribe Correo de contacto o Administrador autorizado.')}", status_code=303)
     values = {
         "agenda_slot_minutes": agenda_slot_minutes,
         "appointment_reminder_hours": appointment_reminder_hours,
@@ -2037,13 +2067,8 @@ async def update_admin_settings(
         "password_min_length": password_min_length,
         "recovery_channel": recovery_channel,
     }
-    org_id = int(user["organization_id"])
     with get_connection() as connection:
-        row = connection.execute("SELECT settings_json FROM organization_preferences WHERE organization_id = ?", (org_id,)).fetchone()
-        try:
-            settings = json.loads(row["settings_json"]) if row and row["settings_json"] else {}
-        except (TypeError, ValueError):
-            settings = {}
+        settings = dict(existing_settings)
         settings.update(values)
         connection.execute(
             "INSERT INTO organization_preferences (organization_id, settings_json) VALUES (?, ?) ON CONFLICT(organization_id) DO UPDATE SET settings_json=excluded.settings_json",
@@ -2112,6 +2137,34 @@ async def update_admin_service(
         connection.commit()
     log_audit_event(user_id=user["id"], organization_id=org_id, location_id=None, action="Actualización", entity_type="Servicio", entity_label=name, detail=f"Duración {duration_minutes} min")
     return RedirectResponse(url="/admin?service_saved=1&panel=admin-services", status_code=303)
+
+
+@router.post("/admin/services/{service_id}/delete")
+async def delete_admin_service(request: Request, service_id: int) -> RedirectResponse:
+    user = user_with_permissions(request)
+    if user is None:
+        return redirect_to_login()
+    if not user["permissions"]["manage_admin"]:
+        return redirect_to_module_with_error("/", "Solo los administradores pueden eliminar servicios.")
+    organization_id = int(user["organization_id"])
+    with get_connection() as connection:
+        service = connection.execute(
+            "SELECT name FROM clinic_services WHERE id = ? AND organization_id = ?",
+            (service_id, organization_id),
+        ).fetchone()
+        if service is None:
+            return redirect_to_module_with_error("/admin?panel=admin-services", "Ese servicio no pertenece a tu organización.")
+        connection.execute(
+            "DELETE FROM clinic_services WHERE id = ? AND organization_id = ?",
+            (service_id, organization_id),
+        )
+        connection.commit()
+    log_audit_event(
+        user_id=user["id"], organization_id=organization_id, location_id=None,
+        action="Eliminacion", entity_type="Servicio", entity_label=service["name"],
+        detail="Servicio eliminado definitivamente; citas e historiales conservados",
+    )
+    return RedirectResponse(url="/admin?service_deleted=1&panel=admin-services", status_code=303)
 
 
 @router.get("/admin/auditoria/export")
@@ -2526,25 +2579,26 @@ async def toggle_location(
     if user is None:
         return redirect_to_login()
     if not user["permissions"]["manage_admin"]:
-        return redirect_to_module_with_error("/", "Tu rol no puede desactivar sedes.")
+        return redirect_to_module_with_error("/", "Tu rol no puede gestionar sedes.")
 
     target_location = get_location_by_id(str(location_id))
     if target_location is None or int(target_location["organization_id"]) != int(user["organization_id"]):
         return redirect_to_module_with_error("/admin", "Esa sede no pertenece a tu organización.")
     if is_active and sum(1 for loc in list_locations(str(user["organization_id"])) if loc["is_active"]) <= 1:
-        return redirect_to_module_with_error("/admin", "Mantén al menos una sede activa.")
+        return redirect_to_module_with_error("/admin", "No puedes eliminar la única sede activa.")
     next_state = not bool(is_active)
     set_location_active(location_id, next_state)
     log_audit_event(
         user_id=user["id"],
         organization_id=int(user["organization_id"]),
         location_id=location_id,
-        action="Actualizacion",
+        action="Restauracion" if next_state else "Eliminacion",
         entity_type="Sede",
         entity_label=name or f"Sede #{location_id}",
-        detail="Activada" if next_state else "Desactivada",
+        detail="Restaurada" if next_state else "Retirada de la operación; datos históricos conservados",
     )
-    return RedirectResponse(url="/admin?location_updated=1", status_code=303)
+    result = "location_restored" if next_state else "location_removed"
+    return RedirectResponse(url=f"/admin?{result}=1&panel=admin-organization", status_code=303)
 
 
 @router.post("/admin/users")
@@ -2671,24 +2725,87 @@ async def toggle_user(
     if user is None:
         return redirect_to_login()
     if not user["permissions"]["manage_admin"]:
-        return redirect_to_module_with_error("/", "Tu rol no puede activar o desactivar usuarios.")
+        return redirect_to_module_with_error("/", "Tu rol no puede gestionar miembros del equipo.")
     target_user = next((item for item in list_users() if int(item["id"]) == user_id), None)
     if target_user is None or int(target_user.get("organization_id") or 0) != int(user["organization_id"]):
         return redirect_to_module_with_error("/admin", "Ese usuario no pertenece a tu organización.")
     if user_id == user["id"] and is_active:
-        return redirect_to_module_with_error("/admin", "No puedes desactivar tu propio acceso.")
+        return redirect_to_module_with_error("/admin", "No puedes eliminar tu propio acceso administrativo.")
     next_state = not bool(is_active)
     set_user_active(user_id, next_state)
     log_audit_event(
         user_id=user["id"],
         organization_id=int(target_user["organization_id"]),
         location_id=int(target_user["location_id"]),
-        action="Actualizacion",
+        action="Restauracion" if next_state else "Eliminacion",
         entity_type="Usuario",
         entity_label=full_name or f"Usuario #{user_id}",
-        detail="Activado" if next_state else "Desactivado",
+        detail="Acceso restaurado" if next_state else "Acceso retirado; historial conservado",
     )
-    return RedirectResponse(url="/admin?user_updated=1&panel=admin-team", status_code=303)
+    result = "member_restored" if next_state else "member_removed"
+    return RedirectResponse(url=f"/admin?{result}=1&panel=admin-team", status_code=303)
+
+
+@router.post("/admin/users/{user_id}/delete")
+async def permanently_delete_user(request: Request, user_id: int) -> RedirectResponse:
+    user = user_with_permissions(request)
+    if user is None:
+        return redirect_to_login()
+    if not user["permissions"]["manage_admin"]:
+        return redirect_to_module_with_error("/", "Tu rol no puede eliminar miembros definitivamente.")
+    organization_id = int(user["organization_id"])
+    target = next((item for item in list_users() if int(item["id"]) == user_id), None)
+    if target is None or int(target.get("organization_id") or 0) != organization_id:
+        return RedirectResponse(url=f"/admin?member_delete_error={encoded_message('Ese miembro no pertenece a tu organización.')}&panel=admin-team", status_code=303)
+    if user_id == int(user["id"]):
+        return RedirectResponse(url=f"/admin?member_delete_error={encoded_message('No puedes eliminar definitivamente tu propio usuario.')}&panel=admin-team", status_code=303)
+    if target.get("is_active"):
+        return RedirectResponse(url=f"/admin?member_delete_error={encoded_message('Primero retira el acceso del miembro y luego podrás solicitar su eliminación definitiva.')}&panel=admin-team", status_code=303)
+
+    references = (
+        ("auditorías", "audit_events", "user_id"),
+        ("aceptaciones", "legal_acceptances", "user_id"),
+        ("movimientos de inventario", "inventory_movements", "user_id"),
+        ("registros de cadena de frío", "cold_chain_logs", "user_id"),
+        ("solicitudes de inventario", "inventory_replenishments", "requested_by_user_id"),
+        ("revisiones de inventario", "inventory_replenishments", "reviewed_by_user_id"),
+        ("citas", "appointments", "veterinarian_user_id"),
+        ("listas de espera", "appointment_waitlist", "veterinarian_user_id"),
+        ("bloqueos de agenda", "appointment_blocks", "veterinarian_user_id"),
+        ("cambios de pacientes", "patients", "updated_by_user_id"),
+        ("alertas creadas", "alerts", "created_by"),
+        ("alertas asignadas", "alerts", "assigned_user_id"),
+        ("confirmaciones de alertas", "alert_acknowledgements", "user_id"),
+        ("entregas de turno", "shift_handoffs", "created_by"),
+        ("preferencias del tablero", "dashboard_preferences", "user_id"),
+        ("solicitudes de recuperación", "password_reset_tokens", "user_id"),
+        ("recepciones de inventario", "inventory_items", "received_by_user_id"),
+    )
+    with get_connection() as connection:
+        for _label, table, column in references:
+            row = connection.execute(
+                f'SELECT COUNT(*) AS total FROM "{table}" WHERE "{column}" = ?',
+                (user_id,),
+            ).fetchone()
+            if int(row["total"] or 0):
+                message = "No se puede borrar: este usuario conserva registros de actividad o historial vinculados. Se mantuvo eliminado de la operación para proteger la trazabilidad."
+                return RedirectResponse(url=f"/admin?member_delete_error={encoded_message(message)}&panel=admin-team", status_code=303)
+        try:
+            connection.execute(
+                "DELETE FROM users WHERE id = ? AND organization_id = ? AND is_active = 0",
+                (user_id, organization_id),
+            )
+            connection.commit()
+        except sqlite3.IntegrityError:
+            connection.rollback()
+            message = "No se puede borrar: hay otros registros vinculados a este usuario. Se conservó el registro eliminado para proteger el historial."
+            return RedirectResponse(url=f"/admin?member_delete_error={encoded_message(message)}&panel=admin-team", status_code=303)
+    log_audit_event(
+        user_id=user["id"], organization_id=organization_id, location_id=None,
+        action="Eliminacion", entity_type="Usuario", entity_label=target["full_name"],
+        detail="Cuenta eliminada definitivamente tras verificar que no tenía registros asociados",
+    )
+    return RedirectResponse(url="/admin?member_deleted=1&panel=admin-team", status_code=303)
 
 
 @router.post("/admin/users/{user_id}/permissions")

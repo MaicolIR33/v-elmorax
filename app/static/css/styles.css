@@ -7120,3 +7120,53 @@ html[data-theme="dark"] .vet-patients-module .vet-patient-search .filter-actions
         gap: 10px !important;
     }
 }
+
+/* Admin shares the compact, readable language of the inventory workspace. */
+.admin-tabs button { font-family: inherit; }
+.admin-remove-note { display: block; width: 100%; margin: 9px 0 0; color: var(--muted); font-size: .8rem; text-align: right; }
+.admin-inline-action button:disabled { opacity: .55; cursor: not-allowed; }
+.admin-confirm-modal { z-index: 10020; }
+.admin-confirm-card { background: var(--surface) !important; border: 1px solid var(--border) !important; }
+.admin-confirm-card .eyebrow { color: var(--muted); }
+.admin-confirm-card [data-admin-confirm-description] { margin: 10px 0 0; color: var(--muted); line-height: 1.5; }
+.admin-confirm-card .vet-modal-actions { flex-wrap: wrap; }
+@media (max-width: 560px) {
+    .admin-confirm-modal { padding: 12px; }
+    .admin-confirm-card { width: min(440px, calc(100vw - 24px)) !important; padding: 22px !important; }
+}
+
+.vet-topbar-actions { display:flex; align-items:center; justify-content:flex-end; gap:10px; }
+body.veterinary-dashboard-page .vet-profile-admin-link { color:inherit; text-decoration:none; border-radius:12px; padding:5px 8px; transition:background .16s ease, box-shadow .16s ease; }
+body.veterinary-dashboard-page .vet-profile-admin-link:hover,
+body.veterinary-dashboard-page .vet-profile-admin-link:focus-visible { background:var(--surface); box-shadow:0 0 0 1px var(--border); outline:none; }
+.vet-topbar-logout-form { margin:0; }
+.vet-topbar-logout { display:inline-flex; align-items:center; justify-content:center; gap:7px; min-height:38px; padding:7px 11px; border:1px solid var(--border); border-radius:10px; background:var(--surface); color:var(--text); font:inherit; font-size:.8rem; font-weight:700; text-decoration:none; cursor:pointer; }
+.vet-topbar-logout:hover { background:var(--surface-strong); }
+.vet-topbar-logout svg { width:17px; height:17px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+.vet-nav-theme-switcher { margin:8px 0 0; width:100%; }
+#admin-team input[type="checkbox"],
+#admin-services input[type="checkbox"] { appearance:none; display:inline-grid; place-content:center; width:20px; height:20px; flex:0 0 20px; margin:0; border:2px solid color-mix(in srgb, var(--muted) 48%, var(--surface)); border-radius:50%; background:color-mix(in srgb, var(--surface) 86%, var(--background)); box-shadow:inset 0 1px 2px rgba(0,0,0,.28), 0 1px 2px rgba(255,255,255,.07); cursor:pointer; transition:background .15s ease, border-color .15s ease, box-shadow .15s ease; }
+#admin-team input[type="checkbox"]:checked,
+#admin-services input[type="checkbox"]:checked { border-color:#42ad60; background-color:#35a951; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='m3 8 3 3 7-7' fill='none' stroke='white' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"), radial-gradient(circle at 35% 28%, #8edb70, #35a951 66%, #258744); background-repeat:no-repeat; background-position:center; background-size:12px 12px, 100% 100%; box-shadow:inset 0 1px 2px rgba(255,255,255,.4), 0 0 0 2px rgba(66,173,96,.16); }
+#admin-team input[type="checkbox"]:focus-visible,
+#admin-services input[type="checkbox"]:focus-visible { outline:2px solid var(--primary); outline-offset:3px; }
+#admin-team .admin-permission-grid input[type="checkbox"] { margin-top:1px; }
+#admin-services .admin-service-entry { display:grid; gap:10px; padding:12px; border:1px solid var(--border); border-radius:12px; background:#1f2e3d; }
+#admin-services .admin-service-row { padding:0; border:0; background:transparent; }
+#admin-services .admin-service-delete-form { display:flex; justify-content:flex-end; padding-top:9px; border-top:1px solid var(--border); }
+#admin-services .admin-service-delete-form .btn { color:var(--danger); border-color:color-mix(in srgb, var(--danger) 55%, var(--border)); }
+html[data-theme="light"] #admin-services .admin-service-entry { background:var(--surface); }
+html[data-theme="dark"] body.veterinary-dashboard-page .admin-module .admin-tabs,
+html[data-theme="dark"] body.veterinary-dashboard-page .admin-module .admin-tab-panel,
+html[data-theme="dark"] body.veterinary-dashboard-page .admin-module .admin-health-pill { background:#1b2936; }
+html[data-theme="dark"] body.veterinary-dashboard-page .admin-module :is(.admin-disclosure, .admin-user-card, .admin-service-row, .admin-backup-card) { background:#1f2e3d; }
+html[data-theme="dark"] body.veterinary-dashboard-page .admin-module :is(.admin-create-user, .admin-tabs button span, .admin-tabs button[aria-selected="true"]) { background:#17232f; }
+html[data-theme="dark"] body.veterinary-dashboard-page .admin-module :is(.admin-settings-grid input:not([type="checkbox"]):not([type="radio"]), .admin-settings-grid select, .admin-settings-grid textarea) { background:#17232f; color:#f4f7f9; }
+@media (max-width: 560px) {
+    .vet-topbar-actions { gap:6px; }
+    .vet-topbar-logout { min-height:34px; padding:6px 8px; font-size:.72rem; }
+    .vet-nav-theme-switcher { margin-top:6px; }
+}
+@media (max-width: 430px) {
+    #admin-services .admin-service-delete-form .btn { width:100%; }
+}
