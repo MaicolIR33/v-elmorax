@@ -386,6 +386,7 @@ class VelmoraxWebTests(unittest.TestCase):
         self.assertEqual(stored["next_deworming_due"], patient_payload["next_deworming_due"])
         patient_list = self.client.get(f"/clinica?organization_id=1&location_id=2&q={patient_name}")
         self.assertEqual(patient_list.status_code, 200)
+        self.assertIn('class="vet-patient-alert-toggle" type="checkbox" name="alerts" value="1"><span class="vet-patient-alert-checkbox"', patient_list.text)
         self.assertIn(f'data-record-patient-id="{patient_id}"', patient_list.text)
         self.assertIn("Crear cita", patient_list.text)
         self.assertIn(f"/pacientes/{patient_id}/historial", patient_list.text)
@@ -397,6 +398,7 @@ class VelmoraxWebTests(unittest.TestCase):
         self.assertIn(f'data-preselected-patient="{patient_id}"', appointment_form.text)
         self.assertIn('data-open-on-load="1"', appointment_form.text)
         alert_filter = self.client.get(f"/clinica?organization_id=1&location_id=2&q={patient_name}&alerts=1")
+        self.assertIn('name="alerts" value="1" checked><span class="vet-patient-alert-checkbox"', alert_filter.text)
         self.assertIn("Vigilar reacción QA", alert_filter.text)
         self.assertIsNone(
             find_patient_duplicate(

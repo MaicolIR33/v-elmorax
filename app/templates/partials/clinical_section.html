@@ -157,7 +157,7 @@
             <label class="vet-patient-filter"><span>Estado</span><select name="patient_status"><option value="">Todos</option><option value="active"{% if patient_filters.status == 'active' %} selected{% endif %}>Activos</option><option value="inactive"{% if patient_filters.status == 'inactive' %} selected{% endif %}>Inactivos</option></select></label>
             <label class="vet-patient-filter"><span>Especie</span><select name="species"><option value="">Todas</option>{% for species_name in patient_species_options %}<option value="{{ species_name }}"{% if patient_filters.species|lower == species_name|lower %} selected{% endif %}>{{ species_name }}</option>{% endfor %}</select></label>
             <label class="vet-patient-filter"><span>Control preventivo</span><select name="prevention"><option value="">Todos</option><option value="vaccine"{% if patient_filters.prevention == 'vaccine' %} selected{% endif %}>Vacunas pendientes / próximas</option><option value="deworming"{% if patient_filters.prevention == 'deworming' %} selected{% endif %}>Desparasitación pendiente</option></select></label>
-            <label class="vet-patient-alert-filter"><input type="checkbox" name="alerts" value="1"{% if patient_filters.alerts %} checked{% endif %}><span>Con alertas o alergias</span></label>
+            <label class="vet-patient-alert-filter"><input class="vet-patient-alert-toggle" type="checkbox" name="alerts" value="1"{% if patient_filters.alerts %} checked{% endif %}><span class="vet-patient-alert-checkbox" aria-hidden="true"></span><span>Con alertas o alergias</span></label>
 
 
             <div class="filter-actions">

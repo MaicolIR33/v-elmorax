@@ -1035,6 +1035,58 @@ html[data-theme="light"] body.veterinary-workspace .vet-workspace-topbar-compact
     }
 }
 
+/* Alerta en búsqueda de pacientes: conservar el checkbox real y dibujar
+   el estado seleccionado en una marca visible y estable entre navegadores. */
+.vet-patient-search-card .vet-patient-alert-filter { position:relative; }
+.vet-patient-search-card .vet-patient-alert-filter input.vet-patient-alert-toggle {
+    position:absolute;
+    left:0;
+    top:50%;
+    z-index:1;
+    width:20px;
+    height:20px;
+    min-height:20px;
+    margin:0;
+    opacity:0;
+    cursor:pointer;
+    transform:translateY(-50%);
+}
+.vet-patient-search-card .vet-patient-alert-checkbox {
+    display:grid;
+    place-items:center;
+    flex:0 0 20px;
+    width:20px;
+    height:20px;
+    border:2px solid color-mix(in srgb, var(--muted) 48%, var(--surface));
+    border-radius:50%;
+    background:color-mix(in srgb, var(--surface) 86%, var(--background));
+    box-shadow:inset 0 1px 2px rgba(0,0,0,.28), 0 1px 2px rgba(255,255,255,.07);
+    transition:background .15s ease, border-color .15s ease, box-shadow .15s ease;
+}
+.vet-patient-search-card .vet-patient-alert-checkbox::after {
+    content:"";
+    width:9px;
+    height:5px;
+    border-left:2px solid #fff;
+    border-bottom:2px solid #fff;
+    opacity:0;
+    transform:translateY(-1px) rotate(-45deg) scale(.65);
+    transition:opacity .12s ease, transform .12s ease;
+}
+.vet-patient-search-card .vet-patient-alert-filter input:checked + .vet-patient-alert-checkbox {
+    border-color:#42ad60;
+    background:radial-gradient(circle at 35% 28%, #8edb70, #35a951 66%, #258744);
+    box-shadow:inset 0 1px 2px rgba(255,255,255,.4), 0 0 0 2px rgba(66,173,96,.16);
+}
+.vet-patient-search-card .vet-patient-alert-filter input:checked + .vet-patient-alert-checkbox::after {
+    opacity:1;
+    transform:translateY(-1px) rotate(-45deg) scale(1);
+}
+.vet-patient-search-card .vet-patient-alert-filter input:focus-visible + .vet-patient-alert-checkbox {
+    outline:2px solid var(--primary);
+    outline-offset:3px;
+}
+
 /* Patient directory: compact filters, clear clinical signals and real pagination. */
 .vet-patient-search-card { display:block; }
 .vet-patient-search-card .vet-search-copy { margin-bottom:12px; }
